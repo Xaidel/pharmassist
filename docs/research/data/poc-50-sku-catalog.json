@@ -1,0 +1,2527 @@
+{
+  "catalog": {
+    "title": "POC seed: provisional 50-SKU medicine catalog",
+    "ticket": "Xaidel/pharmassist#20",
+    "status": "provisional",
+    "generated_at": "2026-10-21",
+    "updated_at": "2026-10-21",
+    "revision_note": "Issue #30: POC-016 was replaced with metformin + sitagliptin 500 mg + 50 mg film-coated tablet (Janumet) to add an exact MDRP match (EO 104 s. 2020, row 44, MRP PHP 30.31). The former POC-016 metformin 850 mg record (Glucophage Forte) was removed.",
+    "scope": "POC seed catalog for the Naga City price-comparison pilot. SKU basis is the 50-row PNF/Konsulta-anchored list in docs/research/05-naga-market-context.md section 4, with one MDRP-covered replacement under issue #30. Product-level references are from the FDA Verification Portal extract made on 2026-10-21.",
+    "counts": {
+      "skus": 50,
+      "pnf_listed": 49,
+      "konsulta_listed": 33,
+      "konsulta_overlap_pct": 66.0,
+      "fda_reference_verified": 49,
+      "candidate_generic_verified": 49,
+      "registration_expiry_within_6_months": 9
+    },
+    "expiring_registrations": [
+      {
+        "role": "reference",
+        "sku_id": "POC-009",
+        "brand": "Betaloc",
+        "registration_number": "DR-X1812",
+        "expiry_date": "2027-04-02"
+      },
+      {
+        "role": "reference",
+        "sku_id": "POC-015",
+        "brand": "Gludin",
+        "registration_number": "DRP-7406-03",
+        "expiry_date": "2027-01-12"
+      },
+      {
+        "role": "candidate",
+        "sku_id": "POC-020",
+        "brand": "Salbugen",
+        "registration_number": "DRP-6795-01",
+        "expiry_date": "2027-01-17"
+      },
+      {
+        "role": "reference",
+        "sku_id": "POC-021",
+        "brand": "Ventolin Nebules",
+        "registration_number": "DR-XY13579",
+        "expiry_date": "2026-12-22"
+      },
+      {
+        "role": "candidate",
+        "sku_id": "POC-034",
+        "brand": "AzithroMax",
+        "registration_number": "DRP-3456-02",
+        "expiry_date": "2026-12-22"
+      },
+      {
+        "role": "candidate",
+        "sku_id": "POC-037",
+        "brand": "Tempra",
+        "registration_number": "DRHR-1766",
+        "expiry_date": "2027-04-12"
+      },
+      {
+        "role": "reference",
+        "sku_id": "POC-041",
+        "brand": "Losec",
+        "registration_number": "DR-XY18227",
+        "expiry_date": "2026-11-05"
+      },
+      {
+        "role": "reference",
+        "sku_id": "POC-046",
+        "brand": "Antamin",
+        "registration_number": "DR-2359",
+        "expiry_date": "2027-04-05"
+      },
+      {
+        "role": "candidate",
+        "sku_id": "POC-049",
+        "brand": "Revitaplex",
+        "registration_number": "DR-XY22685",
+        "expiry_date": "2027-03-12"
+      }
+    ],
+    "notable_counts": {
+      "prd_fr6_konsulta_overlap": 32,
+      "row_level_konsulta_overlap": 33,
+      "note": "PRD FR-6 and research note 05 state 32/50. A line-by-line check against Annex C (as of 30 March 2024) finds 33/50 after the issue #30 replacement; POC-016 is now an MDRP-covered metformin + sitagliptin SKU that is not Konsulta-listed. The one-SKU difference is flagged for reconciliation in the final-list ticket (#10)."
+    },
+    "sources": [
+      {
+        "id": "S1",
+        "title": "DOH Philippine National Formulary Essential Medicines List, 8th Edition (2017), EML as of 02 November 2022",
+        "issuer": "Department of Health, Pharmaceutical Division (hosted by PhilHealth)",
+        "url": "https://www.philhealth.gov.ph/partners/providers/pdf/PNF-EML_11022022.pdf",
+        "accessed": "2026-10-21"
+      },
+      {
+        "id": "S2",
+        "title": "Annex C: Checklist of PhilHealth Konsulta Drugs and its Preparations, as of 30 March 2024",
+        "issuer": "Philippine Health Insurance Corporation",
+        "url": "https://www.philhealth.gov.ph/circulars/2024/0013/Annex_C_Checklist_of_PhilHealth_Konsulta_Drugs_as_of_March_2024.pdf",
+        "accessed": "2026-10-21"
+      },
+      {
+        "id": "S3",
+        "title": "FDA Verification Portal — registered drug products (cdrr records)",
+        "issuer": "Food and Drug Administration Philippines",
+        "url": "https://verification.fda.gov.ph/",
+        "accessed": "2026-10-21"
+      },
+      {
+        "id": "S4",
+        "title": "EO No. 104, s. 2020, Annex — List of Medicines and Corresponding MWP and MRP",
+        "issuer": "President of the Philippines / Official Gazette",
+        "url": "https://www.officialgazette.gov.ph/downloads/2020/02feb/20200217-EO-104-RRD.pdf",
+        "accessed": "2026-10-21"
+      }
+    ],
+    "caveats": [
+      "Candidate generic alternatives are candidate groupings only. They are not a determination of therapeutic equivalence or interchangeability and require pharmacist review.",
+      "No price data were collected for this note. The \"candidate cheapest-generic\" label is provisional; price rank must be established during shelf-price collection.",
+      "Pack sizes are the FDA-registered commercial packs chosen as price-collection references. A pharmacy may sell a different pack or per unit; records must capture the actual pack and compute unit price.",
+      "FDA registration records are a point-in-time extract. The portal has no bulk API, rate-limits repeated queries, and the extract covers only products returned by the search terms used. Verify each product before launch.",
+      "Some classic originator brands (Renitec, Aquazide, Augmentin, Klacid, Bactrim, Macrodantin, Suprax, Vibramycin, Chlor-Trimeton) were not found in the FDA extract. Verified registered local brands were substituted as reference packs and are noted per SKU.",
+      "The 400 mg + 57 mg/5 mL co-amoxiclav suspension is PNF/Konsulta-listed but no FDA record was found in this pass; its reference product is recorded as unavailable.",
+      "Rx/OTC values follow the FDA classification field. \"Household Remedy (HR)\" products are recorded as OTC-family products, not as prescription drugs."
+    ]
+  },
+  "skus": [
+    {
+      "sku_id": "POC-001",
+      "category": "Cardiovascular",
+      "generic_name": "Amlodipine (as besilate/camsylate)",
+      "strength": "5 mg",
+      "dosage_form": "Tablet",
+      "brand_name": "Norvasc",
+      "pack_size": "Box of 100 tablets",
+      "manufacturer": "Viatris Pharmaceuticals LLC",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-3419",
+        "brand_name_as_registered": "Norvasc",
+        "generic_name_as_registered": "Amlodipine (as besilate)",
+        "dosage_strength_form_as_registered": "5 mg Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Alu/White Opaque PVC/PVDC Blister Pack x 10's (Box of 100's); Alu/White Opaque PVC/PVDC Blister Pack x 1's (Box of 1's)",
+        "expiry_date": "07 February 2030",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Norvasc",
+        "pack": "Box of 100 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Amlostan",
+        "manufacturer": "J.M. Tolmann Laboratories Inc.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-3536-03",
+        "registration_expiry": "13 December 2031",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Amlodipine (as besilate/camsylate) — Oral: 5 mg and 10 mg tablet",
+        "page": 17
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Amlodipine 5 mg tablet (as besilate/camsylate)",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-002",
+      "category": "Cardiovascular",
+      "generic_name": "Amlodipine (as besilate/camsylate)",
+      "strength": "10 mg",
+      "dosage_form": "Tablet",
+      "brand_name": "Norvasc",
+      "pack_size": "Box of 100 tablets",
+      "manufacturer": "Viatris Pharmaceuticals LLC",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-3429",
+        "brand_name_as_registered": "Norvasc",
+        "generic_name_as_registered": "Amlodipine (as besilate)",
+        "dosage_strength_form_as_registered": "10 mg Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Alu/White Opaque PVC/PVDC Blister Pack x 10's Box of 100's",
+        "expiry_date": "07 February 2030",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Norvasc",
+        "pack": "Box of 100 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Lodi",
+        "manufacturer": "Hizon Laboratories, Inc.",
+        "pack": "Box of 30 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-1334-07",
+        "registration_expiry": "05 February 2029",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Amlodipine (as besilate/camsylate) — Oral: 5 mg and 10 mg tablet",
+        "page": 17
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Amlodipine 10 mg tablet (as besilate/camsylate)",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-003",
+      "category": "Cardiovascular",
+      "generic_name": "Losartan (as potassium salt)",
+      "strength": "50 mg",
+      "dosage_form": "Tablet",
+      "brand_name": "Cozaar",
+      "pack_size": "Box of 30 tablets",
+      "manufacturer": "Organon Pharma (UK) Limited",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-6249",
+        "brand_name_as_registered": "Cozaar",
+        "generic_name_as_registered": "Losartan Potassium",
+        "dosage_strength_form_as_registered": "50 mg Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Opaque, White Alu/PE/PVC/PVDC Blister Pack x 10's Box of 30's",
+        "expiry_date": "24 March 2029",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Cozaar",
+        "pack": "Box of 30 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Prestan",
+        "manufacturer": "Hizon Laboratories, Inc.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-5916",
+        "registration_expiry": "23 December 2029",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Losartan (as potassium salt) — Oral: 50 mg and 100 mg tablet",
+        "page": 45
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Losartan (as potassium salt) 50 mg tablet",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-004",
+      "category": "Cardiovascular",
+      "generic_name": "Losartan (as potassium salt)",
+      "strength": "100 mg",
+      "dosage_form": "Tablet",
+      "brand_name": "Cozaar",
+      "pack_size": "Box of 30 tablets",
+      "manufacturer": "Organon Pharma (UK) Limited",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-6250",
+        "brand_name_as_registered": "Cozaar",
+        "generic_name_as_registered": "Losartan potassium",
+        "dosage_strength_form_as_registered": "100mg Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Opaque PVC/PE/PVDC blister pack x l0's (Box of 30's)",
+        "expiry_date": "10 December 2027",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Cozaar",
+        "pack": "Box of 30 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Wilopres",
+        "manufacturer": "Hizon Laboratories, Inc.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-1667-01",
+        "registration_expiry": "11 August 2030",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Losartan (as potassium salt) — Oral: 50 mg and 100 mg tablet",
+        "page": 45
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Losartan (as potassium salt) 100 mg tablet",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-005",
+      "category": "Cardiovascular",
+      "generic_name": "Losartan + hydrochlorothiazide",
+      "strength": "50 mg + 12.5 mg",
+      "dosage_form": "Film-coated tablet",
+      "brand_name": "Hyzaar",
+      "pack_size": "Box of 30 tablets",
+      "manufacturer": "Organon Pharma (UK) Limited",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DR-XY24847",
+        "brand_name_as_registered": "Hyzaar",
+        "generic_name_as_registered": "Losartan Potassium + Hydrochlorothiazide",
+        "dosage_strength_form_as_registered": "50 mg/12 .5 mg Film-Coated Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "White Opaque PVC/PE/PVDC Blister Pack by 10's (Box of 30's)",
+        "expiry_date": "06 March 2028",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Hyzaar",
+        "pack": "Box of 30 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Zartan Plus",
+        "manufacturer": "Hizon Laboratories, Inc.",
+        "pack": "Box of 30 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-2669-02",
+        "registration_expiry": "09 October 2031",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Losartan + Hydrochlorothiazide — Oral: 50 mg losartan + 12.5 mg hydrochlorothiazide tablet",
+        "page": 45
+      },
+      "konsulta": {
+        "listed": false,
+        "entry": null,
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-006",
+      "category": "Cardiovascular",
+      "generic_name": "Enalapril (as maleate)",
+      "strength": "5 mg",
+      "dosage_form": "Tablet",
+      "brand_name": "Scheepril",
+      "pack_size": "Box of 100 tablets",
+      "manufacturer": "Scheele Laboratories Phils., Inc.",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-1079",
+        "brand_name_as_registered": "Scheepril",
+        "generic_name_as_registered": "Enalapril Maleate",
+        "dosage_strength_form_as_registered": "5 mg Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Blister Pack x 10's (Box of 100's)",
+        "expiry_date": "06 July 2027",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Scheepril",
+        "pack": "Box of 100 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Enara 5",
+        "manufacturer": "Huazhong Pharmaceutical Co., Ltd.",
+        "pack": "Box of 28 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-16252",
+        "registration_expiry": "13 January 2030",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Enalapril (as maleate) — Oral: 5 mg and 20 mg tablet",
+        "page": 30
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Enalapril (as maleate) 5 mg tablet",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": [
+        "Classic brand Renitec was not found in the FDA extract; Scheepril is the verified reference pack."
+      ]
+    },
+    {
+      "sku_id": "POC-007",
+      "category": "Cardiovascular",
+      "generic_name": "Enalapril (as maleate)",
+      "strength": "20 mg",
+      "dosage_form": "Tablet",
+      "brand_name": "Scheepril",
+      "pack_size": "Box of 100 tablets",
+      "manufacturer": "Scheele Laboratories Phils., Inc.",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-1078",
+        "brand_name_as_registered": "Scheepril",
+        "generic_name_as_registered": "Enalapril Maleate",
+        "dosage_strength_form_as_registered": "20 mg Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Blister Pack x 10's (Box of 100's)",
+        "expiry_date": "06 July 2027",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Scheepril",
+        "pack": "Box of 100 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Enara 20",
+        "manufacturer": "Huazhong Pharmaceutical Co., Ltd.",
+        "pack": "Box of 28 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-16250",
+        "registration_expiry": "13 January 2030",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Enalapril (as maleate) — Oral: 5 mg and 20 mg tablet",
+        "page": 30
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Enalapril (as maleate) 20 mg tablet",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": [
+        "Classic brand Renitec was not found in the FDA extract; Scheepril is the verified reference pack."
+      ]
+    },
+    {
+      "sku_id": "POC-008",
+      "category": "Cardiovascular",
+      "generic_name": "Metoprolol (as tartrate)",
+      "strength": "50 mg",
+      "dosage_form": "Tablet",
+      "brand_name": "Betaloc",
+      "pack_size": "Box of 100 tablets",
+      "manufacturer": "AstraZeneca Pharmaceutical Company Ltd.",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DR-X1848",
+        "brand_name_as_registered": "Betaloc",
+        "generic_name_as_registered": "Metoprolol Tartrate",
+        "dosage_strength_form_as_registered": "50 mg Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Alu/PVC/PVDC Blister Pack x 20's (Box of 100's)",
+        "expiry_date": "12 March 2037",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Betaloc",
+        "pack": "Box of 100 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Neobloc",
+        "manufacturer": "Hizon Laboratories, Inc.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DR-XY27497",
+        "registration_expiry": "03 October 2028",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Metoprolol (as tartrate) — Oral: 50 mg and 100 mg tablet",
+        "page": 47
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Metoprolol (as tartrate) 50 mg tablet",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-009",
+      "category": "Cardiovascular",
+      "generic_name": "Metoprolol (as tartrate)",
+      "strength": "100 mg",
+      "dosage_form": "Tablet",
+      "brand_name": "Betaloc",
+      "pack_size": "Box of 105 tablets",
+      "manufacturer": "AstraZeneca Pharmaceutical Company Ltd.",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DR-X1812",
+        "brand_name_as_registered": "Betaloc",
+        "generic_name_as_registered": "Metoprolol Tartrate",
+        "dosage_strength_form_as_registered": "100 mg Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Alu/PVC/PVDC Blister Pack x 15's (Box of 105's)",
+        "expiry_date": "02 April 2027",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Betaloc",
+        "pack": "Box of 105 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Neobloc",
+        "manufacturer": "HIZON LABORATORIES, INC.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DR-XY27498",
+        "registration_expiry": "03 October 2028",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Metoprolol (as tartrate) — Oral: 50 mg and 100 mg tablet",
+        "page": 47
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Metoprolol (as tartrate) 100 mg tablet",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-010",
+      "category": "Cardiovascular",
+      "generic_name": "Hydrochlorothiazide",
+      "strength": "25 mg",
+      "dosage_form": "Tablet",
+      "brand_name": "Hytaz",
+      "pack_size": "Box of 200 tablets",
+      "manufacturer": "Amherst Laboratories, Inc.",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-9982",
+        "brand_name_as_registered": "Hytaz",
+        "generic_name_as_registered": "Hydrochlorothiazide",
+        "dosage_strength_form_as_registered": "25 mg Film-Coated Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Flex Foil Strip x 10's Box of 200s",
+        "expiry_date": "12 December 2027",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Hytaz",
+        "pack": "Box of 200 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Diuzid",
+        "manufacturer": "Hizon Laboratories, Inc.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-17160",
+        "registration_expiry": "13 November 2031",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Hydrochlorothiazide — Oral: 12.5 mg and 25 mg tablet",
+        "page": 38
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Hydrochlorothiazide 25 mg tablet",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": [
+        "Brand Aquazide was not found in the FDA extract; Hytaz is the verified reference pack."
+      ]
+    },
+    {
+      "sku_id": "POC-011",
+      "category": "Cardiovascular",
+      "generic_name": "Simvastatin",
+      "strength": "20 mg",
+      "dosage_form": "Tablet",
+      "brand_name": "Zocor",
+      "pack_size": "Box of 30 tablets",
+      "manufacturer": "Organon Pharma (UK) Limited",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-6241",
+        "brand_name_as_registered": "Zocor",
+        "generic_name_as_registered": "Simvastatin",
+        "dosage_strength_form_as_registered": "20 mg Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Blister Pack x 10's (Box of 30's)",
+        "expiry_date": "13 January 2030",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Zocor",
+        "pack": "Box of 30 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Vastilan",
+        "manufacturer": "Lloyd Laboratories, Inc.",
+        "pack": "Box of 30 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-16083",
+        "registration_expiry": "25 April 2027",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Simvastatin — Oral: 20 mg and 40 mg tablet",
+        "page": 57
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Simvastatin 20 mg tablet",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-012",
+      "category": "Cardiovascular",
+      "generic_name": "Simvastatin",
+      "strength": "40 mg",
+      "dosage_form": "Tablet",
+      "brand_name": "Zocor HP",
+      "pack_size": "Box of 30 tablets",
+      "manufacturer": "Organon Pharma (UK) Limited",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-6243",
+        "brand_name_as_registered": "Zocor HP",
+        "generic_name_as_registered": "Simvastatin",
+        "dosage_strength_form_as_registered": "40 mg Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Blister Pack x 5 's (Box of 30's)",
+        "expiry_date": "10 February 2028",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Zocor HP",
+        "pack": "Box of 30 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Vastilan",
+        "manufacturer": "Lloyd Laboratories, Inc.",
+        "pack": "Box of 30 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-16075",
+        "registration_expiry": "25 April 2027",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Simvastatin — Oral: 20 mg and 40 mg tablet",
+        "page": 57
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Simvastatin 40 mg tablet",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-013",
+      "category": "Cardiovascular",
+      "generic_name": "Atorvastatin (as calcium)",
+      "strength": "20 mg",
+      "dosage_form": "Tablet",
+      "brand_name": "Lipitor",
+      "pack_size": "Box of 100 tablets",
+      "manufacturer": "Pfizer Pharmaceuticals LLC",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-3362",
+        "brand_name_as_registered": "Lipitor",
+        "generic_name_as_registered": "Atorvastatin (as calcium)",
+        "dosage_strength_form_as_registered": "20 mg Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Alu-PA/Alu/PVC Blister Pack (Box of 10 blister packs x 10's)",
+        "expiry_date": "21 July 2027",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Lipitor",
+        "pack": "Box of 100 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Atorlee",
+        "manufacturer": "Lloyd Laboratories, Inc.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-8366",
+        "registration_expiry": "17 December 2029",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Atorvastatin calcium — Oral: 10 mg, 20 mg, 40 mg and 80 mg tablet",
+        "page": 18
+      },
+      "konsulta": {
+        "listed": false,
+        "entry": null,
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-014",
+      "category": "Cardiovascular",
+      "generic_name": "Aspirin",
+      "strength": "80 mg",
+      "dosage_form": "Tablet",
+      "brand_name": "Aspilets",
+      "pack_size": "Box of 500 tablets",
+      "manufacturer": "Amherst Laboratories, Inc.",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DR-2350",
+        "brand_name_as_registered": "Aspilets",
+        "generic_name_as_registered": "Aspirin",
+        "dosage_strength_form_as_registered": "80 mg Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Blister Pack x 20's (Box of 500's)",
+        "expiry_date": "25 May 2027",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Aspilets",
+        "pack": "Box of 500 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Philprin",
+        "manufacturer": "Hebei Tiancheng Pharmaceutical Co., Ltd.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "OTC",
+        "fda_registration_number": "DRP-8938-01",
+        "registration_expiry": "03 June 2031",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Aspirin — Oral: 80 mg, 100 mg, 300 mg and 325 mg tablet",
+        "page": 18
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Aspirin 80 mg tablet",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-015",
+      "category": "Diabetes",
+      "generic_name": "Metformin (as hydrochloride)",
+      "strength": "500 mg",
+      "dosage_form": "Film-coated tablet",
+      "brand_name": "Gludin",
+      "pack_size": "Box of 100 tablets",
+      "manufacturer": "Hizon Laboratories, Inc.",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-7406-03",
+        "brand_name_as_registered": "Gludin",
+        "generic_name_as_registered": "Metformin Hydrochloride",
+        "dosage_strength_form_as_registered": "500 mg Film-coated Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Alu/Clear PVDC Blister Pack x 10's (Box of 100's)",
+        "expiry_date": "12 January 2027",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Gludin",
+        "pack": "Box of 100 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Formex",
+        "manufacturer": "Lloyd Laboratories, Inc.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-8065",
+        "registration_expiry": "06 May 2029",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Metformin (as hydrochloride) — Oral: 500 mg tablet/film coated tablet; 850 mg tablet",
+        "page": 46
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Metformin (as hydrochloride) 500 mg tablet",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": [
+        "Glucophage plain 500 mg was not found in the FDA extract; Gludin is the verified reference pack."
+      ]
+    },
+    {
+      "sku_id": "POC-016",
+      "category": "Diabetes",
+      "generic_name": "Metformin (as hydrochloride) + sitagliptin (as phosphate monohydrate)",
+      "strength": "500 mg + 50 mg",
+      "dosage_form": "Film-coated tablet",
+      "brand_name": "Janumet",
+      "pack_size": "Box of 28 tablets",
+      "manufacturer": "Patheon Puerto Rico, Inc.",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-4010",
+        "brand_name_as_registered": "Janumet",
+        "generic_name_as_registered": "Sitagliptin (as Monohydrate Phosphate) + Metformin Hydrochloride",
+        "dosage_strength_form_as_registered": "50 mg/ 500 mg Film-Coated Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Alu/Alu Blister Pack x 7's (Box of 28's); Alu/Alu Blister Pack x 7's Box of 7's (Physician Sample)",
+        "expiry_date": "14 March 2029",
+        "source": "FDA Verification Portal",
+        "source_url": "https://verification.fda.gov.ph/api/search?q=janumet",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Janumet",
+        "pack": "Box of 28 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Sitaplus",
+        "manufacturer": "Lloyd Laboratories, Inc.",
+        "pack": "Box of 21 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DR-XY48840",
+        "registration_expiry": "10 August 2028",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": false,
+        "entry": null,
+        "page": null
+      },
+      "konsulta": {
+        "listed": false,
+        "entry": null,
+        "as_of": "2024-03-30"
+      },
+      "mdrp": {
+        "match_basis": "exact",
+        "mdrp_entry_id": "EO104-044",
+        "order": "EO 104 s. 2020",
+        "order_signed": "2020-02-17",
+        "annex_row": 44,
+        "molecule": "Metformin + Sitagliptin",
+        "molecules": [
+          "Metformin",
+          "Sitagliptin"
+        ],
+        "strength": "500 mg + 50 mg",
+        "dosage_form": "film-coated tablet",
+        "pack_size": null,
+        "pack_note": "The annex states no pack count for this tablet row; the published MRP is the per-tablet ceiling.",
+        "mrp_php": 30.31,
+        "mwp_php": 25.05,
+        "vat_exclusive_mrp": true,
+        "unit_basis": "per tablet",
+        "source_url": "https://www.officialgazette.gov.ph/downloads/2020/02feb/20200217-EO-104-RRD.pdf",
+        "source_pdf_page": 5,
+        "checked_at": "2026-10-21"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-017",
+      "category": "Diabetes",
+      "generic_name": "Gliclazide",
+      "strength": "30 mg",
+      "dosage_form": "Modified-release tablet",
+      "brand_name": "Glicla-Natrapharm",
+      "pack_size": "Box of 60 tablets",
+      "manufacturer": "Lloyd Laboratories, Inc.",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DR-XY38504",
+        "brand_name_as_registered": "Glicla-Natrapharm",
+        "generic_name_as_registered": "Gliclazide",
+        "dosage_strength_form_as_registered": "30 mg Modified-Release Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Alu/Clear PVDC Blister Pack x 10's (Box of 60's); Alu/Claear PVDC Blister Pack x 15's (Box of 15's)",
+        "expiry_date": "15 September 2030",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Glicla-Natrapharm",
+        "pack": "Box of 60 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Azukon MR 30",
+        "manufacturer": "Stallion Laboratories Pvt. Ltd.",
+        "pack": "Box of 60 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-8993-10",
+        "registration_expiry": "29 June 2030",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Gliclazide — Oral: 30 mg and 60 mg MR tablet; 80 mg tablet",
+        "page": 36
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Gliclazide 30 mg MR tablet",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": [
+        "Diamicron MR 30 mg was not found in the FDA extract; Glicla-Natrapharm 30 mg is the verified reference pack."
+      ]
+    },
+    {
+      "sku_id": "POC-018",
+      "category": "Diabetes",
+      "generic_name": "Gliclazide",
+      "strength": "60 mg",
+      "dosage_form": "Modified-release tablet",
+      "brand_name": "Diamicron MR",
+      "pack_size": "Box of 60 tablets",
+      "manufacturer": "Les Laboratoires Servier lndustrie",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DR-XY38522",
+        "brand_name_as_registered": "Diamicron MR",
+        "generic_name_as_registered": "Gliclazide",
+        "dosage_strength_form_as_registered": "60 mg Modified-Release Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Alu-PVC blister pack x 15's (Box of 60's)",
+        "expiry_date": "21 September 2030",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Diamicron MR",
+        "pack": "Box of 60 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Neoclazz MR",
+        "manufacturer": "Stallion Laboratories Pvt. Ltd.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-8994-02",
+        "registration_expiry": "14 August 2030",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Gliclazide — Oral: 30 mg and 60 mg MR tablet; 80 mg tablet",
+        "page": 36
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Gliclazide 60 mg MR tablet",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-019",
+      "category": "Respiratory",
+      "generic_name": "Salbutamol (as sulfate)",
+      "strength": "100 mcg/dose",
+      "dosage_form": "Metered-dose inhaler (200 actuations)",
+      "brand_name": "Ventolin Inhaler",
+      "pack_size": "1 inhaler (200 actuations)",
+      "manufacturer": "Glaxo Wellcome S.A.",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DR-XY23941",
+        "brand_name_as_registered": "Ventolin Inhaler",
+        "generic_name_as_registered": "Salbutamol (as sulfate)",
+        "dosage_strength_form_as_registered": "100 mcg/Actuation Metered Dose Inhaler",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Aluminum Alloy Can with Metering Valve x 200 Actuations (Box of 1's)",
+        "expiry_date": "06 March 2028",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Ventolin Inhaler",
+        "pack": "1 inhaler (200 actuations)",
+        "unit_basis": "per actuation"
+      },
+      "candidate_generic": {
+        "brand": "Salbumin",
+        "manufacturer": "Heilongjiang Province Fulekang Pharmaceutical Co., Ltd.",
+        "pack": "1 inhaler (200 doses)",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-9447",
+        "registration_expiry": "06 September 2029",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Salbutamol (as sulfate) — Inhalation: MDI 100 micrograms/dose x 200 actuations",
+        "page": 57
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Salbutamol (as sulfate) MDI: 100 micrograms/dose x 200 actuations",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-020",
+      "category": "Respiratory",
+      "generic_name": "Salbutamol (as sulfate)",
+      "strength": "2 mg/5 mL",
+      "dosage_form": "Syrup",
+      "brand_name": "Asmalin",
+      "pack_size": "Bottle of 60 mL",
+      "manufacturer": "Amherst Laboratories, Inc.",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-12186",
+        "brand_name_as_registered": "Asmalin",
+        "generic_name_as_registered": "Salbutamol (As Sulfate)",
+        "dosage_strength_form_as_registered": "2 mg/5 mL Syrup",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Amber Glass Bottle x 60mL (Box of 1's)",
+        "expiry_date": "28 June 2027",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Asmalin",
+        "pack": "Bottle of 60 mL",
+        "unit_basis": "per mL"
+      },
+      "candidate_generic": {
+        "brand": "Salbugen",
+        "manufacturer": "Lloyd Laboratories, Inc.",
+        "pack": "Bottle of 60 mL",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-6795-01",
+        "registration_expiry": "17 January 2027",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Salbutamol (as sulfate) — Oral: 2 mg/5 mL syrup, 60 mL",
+        "page": 57
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Salbutamol (as sulfate) 2 mg/5 mL syrup, 60 mL",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": [
+        "Ventolin syrup was found only as a 100 mL pack; Asmalin 60 mL is used to match the PNF/Konsulta pack size."
+      ]
+    },
+    {
+      "sku_id": "POC-021",
+      "category": "Respiratory",
+      "generic_name": "Salbutamol (as sulfate)",
+      "strength": "1 mg/mL",
+      "dosage_form": "Nebuliser solution, 2.5 mL unit-dose",
+      "brand_name": "Ventolin Nebules",
+      "pack_size": "Box of 20 ampoules (2.5 mL each)",
+      "manufacturer": "GlaxoSmithKline Australia Pty Ltd",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DR-XY13579",
+        "brand_name_as_registered": "Ventolin Nebules",
+        "generic_name_as_registered": "Salbutamol (as sulfate)",
+        "dosage_strength_form_as_registered": "1 mg/mL Solution for Inhalation",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Card of Five (5) Plastic Ampoules x 2.5 mL in an Aluminum Flowrap Pack x 4 (Box of 20 Ampoules)",
+        "expiry_date": "22 December 2026",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Ventolin Nebules",
+        "pack": "Box of 20 ampoules (2.5 mL each)",
+        "unit_basis": "per unit-dose"
+      },
+      "candidate_generic": {
+        "brand": "Asmacaire",
+        "manufacturer": "Ahlcon Parenterals (India) Limited",
+        "pack": "Box of 35 ampoules (2.5 mL each)",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-630-05",
+        "registration_expiry": "16 October 2027",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Salbutamol (as sulfate) — Resp. Soln.: 1 mg/mL, 2.5 mL (unit dose)",
+        "page": 57
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Salbutamol (as sulfate) Resp. Soln.: 1 mg/mL, 2.5 mL (unit dose)",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-022",
+      "category": "Respiratory",
+      "generic_name": "Ipratropium + salbutamol",
+      "strength": "500 mcg + 2.5 mg per 2.5 mL",
+      "dosage_form": "Nebuliser solution, unit-dose",
+      "brand_name": "Combivent UDV",
+      "pack_size": "Box of 20 unit-dose vials (2.5 mL each)",
+      "manufacturer": "Laboratoire Unither",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-7891",
+        "brand_name_as_registered": "Combivent UDV",
+        "generic_name_as_registered": "Ipratropium Bromide + Salbutamol (as Sulfate)",
+        "dosage_strength_form_as_registered": "500 mcg/ 2.5 mg/ 2.5 mL Solution for Inhalation",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "LDPE Vial x 2.5 mL (Box of 20's)",
+        "expiry_date": "11 February 2031",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Combivent UDV",
+        "pack": "Box of 20 unit-dose vials (2.5 mL each)",
+        "unit_basis": "per unit-dose"
+      },
+      "candidate_generic": {
+        "brand": "Combipul",
+        "manufacturer": "Cipla Ltd.",
+        "pack": "Box of 20 unit-dose vials (2.5 mL each)",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-6160",
+        "registration_expiry": "08 September 2030",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Ipratropium + Salbutamol — Resp. Soln.: 500 micrograms ipratropium + 2.5 mg salbutamol x 2.5 mL (unit dose)",
+        "page": 41
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Ipratropium + Salbutamol Resp. Soln.: 500 micrograms + 2.5 mg x 2.5 mL (unit dose)",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-023",
+      "category": "Respiratory",
+      "generic_name": "Fluticasone (as propionate) + salmeterol (as xinafoate)",
+      "strength": "100 mcg + 50 mcg per dose",
+      "dosage_form": "Dry-powder inhaler",
+      "brand_name": "Seretide 100 Diskus",
+      "pack_size": "1 Diskus (60 doses)",
+      "manufacturer": "Glaxo Wellcome Production",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DR-XY25838",
+        "brand_name_as_registered": "Seretide 100 Diskus",
+        "generic_name_as_registered": "Salmeterol (as xinofoate) + Fluticasone propionate",
+        "dosage_strength_form_as_registered": "50 mcg/ 100 mcg per dose Dry Powder for Inhalation",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Blister pack fitted in a diskus device enclosed in foil laminate overwrap (60 doses)",
+        "expiry_date": "01 August 2028",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Seretide 100 Diskus",
+        "pack": "1 Diskus (60 doses)",
+        "unit_basis": "per actuation"
+      },
+      "candidate_generic": {
+        "brand": "Salmetide",
+        "manufacturer": "Lloyd Laboratories, Inc.",
+        "pack": "Box of 40 capsules + inhaler",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DR-XY41970",
+        "registration_expiry": "25 April 2028",
+        "note": "Candidate is the same strength but a capsule DPI with a separate inhaler, not the Diskus device. Not a like-for-like device substitution."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Fluticasone (as propionate) + Salmeterol (as xinafoate) — Inhalation: DPI 100 micrograms fluticasone + 50 micrograms salmeterol x 28 and 60 doses",
+        "page": 35
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Fluticasone + Salmeterol Inhalation: DPI 100 micrograms + 50 micrograms x 28 and 60 doses",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": [
+        "Device/pack format differs between the reference Diskus and the candidate capsule DPI; confirm acceptability with a pharmacist."
+      ]
+    },
+    {
+      "sku_id": "POC-024",
+      "category": "Respiratory",
+      "generic_name": "Montelukast (as sodium)",
+      "strength": "10 mg",
+      "dosage_form": "Film-coated tablet",
+      "brand_name": "Singulair",
+      "pack_size": "Box of 28 tablets",
+      "manufacturer": "Organon Pharma (UK) Limited",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DR-XY24157",
+        "brand_name_as_registered": "Singulair",
+        "generic_name_as_registered": "Montelukast (as sodium)",
+        "dosage_strength_form_as_registered": "10 mg Film-Coated Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Alu/Alu Blister Pack (Box of 28's)",
+        "expiry_date": "07 September 2031",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Singulair",
+        "pack": "Box of 28 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Monteresp",
+        "manufacturer": "Lloyd Laboratories, Inc.",
+        "pack": "Box of 30 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-11499",
+        "registration_expiry": "08 April 2032",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Montelukast (as sodium salt) — Oral: 10 mg tablet",
+        "page": 48
+      },
+      "konsulta": {
+        "listed": false,
+        "entry": null,
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-025",
+      "category": "Anti-infective",
+      "generic_name": "Amoxicillin (as trihydrate)",
+      "strength": "500 mg",
+      "dosage_form": "Capsule",
+      "brand_name": "Amoxil",
+      "pack_size": "Box of 100 capsules",
+      "manufacturer": "Glaxo Wellcome Production",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-6461",
+        "brand_name_as_registered": "Amoxil",
+        "generic_name_as_registered": "Amoxicillin (as trihydrate)",
+        "dosage_strength_form_as_registered": "500 mg Capsule",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Alu/PVC Blister Pack x 10's (Box of 20's and 100's); 3 Capsules per Blister Pack as Physician's Sample",
+        "expiry_date": "10 March 2031",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Amoxil",
+        "pack": "Box of 100 capsules",
+        "unit_basis": "per capsule"
+      },
+      "candidate_generic": {
+        "brand": "Nuevamoxil",
+        "manufacturer": "North China Pharmaceutical Co., Ltd.",
+        "pack": "Box of 100 capsules",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-3358",
+        "registration_expiry": "31 March 2029",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Amoxicillin (as trihydrate) — Oral: 250 mg and 500 mg capsule",
+        "page": 17
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Amoxicillin (as trihydrate) 500 mg capsule",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-026",
+      "category": "Anti-infective",
+      "generic_name": "Amoxicillin (as trihydrate)",
+      "strength": "250 mg/5 mL",
+      "dosage_form": "Powder for suspension, 60 mL",
+      "brand_name": "Pediamox",
+      "pack_size": "Bottle of 60 mL",
+      "manufacturer": "Asian Antibiotics, Inc.",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DR-X8346",
+        "brand_name_as_registered": "Pediamox",
+        "generic_name_as_registered": "Amoxicillin (as trihydrate)",
+        "dosage_strength_form_as_registered": "250 mg/ 5 mL Powder for Suspension",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Amber Glass Bottle x 60 mL and 105 mL (Box of 1's)",
+        "expiry_date": "25 June 2028",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Pediamox",
+        "pack": "Bottle of 60 mL",
+        "unit_basis": "per mL"
+      },
+      "candidate_generic": {
+        "brand": "Trixen-250",
+        "manufacturer": "Lloyd Laboratories, Inc.",
+        "pack": "Bottle of 60 mL",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-8465-02",
+        "registration_expiry": "27 September 2027",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Amoxicillin (as trihydrate) — Oral: 250 mg/5 mL granules/powder for suspension, 60 mL",
+        "page": 17
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Amoxicillin (as trihydrate) 250 mg/5 mL granules/powder for suspension, 60 mL",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": [
+        "Amoxil 250 mg/5 mL was not found in the FDA extract; Pediamox is the verified reference pack."
+      ]
+    },
+    {
+      "sku_id": "POC-027",
+      "category": "Anti-infective",
+      "generic_name": "Co-amoxiclav (amoxicillin + potassium clavulanate)",
+      "strength": "500 mg + 125 mg",
+      "dosage_form": "Film-coated tablet",
+      "brand_name": "Moxinova CV",
+      "pack_size": "Box of 14 tablets",
+      "manufacturer": "Yeluri Formulations Pvt. Ltd.",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-11805",
+        "brand_name_as_registered": "Moxinova CV",
+        "generic_name_as_registered": "Co-Amoxiclav",
+        "dosage_strength_form_as_registered": "Formulation Each film-coated tablet contains: Amoxicillin (as Trihydrate) .......... 500 mg Clavulanic Acid (as Potassium Clavulanate) ................125 mg Film coated Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Alu/Alu Blister Pack x 7's [Box of 14's]",
+        "expiry_date": "05 May 2027",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Moxinova CV",
+        "pack": "Box of 14 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Atadar",
+        "manufacturer": "Shin Poong Pharm. Co., Ltd.",
+        "pack": "Box of 12 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-3575",
+        "registration_expiry": "13 February 2030",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Co-Amoxiclav (amoxicillin + potassium clavulanate) — Oral: 500 mg amoxicillin + 125 mg potassium clavulanate per tablet",
+        "page": 25
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Co-Amoxiclav 500 mg amoxicillin + 125 mg potassium clavulanate per tablet",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": [
+        "Brand Augmentin was not found in the FDA extract; Moxinova CV is the verified reference pack."
+      ]
+    },
+    {
+      "sku_id": "POC-028",
+      "category": "Anti-infective",
+      "generic_name": "Co-amoxiclav (amoxicillin + potassium clavulanate)",
+      "strength": "400 mg + 57 mg per 5 mL",
+      "dosage_form": "Powder for suspension, 70 mL",
+      "brand_name": "Unavailable (not found in FDA extract)",
+      "pack_size": "Bottle of 70 mL (per PNF/Konsulta; product not verified)",
+      "manufacturer": "Unavailable (not found in FDA extract)",
+      "rx_otc": "Rx (per PNF/Konsulta; FDA record not found)",
+      "fda_registration": null,
+      "price_reference": {
+        "brand": "Unavailable (not found in FDA extract)",
+        "pack": "Bottle of 70 mL (per PNF/Konsulta; product not verified)",
+        "unit_basis": "per mL"
+      },
+      "candidate_generic": null,
+      "pnf": {
+        "listed": true,
+        "entry": "Co-Amoxiclav (amoxicillin + potassium clavulanate) — Oral: 400 mg amoxicillin + 57 mg potassium clavulanate per 5 mL granules/powder for suspension, 70 mL",
+        "page": 25
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Co-Amoxiclav 400 mg amoxicillin + 57 mg potassium clavulanate per 5 mL suspension, 70 mL",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": [
+        "No FDA record found for co-amoxiclav 400 mg + 57 mg per 5 mL, 70 mL. PNF and Konsulta both list it; source a verified registered product from pharmacy shelf data before the pilot."
+      ]
+    },
+    {
+      "sku_id": "POC-029",
+      "category": "Anti-infective",
+      "generic_name": "Ciprofloxacin (as hydrochloride)",
+      "strength": "500 mg",
+      "dosage_form": "Film-coated tablet",
+      "brand_name": "Ciprobay",
+      "pack_size": "Box of 50 tablets",
+      "manufacturer": "Bayer AG",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-7194",
+        "brand_name_as_registered": "Ciprobay",
+        "generic_name_as_registered": "Ciprofloxacin",
+        "dosage_strength_form_as_registered": "500 mg Film-Coated Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Alu/PP Blister Pack x 10's (Box of 50's)",
+        "expiry_date": "12 September 2028",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Ciprobay",
+        "pack": "Box of 50 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Ciprophil",
+        "manufacturer": "Interphil Laboratories, Inc.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-3666",
+        "registration_expiry": "10 August 2027",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Ciprofloxacin — Oral: 250 mg and 500 mg tablet (as hydrochloride)",
+        "page": 24
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Ciprofloxacin 500 mg tablet (as hydrochloride)",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-030",
+      "category": "Anti-infective",
+      "generic_name": "Clarithromycin",
+      "strength": "500 mg",
+      "dosage_form": "Film-coated tablet",
+      "brand_name": "Clarithro-Natrapharm",
+      "pack_size": "Box of 28 tablets",
+      "manufacturer": "Interphil Laboratories, Inc.",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-2331-04",
+        "brand_name_as_registered": "Clarithro-Natrapharm",
+        "generic_name_as_registered": "Clarithromycin",
+        "dosage_strength_form_as_registered": "500 mg Film-coated tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Aluminum Foil Strip x 4's (Box of 28's)",
+        "expiry_date": "10 August 2027",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Clarithro-Natrapharm",
+        "pack": "Box of 28 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Claribid",
+        "manufacturer": "Lloyd Laboratories, Inc.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-7477",
+        "registration_expiry": "13 November 2028",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Clarithromycin — Oral: 250 mg and 500 mg base tablet",
+        "page": 24
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Clarithromycin 500 mg base tablet",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": [
+        "Brand Klacid was not found in the FDA extract; Clarithro-Natrapharm is the verified reference pack."
+      ]
+    },
+    {
+      "sku_id": "POC-031",
+      "category": "Anti-infective",
+      "generic_name": "Cotrimoxazole (sulfamethoxazole + trimethoprim)",
+      "strength": "400 mg + 80 mg",
+      "dosage_form": "Tablet",
+      "brand_name": "Cozole",
+      "pack_size": "Box of 100 tablets",
+      "manufacturer": "Lloyd Laboratories, Inc.",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DR-XY17719-B",
+        "brand_name_as_registered": "Cozole",
+        "generic_name_as_registered": "Cotrimoxazole",
+        "dosage_strength_form_as_registered": "400 mg/80 mg per Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Alu/PVC Blister Pack x 10's (Box of 100's)",
+        "expiry_date": "15 October 2037",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Cozole",
+        "pack": "Box of 100 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Cotrimaxol",
+        "manufacturer": "Drugmaker's Laboratories, Inc.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-5255",
+        "registration_expiry": "28 July 2027",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Cotrimoxazole (sulfamethoxazole + trimethoprim) — Oral: 400 mg sulfamethoxazole + 80 mg trimethoprim tablet/capsule",
+        "page": 26
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Cotrimoxazole 400 mg sulfamethoxazole + 80 mg trimethoprim tablet/capsule",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": [
+        "Brand Bactrim was not found in the FDA extract; Cozole is the verified reference pack."
+      ]
+    },
+    {
+      "sku_id": "POC-032",
+      "category": "Anti-infective",
+      "generic_name": "Nitrofurantoin",
+      "strength": "100 mg",
+      "dosage_form": "Capsule",
+      "brand_name": "Macrobex",
+      "pack_size": "Box of 100 capsules",
+      "manufacturer": "Scheele Laboratories Phils., Inc.",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-049-04",
+        "brand_name_as_registered": "Macrobex",
+        "generic_name_as_registered": "Nitrofurantoin",
+        "dosage_strength_form_as_registered": "100 mg Capsule",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Alu/PVC Blister Pack x 10's (Box of 100's)",
+        "expiry_date": "05 August 2027",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Macrobex",
+        "pack": "Box of 100 capsules",
+        "unit_basis": "per capsule"
+      },
+      "candidate_generic": {
+        "brand": "Nitro",
+        "manufacturer": "West-Coast Pharmaceutical Works Ltd.",
+        "pack": "Box of 20 capsules",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-9868",
+        "registration_expiry": "23 March 2030",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Nitrofurantoin — Oral: 50 mg and 100 mg capsule (as macrocrystals)",
+        "page": 50
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Nitrofurantoin 100 mg capsule (as macrocrystals)",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": [
+        "Brand Macrodantin was not found in the FDA extract; Macrobex is the verified reference pack."
+      ]
+    },
+    {
+      "sku_id": "POC-033",
+      "category": "Anti-infective",
+      "generic_name": "Cefixime (as trihydrate)",
+      "strength": "200 mg",
+      "dosage_form": "Capsule",
+      "brand_name": "Vamocef",
+      "pack_size": "Box of 50 capsules",
+      "manufacturer": "Lloyd Laboratories, Inc.",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DR-XY44294",
+        "brand_name_as_registered": "Vamocef",
+        "generic_name_as_registered": "Cefixime (as Trihydrate)",
+        "dosage_strength_form_as_registered": "200 mg Capsle",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Alu Foil Strip x 10's (Box of 50's)",
+        "expiry_date": "13 April 2030",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Vamocef",
+        "pack": "Box of 50 capsules",
+        "unit_basis": "per capsule"
+      },
+      "candidate_generic": {
+        "brand": "Cefipro 200",
+        "manufacturer": "Celogen Pharma Pvt. Ltd.",
+        "pack": "Box of 20 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-8648-02",
+        "registration_expiry": "26 September 2029",
+        "note": "Candidate is a film-coated tablet, not a capsule. Same molecule/strength; dosage-form difference must be reviewed."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Cefixime — Oral: 200 mg and 400 mg capsule",
+        "page": 23
+      },
+      "konsulta": {
+        "listed": false,
+        "entry": null,
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": [
+        "Reference is a capsule; candidate is a tablet. Confirm dosage-form acceptability with a pharmacist."
+      ]
+    },
+    {
+      "sku_id": "POC-034",
+      "category": "Anti-infective",
+      "generic_name": "Azithromycin (as dihydrate)",
+      "strength": "500 mg",
+      "dosage_form": "Film-coated tablet",
+      "brand_name": "Zithromax",
+      "pack_size": "Box of 3 tablets",
+      "manufacturer": "Viatris Pharmaceuticals LLC",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-8702",
+        "brand_name_as_registered": "Zithromax",
+        "generic_name_as_registered": "Azithromycin (as dihydrate)",
+        "dosage_strength_form_as_registered": "500 mg Film-Coated Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "White opaque PVC/Alu Blister Pack x 3’s Box of 3’s",
+        "expiry_date": "07 February 2030",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Zithromax",
+        "pack": "Box of 3 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "AzithroMax",
+        "manufacturer": "Stallion Laboratories Pvt. Ltd.",
+        "pack": "Box of 3 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-3456-02",
+        "registration_expiry": "22 December 2026",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Azithromycin — Oral: 250 mg and 500 mg tablet (as base/as dihydrate/as monohydrate)",
+        "page": 19
+      },
+      "konsulta": {
+        "listed": false,
+        "entry": null,
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-035",
+      "category": "Anti-infective",
+      "generic_name": "Doxycycline (as hyclate)",
+      "strength": "100 mg",
+      "dosage_form": "Capsule",
+      "brand_name": "Doxin",
+      "pack_size": "Box of 50 capsules",
+      "manufacturer": "Amherst Laboratories, Inc.",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DR-X1308",
+        "brand_name_as_registered": "Doxin",
+        "generic_name_as_registered": "Doxycycline (as hyclate)",
+        "dosage_strength_form_as_registered": "100 mg capsule",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Aluminum Foil Strip Pack x 10's (Box of 50's)",
+        "expiry_date": "24 May 2027",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Doxin",
+        "pack": "Box of 50 capsules",
+        "unit_basis": "per capsule"
+      },
+      "candidate_generic": {
+        "brand": "Medox",
+        "manufacturer": "LLOYD LABORATORIES, INC.",
+        "pack": "Box of 100 capsules",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-1973",
+        "registration_expiry": "02 February 2029",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Doxycycline — Oral: 100 mg capsule (as hyclate)",
+        "page": 30
+      },
+      "konsulta": {
+        "listed": false,
+        "entry": null,
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": [
+        "Brand Vibramycin was not found in the FDA extract; Doxin is the verified reference pack."
+      ]
+    },
+    {
+      "sku_id": "POC-036",
+      "category": "Pain / fever",
+      "generic_name": "Paracetamol",
+      "strength": "500 mg",
+      "dosage_form": "Tablet",
+      "brand_name": "Biogesic",
+      "pack_size": "Box of 500 tablets",
+      "manufacturer": "UNILAB, Inc.",
+      "rx_otc": "OTC",
+      "fda_registration": {
+        "registration_number": "DR-153",
+        "brand_name_as_registered": "Biogesic",
+        "generic_name_as_registered": "Paracetamol",
+        "dosage_strength_form_as_registered": "500 mg Tablet",
+        "classification_as_registered": "Over-the-Counter (OTC) Drug",
+        "packaging_as_registered": "Alu/PVC Blister Pack (Box of 500's); Alu/PVC Blister Pack (Box of 10's)",
+        "expiry_date": "02 April 2028",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Biogesic",
+        "pack": "Box of 500 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Acetawind",
+        "manufacturer": "Celogen Generics Private Ltd.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "OTC",
+        "fda_registration_number": "DRP-8471-01",
+        "registration_expiry": "11 October 2029",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Paracetamol — Oral: 300 mg and 500 mg tablet",
+        "page": 52
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Paracetamol 500 mg tablet",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-037",
+      "category": "Pain / fever",
+      "generic_name": "Paracetamol",
+      "strength": "120 mg/5 mL",
+      "dosage_form": "Syrup/suspension, 60 mL",
+      "brand_name": "Calpol",
+      "pack_size": "Bottle of 60 mL",
+      "manufacturer": "PT Sterling Products Indonesia",
+      "rx_otc": "OTC",
+      "fda_registration": {
+        "registration_number": "DRHR-2132",
+        "brand_name_as_registered": "Calpol",
+        "generic_name_as_registered": "Paracetamol",
+        "dosage_strength_form_as_registered": "120 mg/5 mL Suspension (Strawberry Flavor)",
+        "classification_as_registered": "Over-the-Counter (OTC) Drug",
+        "packaging_as_registered": "Amber PET Bottle x 60mL and 100mL with CRSF Cap (Box of 1's)",
+        "expiry_date": "31 March 2032",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Calpol",
+        "pack": "Bottle of 60 mL",
+        "unit_basis": "per mL"
+      },
+      "candidate_generic": {
+        "brand": "Tempra",
+        "manufacturer": "Interphil Laboratories, Inc.",
+        "pack": "Bottle of 60 mL",
+        "rx_otc": "Household Remedy (HR)",
+        "fda_registration_number": "DRHR-1766",
+        "registration_expiry": "12 April 2027",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Paracetamol — Oral: 120 mg/5 mL syrup/suspension, 30 mL, 60 mL and 120 mL (alcohol-free)",
+        "page": 52
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Paracetamol 120 mg/5 mL syrup/suspension, 60 mL (alcohol-free)",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-038",
+      "category": "Pain / fever",
+      "generic_name": "Mefenamic acid",
+      "strength": "500 mg",
+      "dosage_form": "Tablet",
+      "brand_name": "Ponstan",
+      "pack_size": "Box of 200 tablets",
+      "manufacturer": "P.T. Pfizer Indonesia",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-2092",
+        "brand_name_as_registered": "Ponstan",
+        "generic_name_as_registered": "Mefenamic Acid",
+        "dosage_strength_form_as_registered": "500 mg Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Alu/PVC Blister Pack x 10's Box of 200's; Alu/PVC Blister Pack x 10's Box of 200's [Philippine Government Property - Department of Health NOT FOR SALE]",
+        "expiry_date": "21 September 2027",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Ponstan",
+        "pack": "Box of 200 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Mefenax",
+        "manufacturer": "Hizon Laboratories, Inc.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DR-XY10083",
+        "registration_expiry": "27 September 2030",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Mefenamic Acid — Oral: 250 mg and 500 mg tablet/capsule",
+        "page": 45
+      },
+      "konsulta": {
+        "listed": false,
+        "entry": null,
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-039",
+      "category": "Pain / fever",
+      "generic_name": "Ibuprofen",
+      "strength": "200 mg",
+      "dosage_form": "Tablet",
+      "brand_name": "Medicol",
+      "pack_size": "Box of 500 tablets",
+      "manufacturer": "UNILAB, Inc.",
+      "rx_otc": "OTC",
+      "fda_registration": {
+        "registration_number": "DR-XY24958",
+        "brand_name_as_registered": "Medicol",
+        "generic_name_as_registered": "Ibuprofen",
+        "dosage_strength_form_as_registered": "200 mg Tablet",
+        "classification_as_registered": "Over-the-Counter (OTC) Drug",
+        "packaging_as_registered": "Aluminum Flex Foil x 10's (Box of 500's)",
+        "expiry_date": "22 October 2029",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Medicol",
+        "pack": "Box of 500 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Midol",
+        "manufacturer": "Swisspharma Research Laboratories, Inc.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "OTC",
+        "fda_registration_number": "DR-XY30477",
+        "registration_expiry": "17 January 2030",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Ibuprofen — Oral: 200 mg and 400 mg tablet",
+        "page": 39
+      },
+      "konsulta": {
+        "listed": false,
+        "entry": null,
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-040",
+      "category": "Pain / fever",
+      "generic_name": "Diclofenac (as sodium)",
+      "strength": "50 mg",
+      "dosage_form": "Enteric-coated tablet",
+      "brand_name": "Voltaren Forte",
+      "pack_size": "Box of 100 tablets",
+      "manufacturer": "Novartis Saglik, Gida Ve Tarim Urunleri San. Ve Tic. A.S.",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DR-XY27769",
+        "brand_name_as_registered": "Voltaren Forte",
+        "generic_name_as_registered": "Diclofenac sodium",
+        "dosage_strength_form_as_registered": "50 mg Enteric-Coated Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Alu/PVC/PE/PVDC Blister Pack x 10’s (Box of 100's)",
+        "expiry_date": "19 August 2027",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Voltaren Forte",
+        "pack": "Box of 100 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Rheudi",
+        "manufacturer": "Lloyd Laboratories, Inc.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DR-XY33750",
+        "registration_expiry": "22 August 2027",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Diclofenac — Oral: 50 mg enteric coated tablet or MR tablet (as sodium salt)",
+        "page": 28
+      },
+      "konsulta": {
+        "listed": false,
+        "entry": null,
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-041",
+      "category": "GI",
+      "generic_name": "Omeprazole",
+      "strength": "20 mg",
+      "dosage_form": "Capsule",
+      "brand_name": "Losec",
+      "pack_size": "Unavailable (FDA packaging field blank; confirm at pharmacy)",
+      "manufacturer": "AstraZeneca AB",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DR-XY18227",
+        "brand_name_as_registered": "Losec",
+        "generic_name_as_registered": "Omeprazole",
+        "dosage_strength_form_as_registered": "Capsule, 20 mg",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": null,
+        "expiry_date": "05 November 2026",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Losec",
+        "pack": "Unavailable (FDA packaging field blank; confirm at pharmacy)",
+        "unit_basis": "per capsule"
+      },
+      "candidate_generic": {
+        "brand": "Megapraz",
+        "manufacturer": "Drugmaker's Laboratories, Inc.",
+        "pack": "Box of 30 capsules",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-570-02",
+        "registration_expiry": "07 December 2027",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Omeprazole — Oral: 20 mg and 40 mg capsule",
+        "page": 51
+      },
+      "konsulta": {
+        "listed": false,
+        "entry": null,
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": [
+        "FDA packaging field is blank for DR-XY18227. Confirm the retail pack at price collection."
+      ]
+    },
+    {
+      "sku_id": "POC-042",
+      "category": "GI",
+      "generic_name": "Oral rehydration salts (ORS 75-replacement)",
+      "strength": "20.5 g per sachet",
+      "dosage_form": "Powder for oral solution",
+      "brand_name": "E-Lyte",
+      "pack_size": "Box of 10 sachets",
+      "manufacturer": "Medicamen Biotech Limited",
+      "rx_otc": "OTC",
+      "fda_registration": {
+        "registration_number": "DRP-9468",
+        "brand_name_as_registered": "E-Lyte",
+        "generic_name_as_registered": "Oral Rehydration Salt",
+        "dosage_strength_form_as_registered": "20.5 g Powder for Oral Solution",
+        "classification_as_registered": "Over-the-Counter (OTC) Drug",
+        "packaging_as_registered": "Laminated Aluminum Sachets x 20.5 g (Box of 10's)",
+        "expiry_date": "25 January 2031",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "E-Lyte",
+        "pack": "Box of 10 sachets",
+        "unit_basis": "per sachet"
+      },
+      "candidate_generic": {
+        "brand": "Rap-Ors",
+        "manufacturer": "Azarias Pharmaceutical Laboratories, Inc.",
+        "pack": "Box of 10 sachets",
+        "rx_otc": "OTC",
+        "fda_registration_number": "HRP-594",
+        "registration_expiry": "24 April 2028",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Oral Rehydration Salts (ORS 75-replacement) — Oral: reduced-osmolarity ORS, total weight 20.5 g per sachet",
+        "page": 51
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Oral Rehydration Salts (ORS) 20.5 g sachet",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": [
+        "Hydrite 20.5 g was not found (only 4.1 g household-remedy packs); E-Lyte is the verified 20.5 g reference pack."
+      ]
+    },
+    {
+      "sku_id": "POC-043",
+      "category": "GI",
+      "generic_name": "Bisacodyl",
+      "strength": "5 mg",
+      "dosage_form": "Enteric-coated tablet",
+      "brand_name": "Dulcolax",
+      "pack_size": "Box of 120 tablets",
+      "manufacturer": "Sanofi Vietnam Shareholding Company",
+      "rx_otc": "OTC",
+      "fda_registration": {
+        "registration_number": "DR-XY42393",
+        "brand_name_as_registered": "Dulcolax",
+        "generic_name_as_registered": "Bisacodyl",
+        "dosage_strength_form_as_registered": "5 mg Enteric-Coated Tablet",
+        "classification_as_registered": "Over-the-Counter (OTC) Drug",
+        "packaging_as_registered": "Opaque White PVC/PVDC Alu Blister Pack x 4's Packed in Individual Pouch x 3's Box of 120's; Opaque White PVC/PVDC Alu Blister Pack x 4's (Without Individual Pouch) Box of 120's; Opaque White PVC/PVDC Alu Blister Pack x 4's (Box of 4's x 30 packs) Box of 120's; 5 Boxes x 4 Tablets (shelf-ready box)",
+        "expiry_date": "08 August 2028",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Dulcolax",
+        "pack": "Box of 120 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Bisapro",
+        "manufacturer": "Lloyd Laboratories, Inc.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "OTC",
+        "fda_registration_number": "DRP-7552",
+        "registration_expiry": "31 March 2031",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Bisacodyl — Oral: 5 mg tablet; 5 mg MR tablet",
+        "page": 20
+      },
+      "konsulta": {
+        "listed": false,
+        "entry": null,
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-044",
+      "category": "GI",
+      "generic_name": "Domperidone",
+      "strength": "10 mg",
+      "dosage_form": "Tablet",
+      "brand_name": "Motilium",
+      "pack_size": "Box of 100 tablets",
+      "manufacturer": "Interphil Laboratories, Inc",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DR-XY25762",
+        "brand_name_as_registered": "Motilium",
+        "generic_name_as_registered": "Domperidone",
+        "dosage_strength_form_as_registered": "10 mg Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Blister Pack x 10's (Box of 100's)",
+        "expiry_date": "14 December 2029",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Motilium",
+        "pack": "Box of 100 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Gastromec",
+        "manufacturer": "Micro Labs Limited",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "OTC",
+        "fda_registration_number": "DRP-586-02",
+        "registration_expiry": "17 October 2029",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Domperidone — Oral: 10 mg tablet",
+        "page": 29
+      },
+      "konsulta": {
+        "listed": false,
+        "entry": null,
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-045",
+      "category": "Allergy",
+      "generic_name": "Loratadine",
+      "strength": "10 mg",
+      "dosage_form": "Tablet",
+      "brand_name": "Claritin",
+      "pack_size": "Box of 100 tablets",
+      "manufacturer": "PT. Bayer Indonesia",
+      "rx_otc": "OTC",
+      "fda_registration": {
+        "registration_number": "DR-XY46593",
+        "brand_name_as_registered": "Claritin",
+        "generic_name_as_registered": "Loratadine",
+        "dosage_strength_form_as_registered": "10 mg Tablet",
+        "classification_as_registered": "Over-the-Counter (OTC) Drug",
+        "packaging_as_registered": "Alu/PVC/PVDC Blister Pack x 5’s (Box of 5’s); Alu/PVC/PVDC Blister Pack x 10’s (Box of 100’s)",
+        "expiry_date": "04 September 2029",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Claritin",
+        "pack": "Box of 100 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Clarexa",
+        "manufacturer": "Drugmaker's Laboratories, Inc.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "OTC",
+        "fda_registration_number": "DRP-5552-04",
+        "registration_expiry": "28 March 2028",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Loratadine — Oral: 10 mg tablet/film coated tablet",
+        "page": 45
+      },
+      "konsulta": {
+        "listed": false,
+        "entry": null,
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-046",
+      "category": "Allergy",
+      "generic_name": "Chlorphenamine (as maleate)",
+      "strength": "4 mg",
+      "dosage_form": "Tablet",
+      "brand_name": "Antamin",
+      "pack_size": "Box of 100 tablets",
+      "manufacturer": "Pascual Laboratories, Inc.",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DR-2359",
+        "brand_name_as_registered": "Antamin",
+        "generic_name_as_registered": "Chlorphenamine Maleate",
+        "dosage_strength_form_as_registered": "4 mg Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Strip Foil x 10's (Box of 100's)",
+        "expiry_date": "05 April 2027",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Antamin",
+        "pack": "Box of 100 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Allermax",
+        "manufacturer": "Drugmaker’s Laboratories, Inc.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-5201",
+        "registration_expiry": "28 March 2030",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Chlorphenamine (Chlopheniramine) (as maleate) — Oral: 4 mg tablet",
+        "page": 24
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Chlorphenamine (as maleate) 4 mg tablet",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": [
+        "Brand Chlor-Trimeton was not found in the FDA extract; Antamin is the verified reference pack."
+      ]
+    },
+    {
+      "sku_id": "POC-047",
+      "category": "Steroid",
+      "generic_name": "Prednisone",
+      "strength": "10 mg",
+      "dosage_form": "Film-coated tablet",
+      "brand_name": "Biopred",
+      "pack_size": "Box of 100 tablets",
+      "manufacturer": "Lloyd Laboratories, Inc.",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DR-XY31050",
+        "brand_name_as_registered": "Biopred",
+        "generic_name_as_registered": "Prednisone",
+        "dosage_strength_form_as_registered": "10 mg Film-Coated Tablet",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Alu/Clear PVC Blister Pack x 20's (Box of 100's)",
+        "expiry_date": "05 September 2030",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Biopred",
+        "pack": "Box of 100 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Presone",
+        "manufacturer": "Drugmaker's Laboratories, Inc.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-8907",
+        "registration_expiry": "18 June 2030",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Prednisone — Oral: 5 mg, 10 mg and 20 mg tablet",
+        "page": 55
+      },
+      "konsulta": {
+        "listed": true,
+        "entry": "Prednisone 10 mg tablet",
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": [
+        "No originator prednisone brand was identified in the FDA extract; Biopred is the verified reference pack."
+      ]
+    },
+    {
+      "sku_id": "POC-048",
+      "category": "Vitamin / mineral",
+      "generic_name": "Ferrous salt + folic acid",
+      "strength": "60 mg elemental iron + 400 mcg folic acid",
+      "dosage_form": "Film-coated tablet",
+      "brand_name": "Folifex",
+      "pack_size": "Box of 100 tablets",
+      "manufacturer": "Azarias Pharmaceutical Laboratories Inc.",
+      "rx_otc": "OTC",
+      "fda_registration": {
+        "registration_number": "DRP-13739-03",
+        "brand_name_as_registered": "Folifex",
+        "generic_name_as_registered": "Ferrous sulfate + Folic Acid (Vitamin B9)",
+        "dosage_strength_form_as_registered": "187.50 mg (equivalent to 60 mg of elemental Iron)/ 400 mcg Film-Coated Tablet",
+        "classification_as_registered": "Over-the-Counter (OTC) Drug",
+        "packaging_as_registered": "Alu/Deep Red PVC Blister Pack x 10's (Box of 30's, 50's and 100's); Alu/Deep Red PVC Blister Pack x 20's (Box of 100's)",
+        "expiry_date": "03 April 2028",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Folifex",
+        "pack": "Box of 100 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Prenat",
+        "manufacturer": "Medicamen Biotech Limited",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "OTC",
+        "fda_registration_number": "DRP-9881-01",
+        "registration_expiry": "29 June 2031",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Ferrous Salt + Folic Acid — Oral: 60 mg elemental iron + 400 micrograms folic acid per tablet/capsule/film coated tablet",
+        "page": 34
+      },
+      "konsulta": {
+        "listed": false,
+        "entry": null,
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": [
+        "Fefol was not found in the FDA extract; Folifex is the verified reference pack."
+      ]
+    },
+    {
+      "sku_id": "POC-049",
+      "category": "Vitamin / mineral",
+      "generic_name": "Multivitamins",
+      "strength": "Standard adult tablet",
+      "dosage_form": "Tablet",
+      "brand_name": "Enervon",
+      "pack_size": "Bottle of 30 tablets",
+      "manufacturer": "UNILAB, Inc.",
+      "rx_otc": "OTC",
+      "fda_registration": {
+        "registration_number": "DR-XY30455",
+        "brand_name_as_registered": "Enervon",
+        "generic_name_as_registered": "Multivitamins",
+        "dosage_strength_form_as_registered": "Tablet (see reverse for formulation)",
+        "classification_as_registered": "Over-the-Counter (OTC) Drug",
+        "packaging_as_registered": "HDPE bottle with LDPE kwik Cap x 30's",
+        "expiry_date": "06 January 2030",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Enervon",
+        "pack": "Bottle of 30 tablets",
+        "unit_basis": "per tablet"
+      },
+      "candidate_generic": {
+        "brand": "Revitaplex",
+        "manufacturer": "Pharmatechnica Laboratory, Inc.",
+        "pack": "Box of 100 tablets",
+        "rx_otc": "OTC",
+        "fda_registration_number": "DR-XY22685",
+        "registration_expiry": "12 March 2027",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Multivitamins — Oral: composition per adult tablet (see PNF p.49 composition table)",
+        "page": 49
+      },
+      "konsulta": {
+        "listed": false,
+        "entry": null,
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    },
+    {
+      "sku_id": "POC-050",
+      "category": "Topical",
+      "generic_name": "Mupirocin",
+      "strength": "2% (20 mg/g)",
+      "dosage_form": "Ointment, 5 g tube",
+      "brand_name": "Bactroban",
+      "pack_size": "Tube of 5 g",
+      "manufacturer": "Glaxo Operations UK Ltd. Trading as Glaxo Wellcome Operations",
+      "rx_otc": "Rx",
+      "fda_registration": {
+        "registration_number": "DRP-4193",
+        "brand_name_as_registered": "Bactroban",
+        "generic_name_as_registered": "Mupirocin",
+        "dosage_strength_form_as_registered": "20 mg/g (2% w/w) Ointment",
+        "classification_as_registered": "Prescription Drug (Rx)",
+        "packaging_as_registered": "Collapsible Aluminum Tube with Polypropylene Cap x 5 g and 15 g (Box of 1's)",
+        "expiry_date": "11 May 2031",
+        "source": "FDA Verification Portal",
+        "accessed": "2026-10-21"
+      },
+      "price_reference": {
+        "brand": "Bactroban",
+        "pack": "Tube of 5 g",
+        "unit_basis": "per gram"
+      },
+      "candidate_generic": {
+        "brand": "Mupigen",
+        "manufacturer": "Lloyd Laboratories, Inc.",
+        "pack": "Tube of 5 g",
+        "rx_otc": "Rx",
+        "fda_registration_number": "DRP-16442",
+        "registration_expiry": "11 February 2030",
+        "note": "Candidate generic alternative; same molecule/strength/form unless noted. Price rank not verified; not a therapeutic-equivalence claim."
+      },
+      "pnf": {
+        "listed": true,
+        "entry": "Mupirocin — Ointment: 2%, 5 g and 15 g tube",
+        "page": 49
+      },
+      "konsulta": {
+        "listed": false,
+        "entry": null,
+        "as_of": "2024-03-30"
+      },
+      "data_gaps": []
+    }
+  ]
+}
