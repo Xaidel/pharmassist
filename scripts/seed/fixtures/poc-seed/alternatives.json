@@ -1,0 +1,14 @@
+[
+  {
+    "id": "POC-001-ALT-1",
+    "medicine_id": "POC-001",
+    "brand_name": "Amlostan",
+    "manufacturer": "J.M. Tolmann Laboratories Inc.",
+    "pack_size": "Box of 100 tablets",
+    "rx_otc": "Rx",
+    "fda_registration_no": "DRP-3536-03",
+    "registration_expiry": "2031-12-13",
+    "note": "Candidate generic alternative; not a therapeutic-equivalence claim.",
+    "display_order": 1
+  }
+]

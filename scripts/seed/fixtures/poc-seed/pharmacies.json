@@ -1,0 +1,40 @@
+[
+  {
+    "id": "mercury-naga-penafrancia",
+    "name": "Mercury Drug – Naga City Peñafrancia",
+    "brand": "Mercury Drug",
+    "type": "chain",
+    "address": "Panganiban St. cor. Peñafrancia St., Naga City, 4400 Camarines Sur",
+    "barangay": "Dinaga",
+    "latitude": 13.623234,
+    "longitude": 123.185995,
+    "phone": "(054) 472-3214 / (054) 811-2228 / (0968) 878-7678",
+    "hours_text": "24 hours",
+    "open_24h": true,
+    "opening_hours": null,
+    "verification_status": "verified",
+    "data_source": "official chain branch page",
+    "source_url": "https://www.mercurydrug.com/cgi-bin/branchdetail?id2=624",
+    "coordinate_confidence": "high",
+    "notes": "Barangay is inferred from OSM and should not be shown as official."
+  },
+  {
+    "id": "south-star-naga-3",
+    "name": "South Star Drug – SSD Naga 3",
+    "brand": "South Star Drug",
+    "type": "chain",
+    "address": "Crown Hotel Bldg., E. Angeles St. cor. P. Burgos St., San Francisco, Naga City, Camarines Sur",
+    "barangay": "San Francisco",
+    "latitude": 13.624095,
+    "longitude": 123.185544,
+    "phone": "+63 942 669 0337",
+    "hours_text": "24 hours",
+    "open_24h": true,
+    "opening_hours": null,
+    "verification_status": "verified",
+    "data_source": "official chain store page",
+    "source_url": "https://southstardrug.com.ph/pages/store-locations",
+    "coordinate_confidence": "high",
+    "notes": null
+  }
+]

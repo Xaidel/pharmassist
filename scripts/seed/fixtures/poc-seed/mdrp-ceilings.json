@@ -1,0 +1,25 @@
+[
+  {
+    "id": "EO104-044",
+    "order_id": "EO 104 s. 2020",
+    "order_signed": "2020-02-17",
+    "annex_row": 44,
+    "category": "Antidiabetic Drugs",
+    "molecule": "Metformin + Sitagliptin",
+    "molecules": ["Metformin", "Sitagliptin"],
+    "strength": "500 mg + 50 mg",
+    "dosage_form": "film-coated tablet",
+    "pack_size": null,
+    "strength_and_form_raw": "500 mg + 50 mg film-coated tablet",
+    "mwp_php": 25.05,
+    "mrp_php": 30.31,
+    "price_basis": "per_unit",
+    "price_unit": "tablet",
+    "vat_exclusive_mrp": true,
+    "voluntary_price_reduction": false,
+    "source_url": "https://www.officialgazette.gov.ph/downloads/2020/02feb/20200217-EO-104-RRD.pdf",
+    "source_pdf_page": 5,
+    "checked_at": "2026-10-21",
+    "notes": null
+  }
+]
