@@ -1,12 +1,14 @@
 import { expect, test } from '@playwright/test'
 
-test('serves the placeholder shell and registers the app-shell worker', async ({
+test('serves the search-first shell and registers the app-shell worker', async ({
   page,
 }) => {
   await page.goto('/')
 
   await expect(
-    page.getByRole('heading', { name: 'The scaffold is up.' }),
+    page.getByRole('heading', {
+      name: 'Know the shelf price before you leave.',
+    }),
   ).toBeVisible()
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(
     'href',

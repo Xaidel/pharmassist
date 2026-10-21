@@ -13,6 +13,7 @@ export type SourceModule = {
   exportedImports: string[]
   unresolvedDynamicImport: boolean
   serverCallbackImports: string[]
+  serverHandlerImports: string[]
 }
 
 /** Reads dependency syntax, including exports, side effects and literal dynamic imports. */
@@ -171,6 +172,38 @@ export function inspectModule(source: string): SourceModule {
     ts.forEachChild(node, (child) => inspectUses(child, protectedCallback))
   }
   inspectUses(file)
+  const serverHandlerUses = new Set<string>()
+  const outsideServerHandlerUses = new Set<string>()
+  function collectHandlerUses(node: ts.Node): void {
+    if (ts.isImportDeclaration(node)) return
+    if (ts.isIdentifier(node) && imported.has(node.text))
+      serverHandlerUses.add(node.text)
+    ts.forEachChild(node, collectHandlerUses)
+  }
+  function inspectServerHandlerProperties(node: ts.Node): void {
+    if (ts.isImportDeclaration(node)) return
+    if (
+      ts.isPropertyAssignment(node) &&
+      (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name)) &&
+      node.name.text === 'server'
+    ) {
+      collectHandlerUses(node.initializer)
+      return
+    }
+    if (ts.isIdentifier(node) && imported.has(node.text))
+      outsideServerHandlerUses.add(node.text)
+    ts.forEachChild(node, inspectServerHandlerProperties)
+  }
+  inspectServerHandlerProperties(file)
+  function handlerOnlyImport(specifier: string): boolean {
+    const names = [...imported]
+      .filter(([, target]) => target === specifier)
+      .map(([name]) => name)
+    return (
+      names.some((name) => serverHandlerUses.has(name)) &&
+      names.every((name) => !outsideServerHandlerUses.has(name))
+    )
+  }
   return {
     dependencies,
     exportedImports: [...exported].flatMap((name) => {
@@ -188,6 +221,9 @@ export function inspectModule(source: string): SourceModule {
           names.every((name) => !unprotectedUses.has(name))
         )
       },
+    ),
+    serverHandlerImports: [...new Set(imported.values())].filter(
+      handlerOnlyImport,
     ),
   }
 }
@@ -334,11 +370,15 @@ export function boundaryFindings(sources: Map<string, string>): string[] {
         (owner !== undefined || target.startsWith('src/routes/'))
       )
         findings.push(`${path}: shared/lib must not import ${target}`)
+      const routeHandlerOnlyImport =
+        path.startsWith('src/routes/') &&
+        module.serverHandlerImports.includes(dependency.specifier)
       if (
         !dependency.typeOnly &&
         serverOnly(target) &&
         !serverOnly(path) &&
         !path.endsWith('.functions.ts') &&
+        !routeHandlerOnlyImport &&
         !(
           path.endsWith('.middleware.ts') &&
           module.serverCallbackImports.includes(dependency.specifier)

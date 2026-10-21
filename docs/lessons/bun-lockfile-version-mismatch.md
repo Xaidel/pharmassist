@@ -10,3 +10,5 @@ npx -y bun@1.4.2 run verify
 ```
 
 Do not regenerate the lockfile with the older runtime; that downgrades the format for every other contributor and defeats the pinned toolchain.
+
+`bun run verify` also runs `tests/server-capabilities/run.ts`, which spawns plain `bun` from `PATH` for the staged fixture. When the global Bun is older, prepend the pinned Bun's directory to `PATH` for the whole verify run; otherwise the parent scripts use 1.4.2 and the fixture children fall back to the older runtime and fail the same lockfile check.

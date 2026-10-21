@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { collectSourceFiles, importSpecifiers, readSource } from './helpers'
-import { boundaryFindings } from './dependency-graph'
+import { boundaryFindings, inspectModule } from './dependency-graph'
 
 const workspaceRoot = new URL('../..', import.meta.url)
 
@@ -188,10 +188,26 @@ describe('client and server source boundaries', () => {
         !path.endsWith('.test.tsx'),
     )
 
-    const sources = await Promise.all(clientPaths.map(readSource))
+    const sources = await Promise.all(
+      clientPaths.map(async (path) => ({
+        path,
+        source: await readSource(path),
+      })),
+    )
 
-    for (const source of sources) {
-      expect(source).not.toMatch(/from ['"][^'"]+\.server['"]/)
+    for (const { path, source } of sources) {
+      const handlerOnlyImports = path.startsWith('src/routes/')
+        ? inspectModule(source).serverHandlerImports
+        : []
+      const withoutHandlerImports = handlerOnlyImports.reduce(
+        (current, specifier) =>
+          current
+            .replaceAll(`from '${specifier}'`, '')
+            .replaceAll(`from "${specifier}"`, ''),
+        source,
+      )
+
+      expect(withoutHandlerImports).not.toMatch(/from ['"][^'"]+\.server['"]/)
       expect(source).not.toContain('@tanstack/react-start/server')
     }
   })
