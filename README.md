@@ -34,7 +34,7 @@ bun install --frozen-lockfile
 bun run dev
 ```
 
-The dev server listens on <http://localhost:3000>. The app shell does not read Postgres yet; the database tooling and schema are ready for the feature slices.
+The dev server listens on <http://localhost:3000>. Search reads Postgres, so start the database and load the seed before using the home screen.
 
 ## Container stack
 
@@ -94,7 +94,7 @@ bun run db:acceptance
 | `bun run db:acceptance` | Prove migrations, idempotent seed, and guarded wipe on a scratch database |
 | `bun run verify` | Format, lint, typecheck, tests, browser acceptance, and capability fixture |
 
-Install Chromium once before browser tests: `bunx playwright install chromium`.
+Install Chromium once before browser tests: `bunx playwright install chromium`. Browser acceptance reads the seeded database, so `bun run verify` requires a running Postgres with `bun run db:migrate` and `bun run db:seed` applied, and `DATABASE_URL` set.
 
 ## PWA
 
@@ -112,4 +112,4 @@ Material that governs derived applications belongs in `template_docs/`. Material
 
 ## Status
 
-The scaffold, PWA, Compose stack, Postgres schema, and seed/wipe tooling are in place. Search, map results, basket ranking, pharmacy detail, directions, mocked scan, and report flows are subsequent slices in [the POC map](https://github.com/Xaidel/pharmassist/issues/17).
+The scaffold, PWA, Compose stack, Postgres schema, seed/wipe tooling, and typo-tolerant medicine search with anonymous search events are in place. Map results, basket ranking, pharmacy detail, directions, mocked scan, and report flows are subsequent slices in [the POC map](https://github.com/Xaidel/pharmassist/issues/17).

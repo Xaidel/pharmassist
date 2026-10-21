@@ -21,6 +21,37 @@ describe('dependency syntax and server capability boundaries', () => {
       ),
     ).toBe(true)
   })
+  it('permits route server handlers to use a feature server operation', () => {
+    const sources = new Map([
+      [
+        'src/routes/api.search.ts',
+        `import { handleSearch } from '#/features/search/search.server'; export const Route = createFileRoute('/api/search')({ server: { handlers: { GET: () => handleSearch() } } })`,
+      ],
+      [
+        'src/features/search/search.server.ts',
+        'export function handleSearch() {}',
+      ],
+    ])
+    expect(boundaryFindings(sources)).toEqual([])
+  })
+  it('rejects a route component reaching the same server operation', () => {
+    const sources = new Map([
+      [
+        'src/routes/leaky.tsx',
+        `import { handleSearch } from '#/features/search/search.server'; export const Route = createFileRoute('/leaky')({ component: () => handleSearch(), server: { handlers: { GET: () => handleSearch() } } })`,
+      ],
+      [
+        'src/features/search/search.server.ts',
+        'export function handleSearch() {}',
+      ],
+    ])
+    expect(
+      boundaryFindings(sources).some((finding) =>
+        finding.includes('client-safe module imports'),
+      ),
+    ).toBe(true)
+  })
+
   it('distinguishes type-only, side-effect, re-export and literal dynamic links', () => {
     const inspected =
       inspectModule(`import type { Contract } from './types.server';
