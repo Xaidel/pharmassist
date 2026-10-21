@@ -278,7 +278,11 @@ async function verifyMdrp(databaseUrl: string): Promise<void> {
          from price_record_with_mdrp
         where seed_batch_id = 'poc-seed'`,
     )
-    const janumet = rows.rows.find((row) => row.medicine_id === 'POC-016')
+    const janumet = rows.rows.find(
+      (row) =>
+        row.medicine_id === 'POC-016' &&
+        row.pharmacy_id === 'mercury-naga-penafrancia',
+    )
     assert(
       janumet?.mdrp_entry_id === 'EO104-044',
       'POC-016 must carry EO104-044',
@@ -291,7 +295,7 @@ async function verifyMdrp(databaseUrl: string): Promise<void> {
       Number(janumet.mdrp_observed_price_php) === 35,
       'POC-016 observed unit price must be 35.00',
     )
-    const component = rows.rows.find((row) => row.medicine_id === 'POC-090')
+    const component = rows.rows.find((row) => row.medicine_id === 'POC-015')
     assert(
       component?.mdrp_entry_id === null,
       'A combination ceiling must not attach to its metformin component',
@@ -459,8 +463,8 @@ export async function runAcceptance(baseDatabaseUrl: string): Promise<void> {
 
     const reseed = await runSeed({ config, fixtureDirectory })
     assert(
-      reseed.counts.medicine === 4,
-      'Reseeding after a wipe should restore the fixture',
+      reseed.counts.medicine === 50,
+      'Reseeding after a wipe should restore the full fixture',
     )
     await runWipe({ config })
     const finalCounts = await seedCounts(scratch.url)

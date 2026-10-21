@@ -6,6 +6,7 @@ import type { Client } from 'pg'
 import { assertSeedAllowed, readConfig, type ToolingConfig } from '../db/config'
 import { connect, inTransaction, ToolingError } from '../db/database'
 
+import { assertDemoCases } from './demo-cases'
 import { loadFixture, type SeedBundle } from './fixture'
 import { expectedMdrpAttachments } from './mdrp-match'
 
@@ -687,7 +688,9 @@ export async function runSeed(options: SeedOptions): Promise<SeedReport> {
       await upsertMdrpCeilings(client, bundle)
       await upsertAlternatives(client, bundle)
       await upsertPrices(client, bundle)
-      return validateSeed(client, bundle)
+      const counts = await validateSeed(client, bundle)
+      await assertDemoCases(client, POC_SEED_BATCH_ID)
+      return counts
     })
 
     return {
