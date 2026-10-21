@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader } from '#/shared/components/ui/card'
 import type { MedicineSummary } from '#/shared/domain/medicine-summary'
 
 import {
-  BASKET_MAX_PACKS,
-  BASKET_MIN_PACKS,
+  BASKET_MAX_QUANTITY,
+  BASKET_MIN_QUANTITY,
   type BasketLine,
 } from '../results.domain'
 
@@ -15,24 +15,23 @@ type BasketPanelProps = {
   items: readonly BasketLine[]
   medicines: readonly MedicineSummary[]
   busy: boolean
-  onPacksChange: (medicineId: string, packs: number) => void
+  onQuantityChange: (medicineId: string, quantity: number) => void
   onRemove: (medicineId: string) => void
   onClear: () => void
 }
 
-/** Render the session basket and its pack controls. */
+/** Render the session basket and its base-unit quantity controls. */
 export function BasketPanel({
   items,
   medicines,
   busy,
-  onPacksChange,
+  onQuantityChange,
   onRemove,
   onClear,
 }: BasketPanelProps): React.JSX.Element {
   const medicineById = new Map(
     medicines.map((medicine) => [medicine.medicine_id, medicine]),
   )
-  const packCount = items.reduce((sum, item) => sum + item.packs, 0)
 
   return (
     <Card aria-busy={busy} className="mt-6">
@@ -41,7 +40,7 @@ export function BasketPanel({
           <h2 className="font-display text-2xl font-semibold">Your basket</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {items.length} {items.length === 1 ? 'medicine' : 'medicines'} ·{' '}
-            {packCount} {packCount === 1 ? 'pack' : 'packs'}
+            {items.length === 1 ? 'one quantity line' : 'quantity lines'}
           </p>
         </div>
         <Button
@@ -75,15 +74,15 @@ export function BasketPanel({
                 )}
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                   <div
-                    aria-label={`Packs of ${label}`}
+                    aria-label={`Quantity of ${label}`}
                     className="flex items-center gap-2"
                     role="group"
                   >
                     <Button
-                      aria-label={`Remove one pack of ${label}`}
-                      disabled={busy || item.packs <= BASKET_MIN_PACKS}
+                      aria-label={`Reduce the quantity of ${label}`}
+                      disabled={busy || item.quantity <= BASKET_MIN_QUANTITY}
                       onClick={() => {
-                        onPacksChange(item.medicine_id, item.packs - 1)
+                        onQuantityChange(item.medicine_id, item.quantity - 1)
                       }}
                       size="icon"
                       type="button"
@@ -93,15 +92,15 @@ export function BasketPanel({
                     </Button>
                     <span
                       aria-live="polite"
-                      className="min-w-8 text-center text-sm font-semibold"
+                      className="min-w-16 text-center text-sm font-semibold"
                     >
-                      {item.packs}
+                      {item.quantity} {item.unit}
                     </span>
                     <Button
-                      aria-label={`Add one pack of ${label}`}
-                      disabled={busy || item.packs >= BASKET_MAX_PACKS}
+                      aria-label={`Increase the quantity of ${label}`}
+                      disabled={busy || item.quantity >= BASKET_MAX_QUANTITY}
                       onClick={() => {
-                        onPacksChange(item.medicine_id, item.packs + 1)
+                        onQuantityChange(item.medicine_id, item.quantity + 1)
                       }}
                       size="icon"
                       type="button"
@@ -137,8 +136,8 @@ export function BasketPanel({
         </div>
 
         <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-          Totals multiply each pharmacy&apos;s pack shelf price by the number of
-          packs. Prices are per pack, not per tablet.
+          Quantities are counted in each medicine&apos;s base unit. Pharmacies
+          fulfill them with their observed pack, strip, or loose forms.
         </p>
       </CardContent>
     </Card>

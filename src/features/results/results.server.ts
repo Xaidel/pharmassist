@@ -1,13 +1,18 @@
 import { readServerConfig } from '#/lib/config.server'
 import { queryRows } from '#/lib/db.server'
-import type { MedicineSummary } from '#/shared/domain/medicine-summary'
+import type {
+  BaseUnit,
+  MedicineSummary,
+} from '#/shared/domain/medicine-summary'
 
 import {
   BASKET_MAX_ITEMS,
+  BASKET_MAX_QUANTITY,
   buildRankedResults,
   manilaClock,
   STALE_AFTER_DAYS,
   type BasketLine,
+  type BasketMedicine,
   type Origin,
 } from './results.domain'
 import { createResultsRepository } from './results.repository.server'
@@ -15,6 +20,7 @@ import {
   basketResponseSchema,
   resultsResponseSchema,
   type Basket,
+  type BasketItemInput,
   type BasketRequest,
   type BasketResponse,
   type ResultsRequest,
@@ -23,14 +29,18 @@ import {
 
 const repository = createResultsRepository(queryRows)
 
+type BasketFailureCode =
+  | 'INVALID_REQUEST'
+  | 'UNKNOWN_MEDICINE'
+  | 'DUPLICATE_MEDICINE'
+  | 'BASKET_TOO_LARGE'
+  | 'INVALID_UNIT'
+  | 'INVALID_QUANTITY'
+
 /** A validated basket error the route renders as the shared API envelope. */
 export type BasketFailure = {
   status: 400 | 422
-  code:
-    | 'INVALID_REQUEST'
-    | 'UNKNOWN_MEDICINE'
-    | 'DUPLICATE_MEDICINE'
-    | 'BASKET_TOO_LARGE'
+  code: BasketFailureCode
   message: string
   details?: unknown
 }
@@ -43,21 +53,26 @@ export type BasketOutcome =
 export type ResultsOutcome =
   { ok: true; response: ResultsResponse } | { ok: false; error: BasketFailure }
 
-function duplicateMedicineIds(lines: readonly BasketLine[]): string[] {
+type ResolvedBasket = {
+  lines: BasketLine[]
+  medicines: MedicineSummary[]
+}
+
+function duplicateMedicineIds(items: readonly BasketItemInput[]): string[] {
   const seen = new Set<string>()
   const duplicates = new Set<string>()
-  for (const line of lines) {
-    if (seen.has(line.medicine_id)) {
-      duplicates.add(line.medicine_id)
+  for (const item of items) {
+    if (seen.has(item.medicine_id)) {
+      duplicates.add(item.medicine_id)
     }
-    seen.add(line.medicine_id)
+    seen.add(item.medicine_id)
   }
   return [...duplicates]
 }
 
 function fail(
   status: BasketFailure['status'],
-  code: BasketFailure['code'],
+  code: BasketFailureCode,
   message: string,
   details?: unknown,
 ): { ok: false; error: BasketFailure } {
@@ -68,13 +83,40 @@ function fail(
   return { ok: false, error }
 }
 
-async function readBasketMedicines(
-  lines: readonly BasketLine[],
+function isCountableUnit(unit: BaseUnit): boolean {
+  return unit !== 'mL' && unit !== 'g'
+}
+
+function hasAtMostThreeDecimals(value: number): boolean {
+  return Math.abs(value * 1000 - Math.round(value * 1000)) < 1e-6
+}
+
+function isValidQuantity(value: number, unit: BaseUnit): boolean {
+  if (!Number.isFinite(value) || value <= 0) {
+    return false
+  }
+  if (value > BASKET_MAX_QUANTITY) {
+    return false
+  }
+  return isCountableUnit(unit)
+    ? Number.isInteger(value)
+    : hasAtMostThreeDecimals(value)
+}
+
+async function resolveBasket(
+  items: readonly BasketItemInput[],
 ): Promise<
-  | { ok: true; medicines: MedicineSummary[] }
-  | { ok: false; error: BasketFailure }
+  { ok: true; basket: ResolvedBasket } | { ok: false; error: BasketFailure }
 > {
-  const duplicates = duplicateMedicineIds(lines)
+  if (items.length > BASKET_MAX_ITEMS) {
+    return fail(
+      422,
+      'BASKET_TOO_LARGE',
+      `A basket cannot contain more than ${String(BASKET_MAX_ITEMS)} items.`,
+    )
+  }
+
+  const duplicates = duplicateMedicineIds(items)
   if (duplicates.length > 0) {
     return fail(
       422,
@@ -84,10 +126,12 @@ async function readBasketMedicines(
     )
   }
 
-  const ids = lines.map((line) => line.medicine_id)
+  const ids = items.map((item) => item.medicine_id)
   const medicines = await repository.readMedicines(ids)
-  const found = new Set(medicines.map((medicine) => medicine.medicine_id))
-  const unknown = ids.filter((id) => !found.has(id))
+  const medicineById = new Map(
+    medicines.map((medicine) => [medicine.medicine_id, medicine]),
+  )
+  const unknown = ids.filter((id) => !medicineById.has(id))
   if (unknown.length > 0) {
     return fail(
       422,
@@ -97,7 +141,44 @@ async function readBasketMedicines(
     )
   }
 
-  return { ok: true, medicines }
+  const lines: BasketLine[] = []
+  for (const item of items) {
+    const medicine = medicineById.get(item.medicine_id)
+    if (medicine === undefined) {
+      throw new Error(`Missing medicine ${item.medicine_id} after validation`)
+    }
+    if (item.unit === undefined || item.unit !== medicine.base_unit) {
+      return fail(
+        422,
+        'INVALID_UNIT',
+        `The unit must match the medicine's base unit (${medicine.base_unit}).`,
+        {
+          medicine_id: item.medicine_id,
+          expected_unit: medicine.base_unit,
+        },
+      )
+    }
+    if (!isValidQuantity(item.quantity, medicine.base_unit)) {
+      return fail(
+        422,
+        'INVALID_QUANTITY',
+        isCountableUnit(medicine.base_unit)
+          ? `The quantity must be a positive whole number of ${medicine.base_unit}s up to ${String(BASKET_MAX_QUANTITY)}.`
+          : `The quantity must be positive, have at most three decimal places, and not exceed ${String(BASKET_MAX_QUANTITY)}.`,
+        {
+          medicine_id: item.medicine_id,
+          unit: medicine.base_unit,
+        },
+      )
+    }
+    lines.push({
+      medicine_id: item.medicine_id,
+      quantity: item.quantity,
+      unit: medicine.base_unit,
+    })
+  }
+
+  return { ok: true, basket: { lines, medicines } }
 }
 
 function buildBasket(
@@ -114,7 +195,8 @@ function buildBasket(
     }
     return {
       medicine_id: line.medicine_id,
-      packs: line.packs,
+      quantity: line.quantity,
+      unit: line.unit,
       medicine,
     }
   })
@@ -122,7 +204,6 @@ function buildBasket(
   return {
     items,
     item_count: items.length,
-    pack_count: items.reduce((sum, item) => sum + item.packs, 0),
     currency: 'PHP',
   }
 }
@@ -131,23 +212,15 @@ function buildBasket(
 export async function handleBasket(
   input: BasketRequest,
 ): Promise<BasketOutcome> {
-  if (input.items.length > BASKET_MAX_ITEMS) {
-    return fail(
-      400,
-      'INVALID_REQUEST',
-      `A basket cannot contain more than ${String(BASKET_MAX_ITEMS)} items.`,
-    )
-  }
-
-  const medicines = await readBasketMedicines(input.items)
-  if (!medicines.ok) {
-    return medicines
+  const resolved = await resolveBasket(input.items)
+  if (!resolved.ok) {
+    return resolved
   }
 
   return {
     ok: true,
     response: basketResponseSchema.parse({
-      basket: buildBasket(input.items, medicines.medicines),
+      basket: buildBasket(resolved.basket.lines, resolved.basket.medicines),
     }),
   }
 }
@@ -156,17 +229,9 @@ export async function handleBasket(
 export async function handleResults(
   input: ResultsRequest,
 ): Promise<ResultsOutcome> {
-  if (input.items.length > BASKET_MAX_ITEMS) {
-    return fail(
-      422,
-      'BASKET_TOO_LARGE',
-      `A basket cannot contain more than ${String(BASKET_MAX_ITEMS)} items.`,
-    )
-  }
-
-  const medicines = await readBasketMedicines(input.items)
-  if (!medicines.ok) {
-    return medicines
+  const resolved = await resolveBasket(input.items)
+  if (!resolved.ok) {
+    return resolved
   }
 
   const config = readServerConfig()
@@ -176,9 +241,9 @@ export async function handleResults(
       ? 'naga_center'
       : 'device'
   const now = new Date()
-  const medicineIds = input.items.map((line) => line.medicine_id)
+  const medicineIds = resolved.basket.lines.map((line) => line.medicine_id)
 
-  const [pharmacies, prices, alternatives] = await Promise.all([
+  const [pharmacies, forms, alternatives] = await Promise.all([
     repository.readPharmacies(),
     repository.readPrices(medicineIds),
     repository.readAlternatives(medicineIds),
@@ -189,17 +254,20 @@ export async function handleResults(
   })
   const reports = await repository.readReports(resultKeys)
 
-  const ranked = buildRankedResults({
-    basket: input.items,
-    medicines: medicines.medicines.map((medicine) => ({
+  const medicines: BasketMedicine[] = resolved.basket.medicines.map(
+    (medicine) => ({
       medicine_id: medicine.medicine_id,
       brand_name: medicine.brand_name,
       generic_name: medicine.generic_name,
       strength: medicine.strength,
       dosage_form: medicine.dosage_form,
-    })),
+    }),
+  )
+  const ranked = buildRankedResults({
+    basket: resolved.basket.lines,
+    medicines,
     pharmacies,
-    prices,
+    forms,
     alternatives,
     reports,
     origin,
@@ -208,7 +276,7 @@ export async function handleResults(
   })
 
   const response = resultsResponseSchema.parse({
-    basket: buildBasket(input.items, medicines.medicines),
+    basket: buildBasket(resolved.basket.lines, resolved.basket.medicines),
     origin: {
       latitude: origin.latitude,
       longitude: origin.longitude,

@@ -1,10 +1,12 @@
+import type { BaseUnit } from '#/shared/domain/medicine-summary'
+
 import {
   BASKET_MAX_ITEMS,
-  BASKET_MAX_PACKS,
-  BASKET_MIN_PACKS,
-  basketLinesSchema,
+  BASKET_MAX_QUANTITY,
+  BASKET_MIN_QUANTITY,
   type BasketLine,
 } from './results.domain'
+import { basketLinesSchema } from './results.schema'
 
 const BASKET_STORAGE_KEY = 'pharmassist.basket'
 
@@ -69,10 +71,11 @@ export type AddBasketLineOutcome =
   | { lines: BasketLine[]; added: true }
   | { lines: BasketLine[]; added: false; reason: 'duplicate' | 'full' }
 
-/** Add one medicine at one pack, preserving the existing order. */
+/** Add one medicine at one base unit, preserving the existing order. */
 export function addBasketLine(
   lines: readonly BasketLine[],
   medicineId: string,
+  unit: BaseUnit,
 ): AddBasketLineOutcome {
   if (lines.some((line) => line.medicine_id === medicineId)) {
     return { lines: [...lines], added: false, reason: 'duplicate' }
@@ -81,23 +84,23 @@ export function addBasketLine(
     return { lines: [...lines], added: false, reason: 'full' }
   }
   return {
-    lines: [...lines, { medicine_id: medicineId, packs: 1 }],
+    lines: [...lines, { medicine_id: medicineId, quantity: 1, unit }],
     added: true,
   }
 }
 
-/** Change one basket line's pack count within the contract limits. */
-export function setBasketPacks(
+/** Change one basket line's quantity within the contract limits. */
+export function setBasketQuantity(
   lines: readonly BasketLine[],
   medicineId: string,
-  packs: number,
+  quantity: number,
 ): BasketLine[] {
   const clamped = Math.min(
-    BASKET_MAX_PACKS,
-    Math.max(BASKET_MIN_PACKS, Math.trunc(packs)),
+    BASKET_MAX_QUANTITY,
+    Math.max(BASKET_MIN_QUANTITY, Math.trunc(quantity)),
   )
   return lines.map((line) =>
-    line.medicine_id === medicineId ? { ...line, packs: clamped } : line,
+    line.medicine_id === medicineId ? { ...line, quantity: clamped } : line,
   )
 }
 

@@ -36,6 +36,7 @@ const eventSchema = z.discriminatedUnion('name', [
     properties: z.strictObject({
       item_count: countSchema,
       complete_count: countSchema,
+      sold_per_pack_only_count: countSchema,
       incomplete_count: countSchema,
       no_price_count: countSchema,
       sort: sortSchema,

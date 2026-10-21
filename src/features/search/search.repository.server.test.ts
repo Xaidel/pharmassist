@@ -19,11 +19,12 @@ const row: SearchRow = {
   generic_name: 'Amoxicillin (as trihydrate)',
   strength: '500 mg',
   dosage_form: 'Capsule',
-  pack_size: 'Box of 100 capsules',
+  base_unit: 'capsule',
   manufacturer: 'Glaxo Wellcome Production',
   rx_otc: 'Rx',
   pnf_listed: true,
   konsulta_listed: true,
+  available_forms: ['pack', 'strip', 'loose'],
   candidate_generic_count: 0,
   brand_matched: false,
   generic_matched: true,
@@ -57,6 +58,7 @@ describe('createSearchRepository', () => {
 
     expect(items).toHaveLength(1)
     expect(items[0]?.medicine.medicine_id).toBe('POC-025')
+    expect(items[0]?.available_forms).toEqual(['pack', 'strip', 'loose'])
     expect(items[0]?.match).toEqual({
       field: 'generic',
       type: 'trigram',
@@ -74,6 +76,7 @@ describe('createSearchRepository', () => {
     expect(calls[0]?.text).toContain('word_similarity')
     expect(calls[0]?.text).toContain('where active')
     expect(calls[0]?.text).toContain('candidate_generic_count')
+    expect(calls[0]?.text).toContain('available_forms')
   })
 
   it('returns an empty list without a database call for an empty query', async () => {

@@ -24,6 +24,7 @@ const VALID_EVENTS: AppEvent[] = [
     properties: {
       item_count: 2,
       complete_count: 3,
+      sold_per_pack_only_count: 2,
       incomplete_count: 2,
       no_price_count: 1,
       sort: 'price',

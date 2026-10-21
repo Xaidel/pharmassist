@@ -6,17 +6,17 @@ import type { MedicineSummary } from '#/shared/domain/medicine-summary'
 import type { ResultsResponse } from '../results.schema'
 import {
   formatDistance,
-  formatMissingReason,
   formatOpenNow,
   formatPeso,
   formatVerified,
 } from '../results.format'
 
-import { PriceLineItem } from './price-line'
+import { ResultItemList } from './result-items'
 
 type CompleteResult = ResultsResponse['complete'][number]
+type SoldResult = ResultsResponse['sold_per_pack_only'][number]
 type IncompleteResult = ResultsResponse['incomplete'][number]
-type Result = CompleteResult | IncompleteResult
+type Result = CompleteResult | SoldResult | IncompleteResult
 
 type ResultCardProps = {
   id: string
@@ -30,15 +30,17 @@ type ResultCardProps = {
 
 function oldestVerifiedAt(result: Result): string | null {
   let oldest: string | null = null
-  for (const price of result.prices) {
-    if (oldest === null || price.verified_at < oldest) {
-      oldest = price.verified_at
+  for (const item of result.items) {
+    for (const component of item.components) {
+      if (oldest === null || component.verified_at < oldest) {
+        oldest = component.verified_at
+      }
     }
   }
   return oldest
 }
 
-/** Render one ranked pharmacy with its trust states and price breakdown. */
+/** Render one ranked pharmacy with its trust states and fulfillment breakdown. */
 export function ResultCard({
   id,
   result,
@@ -48,13 +50,14 @@ export function ResultCard({
   onShowRoute,
   onOpenDetail,
 }: ResultCardProps): React.JSX.Element {
-  const medicineById = new Map(
-    medicines.map((medicine) => [medicine.medicine_id, medicine]),
+  const aboveMdrp = result.items.some((item) =>
+    item.forms.some((offer) => offer.mdrp?.above === true),
   )
-  const aboveMdrp = result.prices.some((price) => price.mdrp?.above === true)
-  const stale = result.prices.some((price) => price.stale)
-  const lowStock = result.prices.some(
-    (price) => price.stock_status === 'low_stock',
+  const stale = result.items.some((item) =>
+    item.forms.some((offer) => offer.stale === true),
+  )
+  const lowStock = result.items.some((item) =>
+    item.forms.some((offer) => offer.stock_status === 'low_stock'),
   )
   const verified = oldestVerifiedAt(result)
 
@@ -78,6 +81,9 @@ export function ResultCard({
             {cheapest && (
               <Badge variant="primary-strong">Cheapest complete</Badge>
             )}
+            {result.status === 'sold_per_pack_only' && (
+              <Badge>Sold per pack only</Badge>
+            )}
             {aboveMdrp && (
               <Badge variant="destructive">Above MDRP ceiling</Badge>
             )}
@@ -100,18 +106,28 @@ export function ResultCard({
         </p>
 
         <div className="mt-4">
-          {result.status === 'complete' ? (
+          {result.status === 'complete' && (
             <>
               <p className="font-display text-3xl font-semibold">
                 {formatPeso(result.total_shelf_price_php)}
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                {result.prices.length}{' '}
-                {result.prices.length === 1 ? 'item' : 'items'} in the complete
-                basket
+                Exact total for {result.items.length}{' '}
+                {result.items.length === 1 ? 'medicine' : 'medicines'}
               </p>
             </>
-          ) : (
+          )}
+          {result.status === 'sold_per_pack_only' && (
+            <>
+              <p className="font-display text-2xl font-semibold">
+                {formatPeso(result.covering_total_php)} to buy
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                No exact combination; covering purchases are listed per item.
+              </p>
+            </>
+          )}
+          {result.status === 'incomplete' && (
             <>
               <p className="font-display text-2xl font-semibold">
                 {formatPeso(result.known_total_php)} known
@@ -121,22 +137,6 @@ export function ResultCard({
                 {result.missing_items.length === 1 ? 'item' : 'items'} missing
                 from this basket
               </p>
-              <ul className="mt-3 space-y-2">
-                {result.missing_items.map((item) => (
-                  <li
-                    className="flex flex-wrap items-center gap-2 text-sm"
-                    key={item.medicine_id}
-                  >
-                    <span className="font-medium">
-                      {item.brand_name ?? item.generic_name}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {item.strength} · {item.dosage_form}
-                    </span>
-                    <Badge>{formatMissingReason(item.reason)}</Badge>
-                  </li>
-                ))}
-              </ul>
             </>
           )}
         </div>
@@ -156,23 +156,7 @@ export function ResultCard({
           </Button>
         </div>
 
-        <details className="mt-4 border-t border-border pt-3">
-          <summary className="cursor-pointer text-sm font-semibold text-primary">
-            Price breakdown ({result.prices.length})
-          </summary>
-          <ul className="mt-3 space-y-4">
-            {result.prices.map((price) => {
-              const medicine = medicineById.get(price.medicine_id)
-              return (
-                <PriceLineItem
-                  key={price.medicine_id}
-                  medicine={medicine}
-                  price={price}
-                />
-              )
-            })}
-          </ul>
-        </details>
+        <ResultItemList items={result.items} medicines={medicines} />
       </div>
     </Card>
   )

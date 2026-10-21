@@ -62,7 +62,7 @@ export function CandidateGenerics({
                         </Badge>
                       </div>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        {[item.manufacturer, item.pack_size]
+                        {[item.manufacturer, item.reference_pack_size]
                           .filter((value) => value !== null)
                           .join(' · ')}
                       </p>
