@@ -95,12 +95,16 @@ export function setBasketQuantity(
   medicineId: string,
   quantity: number,
 ): BasketLine[] {
+  if (!Number.isFinite(quantity)) {
+    return [...lines]
+  }
   const clamped = Math.min(
     BASKET_MAX_QUANTITY,
-    Math.max(BASKET_MIN_QUANTITY, Math.trunc(quantity)),
+    Math.max(BASKET_MIN_QUANTITY, quantity),
   )
+  const normalized = Math.round(clamped * 1000) / 1000
   return lines.map((line) =>
-    line.medicine_id === medicineId ? { ...line, quantity: clamped } : line,
+    line.medicine_id === medicineId ? { ...line, quantity: normalized } : line,
   )
 }
 

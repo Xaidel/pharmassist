@@ -115,6 +115,14 @@ describe('session basket', () => {
     expect(removeBasketLine(lines, 'POC-001')).toEqual([])
   })
 
+  it('preserves typed decimal quantities and rejects non-finite values', () => {
+    const lines = [{ medicine_id: 'POC-020', quantity: 1, unit: 'mL' as const }]
+    expect(setBasketQuantity(lines, 'POC-020', 2.5)).toEqual([
+      { medicine_id: 'POC-020', quantity: 2.5, unit: 'mL' },
+    ])
+    expect(setBasketQuantity(lines, 'POC-020', Number.NaN)).toEqual(lines)
+  })
+
   it('clears the stored basket', () => {
     const storage = new MemoryStorage()
     writeBasket(storage, [
