@@ -63,7 +63,7 @@ bun run db:migrate
 bun run db:seed
 ```
 
-The seeder reads `scripts/seed/fixtures/poc-seed/` (a small tooling fixture until the full seed lands), writes one `poc-seed` batch in a single transaction, and is idempotent. The wipe removes only rows tagged `seed_batch_id = 'poc-seed'`; it refuses to run while a non-seed row depends on seeded data, and it never touches reports or anonymous events.
+The seeder reads the full POC fixture at `scripts/seed/fixtures/poc-seed/` — 50 medicines, 10 Naga pharmacies, 204 published MDRP ceilings, and mocked prices with the demo trust states — writes one `poc-seed` batch in a single transaction, and is idempotent. The wipe removes only rows tagged `seed_batch_id = 'poc-seed'`; it refuses to run while a non-seed row depends on seeded data, and it never touches reports or anonymous events.
 
 ```sh
 bun run db:wipe

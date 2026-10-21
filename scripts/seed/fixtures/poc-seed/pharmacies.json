@@ -16,7 +16,131 @@
     "data_source": "official chain branch page",
     "source_url": "https://www.mercurydrug.com/cgi-bin/branchdetail?id2=624",
     "coordinate_confidence": "high",
-    "notes": "Barangay is inferred from OSM and should not be shown as official."
+    "notes": "Official branch page gives the exact map point and phone numbers. Barangay is inferred from OSM and should not be shown as official."
+  },
+  {
+    "id": "mercury-naga-concepcion-grande",
+    "name": "Mercury Drug – Naga City Concepcion Grande",
+    "brand": "Mercury Drug",
+    "type": "chain",
+    "address": "48 Maharlika Highway, Zone 4, Concepcion Grande, Naga City, 4400 Camarines Sur",
+    "barangay": "Concepcion Grande",
+    "latitude": 13.621239,
+    "longitude": 123.218668,
+    "phone": "(054) 884-0823",
+    "hours_text": "6:00 AM–10:00 PM",
+    "open_24h": false,
+    "opening_hours": {
+      "mon": [
+        {
+          "open": "06:00",
+          "close": "22:00"
+        }
+      ],
+      "tue": [
+        {
+          "open": "06:00",
+          "close": "22:00"
+        }
+      ],
+      "wed": [
+        {
+          "open": "06:00",
+          "close": "22:00"
+        }
+      ],
+      "thu": [
+        {
+          "open": "06:00",
+          "close": "22:00"
+        }
+      ],
+      "fri": [
+        {
+          "open": "06:00",
+          "close": "22:00"
+        }
+      ],
+      "sat": [
+        {
+          "open": "06:00",
+          "close": "22:00"
+        }
+      ],
+      "sun": [
+        {
+          "open": "06:00",
+          "close": "22:00"
+        }
+      ]
+    },
+    "verification_status": "verified",
+    "data_source": "official chain branch page",
+    "source_url": "https://www.mercurydrug.com/cgi-bin/branchdetail?id2=3104",
+    "coordinate_confidence": "high",
+    "notes": "The official branch page's map coordinate is broken (0, 0); OSM and Google agree on the location. OSM reverse geocoding labels the point Concepcion Grande/Cararayan; the official address is authoritative for the barangay."
+  },
+  {
+    "id": "mercury-naga-puregold",
+    "name": "Mercury Drug – Naga City Puregold",
+    "brand": "Mercury Drug",
+    "type": "chain",
+    "address": "Puregold Naga, ALDP Mall, Diversion Rd., Triangulo, Naga City, 4400 Camarines Sur",
+    "barangay": "Triangulo",
+    "latitude": 13.615533,
+    "longitude": 123.19079,
+    "phone": "(054) 881-9919 / (0998) 586-0865",
+    "hours_text": "7:00 AM–10:00 PM",
+    "open_24h": false,
+    "opening_hours": {
+      "mon": [
+        {
+          "open": "07:00",
+          "close": "22:00"
+        }
+      ],
+      "tue": [
+        {
+          "open": "07:00",
+          "close": "22:00"
+        }
+      ],
+      "wed": [
+        {
+          "open": "07:00",
+          "close": "22:00"
+        }
+      ],
+      "thu": [
+        {
+          "open": "07:00",
+          "close": "22:00"
+        }
+      ],
+      "fri": [
+        {
+          "open": "07:00",
+          "close": "22:00"
+        }
+      ],
+      "sat": [
+        {
+          "open": "07:00",
+          "close": "22:00"
+        }
+      ],
+      "sun": [
+        {
+          "open": "07:00",
+          "close": "22:00"
+        }
+      ]
+    },
+    "verification_status": "verified",
+    "data_source": "official chain branch page",
+    "source_url": "https://www.mercurydrug.com/cgi-bin/branchdetail?id2=3073",
+    "coordinate_confidence": "high",
+    "notes": "Branch is inside Puregold Naga / ALDP Mall."
   },
   {
     "id": "south-star-naga-3",
@@ -32,9 +156,295 @@
     "open_24h": true,
     "opening_hours": null,
     "verification_status": "verified",
-    "data_source": "official chain store page",
+    "data_source": "official chain store-locations page",
     "source_url": "https://southstardrug.com.ph/pages/store-locations",
     "coordinate_confidence": "high",
-    "notes": null
+    "notes": "Barangay boundary caveat: the official address says San Francisco, while OSM reverse geocoding of the Crown Hotel corner returns Santa Cruz/Lerma. This is a corner-building boundary discrepancy, not a location error."
+  },
+  {
+    "id": "south-star-naga-15",
+    "name": "South Star Drug – SSD Naga 15",
+    "brand": "South Star Drug",
+    "type": "chain",
+    "address": "#77 Concepcion Pequeña, Naga City, Camarines Sur",
+    "barangay": "Concepcion Pequeña",
+    "latitude": 13.621306,
+    "longitude": 123.200293,
+    "phone": "+63 923 742 0187",
+    "hours_text": "7:00 AM–7:00 PM",
+    "open_24h": false,
+    "opening_hours": {
+      "mon": [
+        {
+          "open": "07:00",
+          "close": "19:00"
+        }
+      ],
+      "tue": [
+        {
+          "open": "07:00",
+          "close": "19:00"
+        }
+      ],
+      "wed": [
+        {
+          "open": "07:00",
+          "close": "19:00"
+        }
+      ],
+      "thu": [
+        {
+          "open": "07:00",
+          "close": "19:00"
+        }
+      ],
+      "fri": [
+        {
+          "open": "07:00",
+          "close": "19:00"
+        }
+      ],
+      "sat": [
+        {
+          "open": "07:00",
+          "close": "19:00"
+        }
+      ],
+      "sun": [
+        {
+          "open": "07:00",
+          "close": "19:00"
+        }
+      ]
+    },
+    "verification_status": "verified",
+    "data_source": "official chain store-locations page",
+    "source_url": "https://southstardrug.com.ph/pages/store-locations",
+    "coordinate_confidence": "medium",
+    "notes": "Branch identity is inferred from an OSM pharmacy node on Panganiban Drive; there is no independent storefront pin. Confirm by phone before recruitment. Fallback: South Star Naga 13 (McKay Bldg., Panganiban Drive; 24 hours; +63 923 742 1466; FDA 13.621710, 123.197710)."
+  },
+  {
+    "id": "generika-lcc-cbd2",
+    "name": "Generika Drugstore – CMS Naga LCC CBD2",
+    "brand": "Generika Drugstore",
+    "type": "chain",
+    "address": "G/F LCC Mall, Bicol Central Station CBD2, Brgy. Triangulo, Naga City, Camarines Sur",
+    "barangay": "Triangulo",
+    "latitude": 13.619626,
+    "longitude": 123.189712,
+    "phone": "0917-871-8924 / (054) 472-8080",
+    "hours_text": "9:00 AM–8:00 PM",
+    "open_24h": false,
+    "opening_hours": {
+      "mon": [
+        {
+          "open": "09:00",
+          "close": "20:00"
+        }
+      ],
+      "tue": [
+        {
+          "open": "09:00",
+          "close": "20:00"
+        }
+      ],
+      "wed": [
+        {
+          "open": "09:00",
+          "close": "20:00"
+        }
+      ],
+      "thu": [
+        {
+          "open": "09:00",
+          "close": "20:00"
+        }
+      ],
+      "fri": [
+        {
+          "open": "09:00",
+          "close": "20:00"
+        }
+      ],
+      "sat": [
+        {
+          "open": "09:00",
+          "close": "20:00"
+        }
+      ],
+      "sun": [
+        {
+          "open": "09:00",
+          "close": "20:00"
+        }
+      ]
+    },
+    "verification_status": "verified",
+    "data_source": "official chain store page",
+    "source_url": "https://www.generika.com.ph/stores/cms-naga-lcc-cbd2/",
+    "coordinate_confidence": "medium",
+    "notes": "The pin is the LCC Naga CBD 2 building, not a surveyed Generika door. The official locator coordinate is treated as a data error. Barangay boundary caveat: the official address says Triangulo; the OSM mall polygon sits in Lerma, adjacent to Triangulo."
+  },
+  {
+    "id": "generika-san-felipe",
+    "name": "Generika Drugstore – CMS Naga San Felipe",
+    "brand": "Generika Drugstore",
+    "type": "chain",
+    "address": "Blk. 1, Lot 16, Parkview Executive Village, San Felipe, Naga City, Camarines Sur",
+    "barangay": "San Felipe",
+    "latitude": 13.64226,
+    "longitude": 123.20411,
+    "phone": null,
+    "hours_text": "7:00 AM–8:30 PM",
+    "open_24h": false,
+    "opening_hours": {
+      "mon": [
+        {
+          "open": "07:00",
+          "close": "20:30"
+        }
+      ],
+      "tue": [
+        {
+          "open": "07:00",
+          "close": "20:30"
+        }
+      ],
+      "wed": [
+        {
+          "open": "07:00",
+          "close": "20:30"
+        }
+      ],
+      "thu": [
+        {
+          "open": "07:00",
+          "close": "20:30"
+        }
+      ],
+      "fri": [
+        {
+          "open": "07:00",
+          "close": "20:30"
+        }
+      ],
+      "sat": [
+        {
+          "open": "07:00",
+          "close": "20:30"
+        }
+      ],
+      "sun": [
+        {
+          "open": "07:00",
+          "close": "20:30"
+        }
+      ]
+    },
+    "verification_status": "verified",
+    "data_source": "official chain store page",
+    "source_url": "https://www.generika.com.ph/stores/cms-naga-san-felipe/",
+    "coordinate_confidence": "medium",
+    "notes": "The official locator's phone field is empty; collect the number during recruitment. The FDA record for this branch repeats a clearly wrong default coordinate (13.627880, 123.187510) and was not used. The exact subdivision/block pin is not fully settled, but the official locator coordinate is the best available and cross-checks to San Felipe."
+  },
+  {
+    "id": "watsons-sm-city-naga",
+    "name": "Watsons – SM City Naga",
+    "brand": "Watsons",
+    "type": "chain",
+    "address": "GF, SM City Naga Mall Area, Central Business District II, Brgy. Triangulo, Naga City, 4400 Camarines Sur",
+    "barangay": "Triangulo",
+    "latitude": 13.621578,
+    "longitude": 123.190288,
+    "phone": "+63 54 473 2332",
+    "hours_text": "10:00 AM–9:00 PM daily",
+    "open_24h": false,
+    "opening_hours": {
+      "mon": [
+        {
+          "open": "10:00",
+          "close": "21:00"
+        }
+      ],
+      "tue": [
+        {
+          "open": "10:00",
+          "close": "21:00"
+        }
+      ],
+      "wed": [
+        {
+          "open": "10:00",
+          "close": "21:00"
+        }
+      ],
+      "thu": [
+        {
+          "open": "10:00",
+          "close": "21:00"
+        }
+      ],
+      "fri": [
+        {
+          "open": "10:00",
+          "close": "21:00"
+        }
+      ],
+      "sat": [
+        {
+          "open": "10:00",
+          "close": "21:00"
+        }
+      ],
+      "sun": [
+        {
+          "open": "10:00",
+          "close": "21:00"
+        }
+      ]
+    },
+    "verification_status": "verified",
+    "data_source": "official chain store page",
+    "source_url": "https://www.watsons.com.ph/store/wtcph_453_EN",
+    "coordinate_confidence": "high",
+    "notes": "This is the main Watsons store, not the SM Department Store or SM Supermarket counters."
+  },
+  {
+    "id": "new-nazareno-drugstore",
+    "name": "New Nazareno Drugstore",
+    "brand": null,
+    "type": "independent",
+    "address": "Pav. 5, Panganiban Drive, Naga City, Camarines Sur",
+    "barangay": "Concepcion Pequeña",
+    "latitude": 13.621451,
+    "longitude": 123.197144,
+    "phone": "+63 54 811 6300",
+    "hours_text": null,
+    "open_24h": false,
+    "opening_hours": null,
+    "verification_status": "verified",
+    "data_source": "directory listing + FDA LTO registry",
+    "source_url": "https://ph.nusalist.com/pages/new-nazareno-drugstore",
+    "coordinate_confidence": "medium",
+    "notes": "Phone is from NusaList; hours were not published. Confirm both at recruitment."
+  },
+  {
+    "id": "nagadrug-corporation",
+    "name": "Nagadrug Corporation",
+    "brand": null,
+    "type": "independent",
+    "address": "Door 8, Pav. 1, Panganiban Drive, Triangulo, Naga City, Camarines Sur",
+    "barangay": "Triangulo",
+    "latitude": 13.62211,
+    "longitude": 123.1944,
+    "phone": null,
+    "hours_text": null,
+    "open_24h": false,
+    "opening_hours": null,
+    "verification_status": "verified",
+    "data_source": "FDA LTO registry",
+    "source_url": "https://verification.fda.gov.ph/api/search?q=Nagadrug",
+    "coordinate_confidence": "high",
+    "notes": "The FDA registry point is on Panganiban Drive in front of the building; the OSM/Google building pin is ~27 m south. The FDA address says Triangulo, while OSM reverse geocoding returns Tinago; the FDA address is authoritative for the seed."
   }
 ]

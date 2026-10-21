@@ -6,7 +6,9 @@ import {
   mdrpCeilingSeedSchema,
   priceSeedSchema,
   seedManifestSchema,
+  type SeedBundle,
 } from '../../scripts/seed/fixture'
+import { expectedMdrpAttachments } from '../../scripts/seed/mdrp-match'
 
 const fixtureDirectory = join(
   import.meta.dirname,
@@ -18,21 +20,119 @@ const fixtureDirectory = join(
   'poc-seed',
 )
 
+function availablePrices(bundle: SeedBundle, medicineId: string): string[] {
+  return bundle.prices
+    .filter(
+      (price) =>
+        price.medicine_id === medicineId &&
+        (price.stock_status === 'in_stock' ||
+          price.stock_status === 'low_stock'),
+    )
+    .map((price) => price.pharmacy_id)
+}
+
 describe('loadFixture', () => {
-  it('loads the tooling fixture with its declared counts', async () => {
+  it('loads the full POC seed with its declared counts', async () => {
     const bundle = await loadFixture(fixtureDirectory)
     expect(bundle.manifest.expect.counts).toEqual({
-      medicine: 4,
-      medicine_alternative: 1,
-      pharmacy: 2,
-      mdrp_ceiling: 1,
-      price_record: 4,
+      medicine: 50,
+      medicine_alternative: 49,
+      pharmacy: 10,
+      mdrp_ceiling: 204,
+      price_record: 431,
     })
-    expect(bundle.medicines).toHaveLength(4)
-    expect(bundle.alternatives).toHaveLength(1)
-    expect(bundle.pharmacies).toHaveLength(2)
-    expect(bundle.mdrpCeilings).toHaveLength(1)
-    expect(bundle.prices).toHaveLength(4)
+    expect(bundle.medicines).toHaveLength(50)
+    expect(bundle.alternatives).toHaveLength(49)
+    expect(bundle.pharmacies).toHaveLength(10)
+    expect(bundle.mdrpCeilings).toHaveLength(204)
+    expect(bundle.prices).toHaveLength(431)
+  })
+
+  it('keeps exactly the intended catalog gaps', async () => {
+    const bundle = await loadFixture(fixtureDirectory)
+    const inactive = bundle.medicines.filter((medicine) => !medicine.active)
+    expect(inactive.map((medicine) => medicine.id)).toEqual(['POC-028'])
+    expect(inactive[0]?.fda_registration_no).toBeNull()
+
+    const omeprazole = bundle.medicines.find(
+      (medicine) => medicine.id === 'POC-041',
+    )
+    expect(omeprazole?.active).toBe(true)
+    expect(omeprazole?.pack_size).toBeNull()
+    expect(bundle.prices.some((price) => price.medicine_id === 'POC-041')).toBe(
+      false,
+    )
+  })
+
+  it('attaches the MDRP ceiling to POC-016 only', async () => {
+    const bundle = await loadFixture(fixtureDirectory)
+    const attachments = [
+      ...expectedMdrpAttachments(bundle.medicines, bundle.mdrpCeilings),
+    ].filter(([, entryId]) => entryId !== null)
+    expect(attachments).toEqual([['POC-016', 'EO104-044']])
+  })
+
+  it('ships the demo basket and trust states', async () => {
+    const bundle = await loadFixture(fixtureDirectory)
+    const bundleAvailable = new Set(availablePrices(bundle, 'POC-001'))
+    const paracetamolAvailable = new Set(availablePrices(bundle, 'POC-036'))
+    const complete = bundle.pharmacies.filter(
+      (pharmacy) =>
+        bundleAvailable.has(pharmacy.id) &&
+        paracetamolAvailable.has(pharmacy.id),
+    )
+    const incomplete = bundle.pharmacies.filter(
+      (pharmacy) =>
+        bundleAvailable.has(pharmacy.id) &&
+        !paracetamolAvailable.has(pharmacy.id),
+    )
+    const withNoPriceData = bundle.pharmacies.filter(
+      (pharmacy) =>
+        !bundleAvailable.has(pharmacy.id) &&
+        !paracetamolAvailable.has(pharmacy.id),
+    )
+
+    expect(complete.length).toBeGreaterThanOrEqual(3)
+    expect(
+      new Set(
+        complete.map((pharmacy) => {
+          const total = bundle.prices
+            .filter(
+              (price) =>
+                price.pharmacy_id === pharmacy.id &&
+                (price.medicine_id === 'POC-001' ||
+                  price.medicine_id === 'POC-036'),
+            )
+            .reduce((sum, price) => sum + price.shelf_price_php, 0)
+          return total.toFixed(2)
+        }),
+      ).size,
+    ).toBeGreaterThanOrEqual(2)
+    expect(incomplete.length).toBeGreaterThanOrEqual(1)
+    expect(withNoPriceData.length).toBeGreaterThanOrEqual(1)
+
+    const janumet = bundle.prices.filter(
+      (price) => price.medicine_id === 'POC-016',
+    )
+    expect(janumet.length).toBeGreaterThanOrEqual(1)
+    expect(
+      janumet.every(
+        (price) => price.shelf_price_php / (price.pack_quantity ?? 1) > 30.31,
+      ),
+    ).toBe(true)
+
+    expect(
+      bundle.prices.some(
+        (price) =>
+          price.medicine_id === 'POC-016' &&
+          Date.parse(price.verified_at) < Date.parse('2026-10-07T00:00:00Z'),
+      ),
+    ).toBe(true)
+
+    const rx = bundle.medicines.find((medicine) => medicine.id === 'POC-001')
+    const otc = bundle.medicines.find((medicine) => medicine.id === 'POC-036')
+    expect(rx?.rx_otc).toBe('Rx')
+    expect(otc?.rx_otc).toBe('OTC')
   })
 
   it('hashes the same bundle consistently', async () => {
