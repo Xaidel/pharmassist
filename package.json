@@ -1,0 +1,69 @@
+{
+  "name": "pharmassist-poc",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Pharmassist POC app shell: TanStack Start, PWA, and the local Compose stack.",
+  "type": "module",
+  "packageManager": "bun@1.4.2",
+  "engines": {
+    "bun": ">=1.4 <2",
+    "node": ">=22.13 <23"
+  },
+  "imports": {
+    "#/*": "./src/*"
+  },
+  "scripts": {
+    "dev": "bun --bun vite dev --host 0.0.0.0 --port 3000 --strictPort",
+    "build": "bun --bun vite build",
+    "start": "bun run .output/server/index.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:unit": "vitest run src",
+    "test:routes": "vitest run tests/routes",
+    "test:e2e": "bun run build && bunx playwright test",
+    "test:capabilities": "node --experimental-strip-types tests/server-capabilities/run.ts",
+    "verify": "bun run format:check && bun run lint && bun run typecheck && bun run test && bun run test:e2e && bun run test:capabilities"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "1.1.20",
+    "@radix-ui/react-label": "2.1.12",
+    "@tailwindcss/vite": "4.3.3",
+    "@tanstack/react-router": "1.170.18",
+    "@tanstack/react-start": "1.168.32",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "lucide-react": "1.25.0",
+    "nitro": "3.0.260610-beta",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "tailwind-merge": "3.6.0",
+    "tailwindcss": "4.3.3",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.61.1",
+    "@shadcn/lint": "0.1.5",
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.2",
+    "@testing-library/user-event": "14.6.1",
+    "@types/node": "22.19.15",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@typescript-eslint/parser": "8.65.0",
+    "@vitejs/plugin-react": "6.0.3",
+    "eslint": "10.7.0",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.7.0",
+    "jsdom": "29.1.1",
+    "prettier": "3.9.6",
+    "typescript": "6.0.2",
+    "typescript-eslint": "8.65.0",
+    "vite": "8.1.5",
+    "vitest": "4.1.10"
+  }
+}

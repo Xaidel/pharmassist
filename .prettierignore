@@ -1,0 +1,23 @@
+.output/
+.tanstack/
+.agents/
+node_modules/
+playwright-report/
+src/routeTree.gen.ts
+test-results/
+pnpm-lock.yaml
+
+# The documentation trees are hand-formatted. Prettier is wrong for them beyond the
+# decision records: it reflows embedded markdown inside a fence, and the record-header
+# example in template_docs/adr/README.md is exactly that case. A create-adr record is
+# worse: Prettier inserts a blank line after the heading and merges the `Status:` and
+# `Classification:` lines, destroying the three-line header the format depends on.
+# check_adr.py owns the record format; the rest of both trees is maintained by hand.
+#
+# The consequence is that nothing in these trees is machine-formatted, so the
+# semantic-line-break rule is discipline rather than a gate. That rule, its exceptions,
+# and its accepted cost are stated in template_docs/development-workflow.md; do not
+# restate them here, or the two drift. The root documents (AGENTS.md, README.md,
+# CHANGELOG.md) are still Prettier-formatted and still use proseWrap: 'never'.
+docs/
+template_docs/
