@@ -17,6 +17,13 @@ import {
   type PharmacyRow,
   type ReportRow,
 } from './results.schema'
+import {
+  reportInsertRowSchema,
+  reportSummaryRowSchema,
+  type ReportInsertRow,
+  type ReportReason,
+  type ReportSummaryRow,
+} from './report.schema'
 
 type MedicineRowResult = QueryResultRow & {
   medicine_id: string
@@ -50,8 +57,7 @@ where id = any($1::text[]) and active
 order by id
 `
 
-const PHARMACIES_SQL = `
-select
+const PHARMACY_COLUMNS = `
   id as pharmacy_id,
   name,
   brand,
@@ -65,12 +71,21 @@ select
   opening_hours,
   open_24h,
   verification_status
+`
+
+const PHARMACIES_SQL = `
+select ${PHARMACY_COLUMNS}
 from pharmacy
 order by id
 `
 
-const PRICES_SQL = `
-select
+const PHARMACY_BY_ID_SQL = `
+select ${PHARMACY_COLUMNS}
+from pharmacy
+where id = $1
+`
+
+const PRICE_COLUMNS = `
   pr.medicine_id,
   pr.pharmacy_id,
   pr.shelf_price_php::float8 as shelf_price_php,
@@ -94,9 +109,21 @@ select
   pr.mdrp_source_url,
   to_char(pr.mdrp_checked_at, 'YYYY-MM-DD') as mdrp_checked_at,
   pr.above_mdrp_flag
+`
+
+const PRICES_SQL = `
+select ${PRICE_COLUMNS}
 from price_record_with_mdrp pr
 where pr.medicine_id = any($1::text[])
 order by pr.pharmacy_id, pr.medicine_id
+`
+
+const PHARMACY_PRICES_SQL = `
+select ${PRICE_COLUMNS}
+from price_record_with_mdrp pr
+join medicine m on m.id = pr.medicine_id
+where pr.pharmacy_id = $1
+order by coalesce(m.brand_name, m.generic_name), m.brand_name, pr.medicine_id
 `
 
 const ALTERNATIVES_SQL = `
@@ -127,13 +154,75 @@ group by result_key
 order by result_key
 `
 
+const REPORT_INSERT_SQL = `
+insert into price_report (
+  result_key,
+  pharmacy_id,
+  pharmacy_name_snapshot,
+  medicine_ids,
+  medicine_labels,
+  reason,
+  note
+)
+values ($1, $2, $3, $4::text[], $5::text[], $6::report_reason, $7)
+returning
+  id as report_id,
+  status,
+  to_char(
+    created_at at time zone 'UTC',
+    'YYYY-MM-DD"T"HH24:MI:SS"Z"'
+  ) as created_at
+`
+
+const REPORT_SUMMARY_SQL = `
+select
+  count(*) over()::int as count,
+  id as report_id,
+  reason,
+  status,
+  to_char(
+    created_at at time zone 'UTC',
+    'YYYY-MM-DD"T"HH24:MI:SS"Z"'
+  ) as created_at
+from price_report
+where result_key = $1
+order by created_at desc, id desc
+limit 1
+`
+
+/** One report the server is about to store as an immutable snapshot. */
+export type CreateReportInput = {
+  resultKey: string
+  pharmacyId: string
+  pharmacyName: string
+  medicineIds: readonly string[]
+  medicineLabels: readonly string[]
+  reason: ReportReason
+  note: string | null
+}
+
+/** The latest public report summary for one result key. */
+export type ReportSummary = {
+  count: number
+  latest: {
+    report_id: string
+    reason: ReportReason
+    status: ReportSummaryRow['status']
+    created_at: string
+  } | null
+}
+
 /** Reads the seeded catalog and pharmacy rows the results decision needs. */
 export type ResultsRepository = {
   readMedicines(medicineIds: readonly string[]): Promise<MedicineSummary[]>
   readPharmacies(): Promise<PharmacyRow[]>
+  readPharmacy(pharmacyId: string): Promise<PharmacyRow | null>
   readPrices(medicineIds: readonly string[]): Promise<PriceFacts[]>
+  readPharmacyPrices(pharmacyId: string): Promise<PriceFacts[]>
   readAlternatives(medicineIds: readonly string[]): Promise<AlternativeRow[]>
   readReports(resultKeys: readonly string[]): Promise<ReportRow[]>
+  createReport(input: CreateReportInput): Promise<ReportInsertRow>
+  readReportSummary(resultKey: string): Promise<ReportSummary>
 }
 
 /** Build the results repository over a narrow query runner. */
@@ -153,9 +242,25 @@ export function createResultsRepository(query: QueryRunner): ResultsRepository {
       return rows.map((row) => pharmacyRowSchema.parse(row))
     },
 
+    async readPharmacy(pharmacyId: string): Promise<PharmacyRow | null> {
+      const rows = await query<QueryResultRow>(PHARMACY_BY_ID_SQL, [pharmacyId])
+      const row = rows[0]
+      return row === undefined ? null : pharmacyRowSchema.parse(row)
+    },
+
     async readPrices(medicineIds: readonly string[]): Promise<PriceFacts[]> {
       const rows = await query<QueryResultRow>(PRICES_SQL, [
         [...medicineIds],
+        STALE_AFTER_DAYS,
+      ])
+      return rows
+        .map((row) => priceRowSchema.parse(row))
+        .map((row) => toPriceFacts(row))
+    },
+
+    async readPharmacyPrices(pharmacyId: string): Promise<PriceFacts[]> {
+      const rows = await query<QueryResultRow>(PHARMACY_PRICES_SQL, [
+        pharmacyId,
         STALE_AFTER_DAYS,
       ])
       return rows
@@ -178,6 +283,41 @@ export function createResultsRepository(query: QueryRunner): ResultsRepository {
       }
       const rows = await query<QueryResultRow>(REPORTS_SQL, [[...resultKeys]])
       return rows.map((row) => reportRowSchema.parse(row))
+    },
+
+    async createReport(input: CreateReportInput): Promise<ReportInsertRow> {
+      const rows = await query<QueryResultRow>(REPORT_INSERT_SQL, [
+        input.resultKey,
+        input.pharmacyId,
+        input.pharmacyName,
+        [...input.medicineIds],
+        [...input.medicineLabels],
+        input.reason,
+        input.note,
+      ])
+      const row = rows[0]
+      if (row === undefined) {
+        throw new Error('The report insert returned no row')
+      }
+      return reportInsertRowSchema.parse(row)
+    },
+
+    async readReportSummary(resultKey: string): Promise<ReportSummary> {
+      const rows = await query<QueryResultRow>(REPORT_SUMMARY_SQL, [resultKey])
+      const row = rows[0]
+      if (row === undefined) {
+        return { count: 0, latest: null }
+      }
+      const parsed: ReportSummaryRow = reportSummaryRowSchema.parse(row)
+      return {
+        count: parsed.count,
+        latest: {
+          report_id: parsed.report_id,
+          reason: parsed.reason,
+          status: parsed.status,
+          created_at: parsed.created_at,
+        },
+      }
     },
   }
 }

@@ -2,7 +2,7 @@
 
 **Version:** 0.2 (research-integrated baseline)
 **Status:** Draft — open decisions are tracked in `https://github.com/Xaidel/pharmassist/issues/7`; v1.0 is produced by issue #15.
-**Last updated:** 2026-10-19
+**Last updated:** 2026-10-21
 **Owner:** Karl
 **Pilot market:** Naga City, Camarines Sur, Philippines
 
@@ -39,6 +39,7 @@ The current market is single-seller, not comparison-first. Watsons, Generika, Me
 - Expansion beyond Naga City.
 - Any cart, order, reservation, payment, or delivery transaction.
 - Any computed senior-citizen or PWD net price. Shelf prices are shown; statutory discounts are disclosed.
+- Turn-by-turn navigation, live re-routing, traffic-aware travel estimates, or voice guidance. Directions are an indicative route preview inside the embedded map.
 
 ## 4. Users
 
@@ -69,7 +70,7 @@ An out-of-pocket patient in Naga City, often buying for themselves or a family m
 3. They select the exact product (brand or generic, strength, form, pack).
 4. They see a map-first results screen: pins labeled with the relevant shelf price, the cheapest complete option highlighted, and a bottom list sorted by total.
 5. They tap a pin or list item for pharmacy details, stock, distance, hours, phone, and last-verified date.
-6. They tap **Directions** to hand off to the phone's maps app.
+6. They tap **Show route** to draw the road route from their current location to the pharmacy in the embedded map, with distance and estimated travel time.
 7. If the item is under MDRP, the result shows the ceiling separately and flags any observed price above it.
 
 ### 5.2 Scan a prescription
@@ -132,7 +133,7 @@ The OCR data-flow choice (cloud stateless proxy versus on-device only) is unreso
 - **FR-26:** A sorted, swipeable bottom list mirrors the map.
 - **FR-27:** Each result shows distance, open-now status, last-verified date, and stock status.
 - **FR-28:** The pharmacy detail sheet shows name, address, hours, phone, stock list, price breakdown, last verified, and directions.
-- **FR-29:** Directions hand off to the phone's maps app.
+- **FR-29:** Directions render the road route from the user's current location to the pharmacy inside the embedded map, with distance and estimated travel time. The POC does not hand off to an external maps app and does not provide turn-by-turn guidance. See the [native pharmacy directions ADR](adr/proposed/architecture/2026-10-21-native-pharmacy-directions.md).
 - **FR-30:** Unverified pharmacies may appear muted as "no price data." They are never shown as "unavailable."
 - **FR-31:** Default sort is cheapest basket; a "nearest first" sort is available.
 - **FR-32:** No fare or transport-cost modeling in v1.
@@ -256,6 +257,7 @@ The final metrics and instrumentation are defined in issue #12. Candidate bars f
 | Basket data is incomplete | Complete baskets ranked first; incomplete options shown separately with missing items |
 | Chain resistance or price-war dynamics | Keep pharmacy inclusion free and factual; validate partner concerns in issue #8; revisit post-pilot |
 | Low-end devices and bandwidth | PWA, lightweight map and list, graceful degradation |
+| Native routing is unavailable or low quality | Keep pharmacy detail and prices usable, show a retryable route error, use a replaceable server-side routing adapter, and label the route as a preview; choose a supported provider or self-host before the pilot |
 
 ## 13. Open questions
 

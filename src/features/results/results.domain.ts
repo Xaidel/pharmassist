@@ -218,6 +218,50 @@ export type ManilaClock = {
   minutesSinceMidnight: number
 }
 
+function isoWeekdayFromName(value: string): number {
+  switch (value) {
+    case 'Mon':
+      return 1
+    case 'Tue':
+      return 2
+    case 'Wed':
+      return 3
+    case 'Thu':
+      return 4
+    case 'Fri':
+      return 5
+    case 'Sat':
+      return 6
+    case 'Sun':
+      return 7
+    default:
+      return 0
+  }
+}
+
+/** Convert an instant into the Manila wall clock the opening hours use. */
+export function manilaClock(now: Date): ManilaClock {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Manila',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now)
+  const values = new Map(parts.map((part) => [part.type, part.value]))
+  const weekday = values.get('weekday') ?? ''
+  const isoWeekday = isoWeekdayFromName(weekday)
+  if (isoWeekday === 0) {
+    throw new Error(`Unexpected weekday from Intl: ${weekday}`)
+  }
+  return {
+    isoWeekday,
+    minutesSinceMidnight:
+      Number(values.get('hour') ?? '0') * 60 +
+      Number(values.get('minute') ?? '0'),
+  }
+}
+
 /** Inputs the ranking decision needs, with all I/O already performed. */
 export type BuildRankingInput = {
   basket: readonly BasketLine[]
@@ -411,7 +455,7 @@ function compareNoPrice(left: NoPriceResult, right: NoPriceResult): number {
   return compareNames(left.pharmacy.name, right.pharmacy.name)
 }
 
-function toPharmacySummary(
+export function toPharmacySummary(
   pharmacy: PharmacyRecord,
   origin: Origin,
   clock: ManilaClock,
@@ -447,7 +491,7 @@ function missingReason(price: PriceFacts): MissingReason {
     : 'stock_unknown'
 }
 
-function toPriceLine(price: PriceFacts): PriceLine {
+export function toPriceLine(price: PriceFacts): PriceLine {
   return {
     medicine_id: price.medicine_id,
     shelf_price_php: price.shelf_price_php,

@@ -5,9 +5,9 @@ import type { MedicineSummary } from '#/shared/domain/medicine-summary'
 import {
   BASKET_MAX_ITEMS,
   buildRankedResults,
+  manilaClock,
   STALE_AFTER_DAYS,
   type BasketLine,
-  type ManilaClock,
   type Origin,
 } from './results.domain'
 import { createResultsRepository } from './results.repository.server'
@@ -42,50 +42,6 @@ export type BasketOutcome =
 /** The outcome of ranking pharmacies for a basket. */
 export type ResultsOutcome =
   { ok: true; response: ResultsResponse } | { ok: false; error: BasketFailure }
-
-function isoWeekdayFromName(value: string): number {
-  switch (value) {
-    case 'Mon':
-      return 1
-    case 'Tue':
-      return 2
-    case 'Wed':
-      return 3
-    case 'Thu':
-      return 4
-    case 'Fri':
-      return 5
-    case 'Sat':
-      return 6
-    case 'Sun':
-      return 7
-    default:
-      return 0
-  }
-}
-
-/** Convert an instant into the Manila wall clock the opening hours use. */
-export function manilaClock(now: Date): ManilaClock {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Manila',
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(now)
-  const values = new Map(parts.map((part) => [part.type, part.value]))
-  const weekday = values.get('weekday') ?? ''
-  const isoWeekday = isoWeekdayFromName(weekday)
-  if (isoWeekday === 0) {
-    throw new Error(`Unexpected weekday from Intl: ${weekday}`)
-  }
-  return {
-    isoWeekday,
-    minutesSinceMidnight:
-      Number(values.get('hour') ?? '0') * 60 +
-      Number(values.get('minute') ?? '0'),
-  }
-}
 
 function duplicateMedicineIds(lines: readonly BasketLine[]): string[] {
   const seen = new Set<string>()

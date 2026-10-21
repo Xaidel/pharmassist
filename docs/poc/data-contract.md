@@ -2,7 +2,7 @@
 
 **Ticket:** [Xaidel/pharmassist#21](https://github.com/Xaidel/pharmassist/issues/21)
 **Parent map:** [Map: Pharmassist POC — seeded-data working demo](https://github.com/Xaidel/pharmassist/issues/17)
-**Status:** Contract for implementation. Schema and seed tooling are ticket #23; the full seed is #24.
+**Status:** Contract for implementation. Schema and seed tooling are ticket #23; the full seed is #24. Native directions are governed by the [native pharmacy directions ADR](../adr/proposed/architecture/2026-10-21-native-pharmacy-directions.md).
 **Last updated:** 2026-10-21
 
 ---
@@ -13,7 +13,7 @@ This document fixes the POC data layer before the schema, seed tooling, and API 
 
 - the Postgres schema mapped from PRD section 7 — Medicine, Pharmacy, PriceRecord, Basket (session-only), and Report — plus seed batches, MDRP ceilings, candidate generics, and anonymous events;
 - `poc-seed` tagging and a wipe that cannot touch non-seed rows;
-- the HTTP contract for search, basket validation, results/ranking, pharmacy detail, scan, report, and events;
+- the HTTP contract for search, basket validation, results/ranking, pharmacy detail, native directions, scan, report, and events;
 - session-only basket semantics, with no accounts, no patient identifiers, and no image retention;
 - the scan endpoint as the stable swap point for the real OCR route chosen in [OCR data-flow and legal-risk decision](https://github.com/Xaidel/pharmassist/issues/16).
 
@@ -596,7 +596,7 @@ create index app_event_session_occurred_idx
   on app_event (session_id, occurred_at desc);
 ```
 
-No IP address, user agent, account id, query text, basket contents, report note, or image data. The event name and property allowlist are enforced by the API (section 7.11), not by the table.
+No IP address, user agent, account id, query text, basket contents, report note, or image data. The event name and property allowlist are enforced by the API (section 7.12), not by the table.
 
 ### 5.11 `updated_at` trigger
 
@@ -825,6 +825,7 @@ All endpoints are same-origin, behind Caddy basic auth, and return `Cache-Contro
 | `POST` | `/api/basket` | Validate and resolve a basket | No |
 | `POST` | `/api/results` | Rank pharmacies for a basket | No |
 | `GET` | `/api/pharmacies/{pharmacy_id}` | Pharmacy detail and prices | No |
+| `GET` | `/api/directions` | Native road route from the device origin to a pharmacy | No |
 | `POST` | `/api/scan` | Mock OCR; returns medicine candidates | No |
 | `POST` | `/api/reports` | Create a wrong-price/stock report | Yes |
 | `GET` | `/api/reports` | Report summary for a result | No |
@@ -1258,9 +1259,23 @@ Response `200`:
     "open_24h": true,
     "open_now": true,
     "distance_m": 850,
-    "verification_status": "verified",
-    "directions_url": "https://www.google.com/maps/dir/?api=1&destination=13.623234,123.185995"
+    "verification_status": "verified"
   },
+  "medicines": [
+    {
+      "medicine_id": "POC-001",
+      "category": "Cardiovascular",
+      "brand_name": "Norvasc",
+      "generic_name": "Amlodipine (as besilate/camsylate)",
+      "strength": "5 mg",
+      "dosage_form": "Tablet",
+      "pack_size": "Box of 100 tablets",
+      "manufacturer": "Viatris Pharmaceuticals LLC",
+      "rx_otc": "Rx",
+      "pnf_listed": true,
+      "konsulta_listed": true
+    }
+  ],
   "prices": [
     {
       "medicine_id": "POC-001",
@@ -1297,8 +1312,9 @@ Response `200`:
 ```
 
 - `prices` is always the pharmacy's full available price list, sorted by medicine brand/generic. It powers the detail sheet's stock list.
+- `medicines` carries the `MedicineSummary` for every medicine in `prices`, so the detail sheet can label its stock list without a second catalog request. It is an additive field on this response only.
 - `basket` is present only when `medicine_ids` is supplied. It uses the same completeness rules as results.
-- `directions_url` is the Google Maps directions deep link for the pharmacy's coordinates. The client opens it in a new tab; no other map interaction leaves the app.
+- Directions are requested from `GET /api/directions`; the detail response carries no external maps URL. The client keeps the patient in the embedded map.
 - `open_now` is null when hours are unknown. `hours_text` is the display string; the client must not parse it to decide open/closed.
 - `distance_m` uses the supplied origin or the Naga center fallback.
 
@@ -1310,7 +1326,59 @@ Errors:
 
 Empty state: a pharmacy with no price records returns `prices: []` and, if a basket was requested, an incomplete basket with all items missing. This is the muted no-price pharmacy.
 
-### 7.9 `POST /api/scan`
+### 7.9 `GET /api/directions`
+
+Native route preview from the device origin to a pharmacy. The client draws the returned geometry in the embedded map; it does not hand off to an external maps app.
+
+Query parameters:
+
+| Name | Required | Rules |
+|---|---|---|
+| `pharmacy_id` | Yes | Existing pharmacy ID. |
+| `origin_latitude` | Yes | -90..90; the device origin. |
+| `origin_longitude` | Yes | -180..180; the device origin. |
+
+There is no Naga-center fallback. A missing, partial, or out-of-range origin is `400 INVALID_ORIGIN`: a route from a placeholder location would be false information.
+
+Response `200`:
+
+```json
+{
+  "pharmacy_id": "generika-lcc-cbd2",
+  "origin": { "latitude": 13.6215, "longitude": 123.1945 },
+  "route": {
+    "type": "LineString",
+    "coordinates": [
+      [123.1945, 13.6215],
+      [123.1912, 13.6204],
+      [123.189712, 13.619626]
+    ]
+  },
+  "distance_m": 1234,
+  "duration_s": 456,
+  "provider": "osrm",
+  "generated_at": "2026-10-21T10:00:00Z"
+}
+```
+
+Rules:
+
+- `route.coordinates` are GeoJSON `[longitude, latitude]` pairs in travel order, with at most 5,000 points. The server requests a simplified overview, not a full-resolution trace.
+- `distance_m` and `duration_s` are non-negative integers from the routing provider. The client formats them and labels them as an estimate.
+- `provider` identifies the routing adapter. The client must not depend on a specific value.
+- `generated_at` is the server's response time.
+- The endpoint is stateless: it holds the origin in memory for the request and never stores or logs it.
+- This is a route preview, not turn-by-turn navigation. The response carries no manoeuvre instructions, traffic model, or live position.
+- The server sends the origin and pharmacy coordinates to the configured routing provider. The browser never calls the routing provider directly.
+
+Errors:
+
+- `400 INVALID_REQUEST` / `INVALID_ORIGIN` — malformed query or missing/invalid origin.
+- `404 UNKNOWN_PHARMACY` — the pharmacy ID does not exist.
+- `503 ROUTING_UNAVAILABLE` — the provider is unreachable or returned no usable route.
+- `504 ROUTING_TIMEOUT` — the provider exceeded the 8-second timeout.
+
+### 7.10 `POST /api/scan`
 
 Multipart form data. The endpoint is the OCR seam.
 
@@ -1435,7 +1503,7 @@ Errors:
 
 The error response never echoes the image, the file name, or any text from the image.
 
-### 7.10 `POST /api/reports`
+### 7.11 `POST /api/reports`
 
 Request:
 
@@ -1495,7 +1563,7 @@ Errors:
 - `422 UNKNOWN_MEDICINE`.
 - `429 REPORT_RATE_LIMITED` — more than 5 reports per hour per session/IP.
 
-### 7.11 `POST /api/events`
+### 7.12 `POST /api/events`
 
 Request:
 
@@ -1564,7 +1632,7 @@ Errors:
 - `422 INVALID_EVENT` — unknown event name, property key, or value type.
 - `429 EVENT_RATE_LIMITED` — more than 120 events per minute per session.
 
-### 7.12 Error catalogue
+### 7.13 Error catalogue
 
 | HTTP | Code | Meaning |
 |---:|---|---|
@@ -1586,8 +1654,10 @@ Errors:
 | `429` | `EVENT_RATE_LIMITED` | Event rate limit |
 | `500` | `INTERNAL` | Unexpected server error |
 | `503` | `SCAN_UNAVAILABLE` | OCR provider unavailable |
+| `503` | `ROUTING_UNAVAILABLE` | Routing provider unavailable or returned no usable route |
 | `503` | `DATABASE_UNAVAILABLE` | Database unreachable |
 | `504` | `SCAN_TIMEOUT` | OCR provider timeout |
+| `504` | `ROUTING_TIMEOUT` | Routing provider timeout |
 
 ---
 
@@ -1645,6 +1715,7 @@ delete from app_event where occurred_at < now() - interval '90 days';
 - The app and API are same-origin; no CORS.
 - `X-Robots-Tag: noindex` on all responses and a `noindex` meta tag in the app shell.
 - No request bodies, query strings, images, or report notes in access logs. Log method, path without query, status, and duration only.
+- Routing requests are stateless: the device origin is held in memory for one request, sent only to the configured routing provider, and never stored or logged.
 - The POC is not public. The demo badge is shown when `APP_ENV=dev` and hidden when `APP_ENV=pilot`.
 
 ---
@@ -1653,7 +1724,7 @@ delete from app_event where occurred_at < now() - interval '90 days';
 
 ### 9.1 Stable seam
 
-The client's scan flow depends only on the response shape in section 7.9. The server-side implementation is replaceable:
+The client's scan flow depends only on the response shape in section 7.10. The server-side implementation is replaceable:
 
 ```ts
 interface ScanCandidate {
@@ -1719,8 +1790,8 @@ The POC provider is `MockScanProvider`. The real provider is chosen in #16. The 
 
 - Search returns exact products with typo tolerance and empty states.
 - Results implement the ranking, stale, MDRP, Rx/OTC, candidate-generic, and no-price states exactly as section 7.7.
-- Pharmacy detail matches the selected result and uses the Google Maps deep link.
-- Scan uses section 7.9, shows the low-confidence item, and never auto-adds.
+- Pharmacy detail matches the selected result, and directions render the native route preview in the embedded map.
+- Scan uses section 7.10, shows the low-confidence item, and never auto-adds.
 - Report persists and the visible `reported` state survives reload.
 - Events are anonymous and reject free text.
 
@@ -1733,6 +1804,7 @@ These are intentionally left to their implementation tickets:
 - exact mock prices, stock distribution, verification dates, and the specific pharmacy/medicine pairs used for the demo (ticket #24);
 - the three sample prescription images and their scripted item lists (ticket #28);
 - MapLibre styling, pin/bottom-sheet visuals, and the demo banner wording (map "Not yet specified" and ticket #26);
+- the production routing provider and any self-hosting plan; the POC uses a replaceable OSRM-compatible adapter (ticket #27 and the [native pharmacy directions ADR](../adr/proposed/architecture/2026-10-21-native-pharmacy-directions.md));
 - VPS provider, hostname, TLS/basic-auth wiring, and the pilot-cutover runbook (ticket #29);
 - price history, audit trails, admin report triage UI, and a real OCR provider (out of scope for the POC map).
 
@@ -1743,6 +1815,7 @@ These are intentionally left to their implementation tickets:
 - Patient accounts, saved baskets, order/reservation/payment/delivery, and pharmacy dashboards.
 - Real price/stock collection, pharmacy recruitment, and pilot operations.
 - Real OCR or cloud OCR integration in the POC.
+- Turn-by-turn navigation, live re-routing, traffic-aware travel estimates, and voice guidance. Directions are a route preview only.
 - Offline price data; the PWA caches only the app shell.
 - Public/anonymous access; the POC is behind basic auth and `noindex`.
 - LGU/public health center data, Bikol localization, expansion beyond Naga City, monetization, and the metrics program.

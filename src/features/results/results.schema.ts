@@ -192,7 +192,8 @@ export const basketSchema = z.strictObject({
 /** The resolved basket envelope. */
 export type Basket = z.infer<typeof basketSchema>
 
-const priceLineSchema = z.strictObject({
+/** One price line exposed by the results and pharmacy-detail contracts. */
+export const priceLineSchema = z.strictObject({
   medicine_id: z.string(),
   shelf_price_php: z.number(),
   pack_size: z.string(),
@@ -205,7 +206,11 @@ const priceLineSchema = z.strictObject({
   mdrp: mdrpInfoSchema.nullable(),
 })
 
-const missingItemSchema = z.strictObject({
+/** One price line exposed by the results and pharmacy-detail contracts. */
+export type PriceLine = z.infer<typeof priceLineSchema>
+
+/** One basket item a pharmacy cannot supply. */
+export const missingItemSchema = z.strictObject({
   medicine_id: z.string(),
   brand_name: z.string().nullable(),
   generic_name: z.string(),

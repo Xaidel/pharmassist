@@ -1,0 +1,491 @@
+import { useEffect, useId, useRef, useState } from 'react'
+import type { SyntheticEvent } from 'react'
+
+import { sendEvents } from '#/lib/events'
+import { MedicineLine } from '#/shared/components/medicine-line'
+import { Alert } from '#/shared/components/ui/alert'
+import { Badge } from '#/shared/components/ui/badge'
+import { Button } from '#/shared/components/ui/button'
+import { Dialog } from '#/shared/components/ui/dialog'
+import { Label } from '#/shared/components/ui/label'
+import { Textarea } from '#/shared/components/ui/textarea'
+
+import {
+  fetchPharmacyDetail,
+  PharmacyDetailRequestError,
+} from '../pharmacy-detail.api'
+import type { PharmacyDetailResponse } from '../pharmacy-detail.schema'
+import type { DetailBasket } from '../pharmacy-detail.domain'
+import { postReport, ReportRequestError } from '../report.api'
+import { REPORT_NOTE_MAX, type ReportReason } from '../report.schema'
+import { isAbortError } from '../results.api'
+import type { BasketLine, Origin } from '../results.domain'
+import {
+  formatDistance,
+  formatMissingReason,
+  formatOpenNow,
+  formatPeso,
+  formatStockStatus,
+  formatVerified,
+} from '../results.format'
+
+import { PriceLineItem } from './price-line'
+
+const REPORT_REASON_OPTIONS: readonly {
+  value: ReportReason
+  label: string
+}[] = [
+  { value: 'wrong_price', label: 'Wrong price' },
+  { value: 'wrong_stock', label: 'Wrong stock' },
+  { value: 'wrong_details', label: 'Wrong details' },
+  { value: 'other', label: 'Other' },
+]
+
+type LoadStatus = 'idle' | 'loading' | 'ready' | 'error'
+
+type PharmacyDetailSheetProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  pharmacyId: string
+  resultKey: string | null
+  basketItems: readonly BasketLine[]
+  origin: Origin | null
+  reported: boolean
+  reportedAt: string | null
+  onReported: () => void
+  onShowRoute: () => void
+}
+
+type ReportFormProps = {
+  pharmacyId: string
+  medicineIds: readonly string[]
+  onSubmitted: () => void
+}
+
+function ReportForm({
+  pharmacyId,
+  medicineIds,
+  onSubmitted,
+}: ReportFormProps): React.JSX.Element {
+  const [reason, setReason] = useState<ReportReason>('wrong_price')
+  const [note, setNote] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const noteId = useId()
+  const reasonLabelId = useId()
+
+  async function handleSubmit(
+    event: SyntheticEvent<HTMLFormElement>,
+  ): Promise<void> {
+    event.preventDefault()
+    setSubmitting(true)
+    setError(null)
+    try {
+      await postReport({
+        pharmacyId,
+        medicineIds,
+        reason,
+        note: note.trim() === '' ? null : note.trim(),
+      })
+      sendEvents([{ name: 'report_submitted', properties: { reason } }]).catch(
+        () => undefined,
+      )
+      onSubmitted()
+    } catch (reportError) {
+      setError(
+        reportError instanceof ReportRequestError
+          ? reportError.message
+          : 'The report could not be sent. Check your connection and try again.',
+      )
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <form
+      aria-label="Report a wrong price or stock"
+      className="rounded-2xl border border-border p-4"
+      onSubmit={(event) => {
+        void handleSubmit(event)
+      }}
+    >
+      <h3 className="font-display text-xl font-semibold">
+        Report wrong price or stock
+      </h3>
+      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+        Reports go to the data operator. The pharmacy is not notified, and the
+        reported state is shown on this result after you send it.
+      </p>
+
+      <div
+        aria-labelledby={reasonLabelId}
+        className="mt-4 flex flex-wrap gap-2"
+        role="group"
+      >
+        <p
+          className="w-full text-sm font-semibold text-foreground"
+          id={reasonLabelId}
+        >
+          Reason
+        </p>
+        {REPORT_REASON_OPTIONS.map((option) => (
+          <Button
+            aria-pressed={reason === option.value}
+            disabled={submitting}
+            key={option.value}
+            onClick={() => {
+              setReason(option.value)
+            }}
+            size="sm"
+            type="button"
+            variant={reason === option.value ? 'default' : 'outline'}
+          >
+            {option.label}
+          </Button>
+        ))}
+      </div>
+
+      <div className="mt-4">
+        <Label htmlFor={noteId}>Note (optional)</Label>
+        <Textarea
+          className="mt-2"
+          disabled={submitting}
+          id={noteId}
+          maxLength={REPORT_NOTE_MAX}
+          onChange={(event) => {
+            setNote(event.target.value)
+          }}
+          placeholder="What looks wrong? Do not include names, contact details, or other personal information."
+          value={note}
+        />
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          Do not include names or contact details. {note.length}/
+          {REPORT_NOTE_MAX} characters.
+        </p>
+      </div>
+
+      {error !== null && <Alert className="mt-4">{error}</Alert>}
+
+      <div className="mt-4">
+        <Button disabled={submitting} size="sm" type="submit">
+          {submitting ? 'Sending…' : 'Send report'}
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+function DetailBasketSummary({
+  basket,
+}: {
+  basket: DetailBasket
+}): React.JSX.Element {
+  const missingByMedicine = new Map(
+    basket.missing_items.map((item) => [item.medicine_id, item]),
+  )
+  const total =
+    basket.complete && basket.total_shelf_price_php !== null
+      ? basket.total_shelf_price_php
+      : basket.known_total_php
+
+  return (
+    <section
+      aria-labelledby="detail-basket-heading"
+      className="rounded-2xl border border-border p-4"
+    >
+      <h3
+        className="font-display text-xl font-semibold"
+        id="detail-basket-heading"
+      >
+        This basket at this pharmacy
+      </h3>
+      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+        {basket.complete
+          ? `Complete basket · ${formatPeso(total)}`
+          : `${String(basket.missing_items.length)} ${
+              basket.missing_items.length === 1 ? 'item' : 'items'
+            } missing · ${formatPeso(total)} known`}
+      </p>
+      <ul className="mt-3 space-y-3">
+        {basket.items.map((item) => {
+          const missing = missingByMedicine.get(item.medicine_id)
+          return (
+            <li className="rounded-xl bg-muted p-3" key={item.medicine_id}>
+              <MedicineLine medicine={item.medicine} />
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                {item.price === null ? (
+                  <Badge>
+                    {missing === undefined
+                      ? 'No price listed'
+                      : formatMissingReason(missing.reason)}
+                  </Badge>
+                ) : (
+                  <>
+                    <span className="font-semibold">
+                      {formatPeso(item.price.shelf_price_php)}
+                    </span>
+                    <Badge variant="default">
+                      {formatStockStatus(item.price.stock_status)}
+                    </Badge>
+                    {item.price.stale && <Badge>Possibly outdated</Badge>}
+                  </>
+                )}
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+    </section>
+  )
+}
+
+/** Read and render one pharmacy's detail, stock list, directions, and report. */
+export function PharmacyDetailSheet({
+  open,
+  onOpenChange,
+  pharmacyId,
+  resultKey,
+  basketItems,
+  origin,
+  reported,
+  reportedAt,
+  onReported,
+  onShowRoute,
+}: PharmacyDetailSheetProps): React.JSX.Element {
+  const [detail, setDetail] = useState<PharmacyDetailResponse | null>(null)
+  const [status, setStatus] = useState<LoadStatus>('idle')
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [reloadToken, setReloadToken] = useState(0)
+  const [submitted, setSubmitted] = useState(false)
+  const viewedRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    setSubmitted(false)
+  }, [pharmacyId])
+
+  useEffect(() => {
+    if (!open) {
+      viewedRef.current = null
+      return
+    }
+
+    const controller = new AbortController()
+    setStatus('loading')
+    setLoadError(null)
+    void fetchPharmacyDetail(
+      {
+        pharmacyId,
+        medicineIds: basketItems.map((item) => item.medicine_id),
+        origin,
+      },
+      controller.signal,
+    )
+      .then((response) => {
+        if (controller.signal.aborted) {
+          return
+        }
+        setDetail(response)
+        setStatus('ready')
+      })
+      .catch((error: unknown) => {
+        if (isAbortError(error)) {
+          return
+        }
+        setLoadError(
+          error instanceof PharmacyDetailRequestError
+            ? error.message
+            : 'Pharmacy details are unavailable right now. Check your connection and try again.',
+        )
+        setStatus('error')
+      })
+
+    return () => {
+      controller.abort()
+    }
+  }, [open, pharmacyId, basketItems, origin, reloadToken])
+
+  useEffect(() => {
+    if (!open || status !== 'ready' || detail === null) {
+      return
+    }
+    if (viewedRef.current === pharmacyId) {
+      return
+    }
+    viewedRef.current = pharmacyId
+    sendEvents([
+      {
+        name: 'pharmacy_detail_viewed',
+        properties: { pharmacy_id: pharmacyId },
+      },
+    ]).catch(() => undefined)
+  }, [open, status, detail, pharmacyId])
+
+  const ready = status === 'ready' && detail !== null
+  const title = ready ? detail.pharmacy.name : 'Pharmacy details'
+  const descriptionParts: string[] = []
+  if (ready) {
+    descriptionParts.push(detail.pharmacy.address)
+    if (detail.pharmacy.barangay !== null) {
+      descriptionParts.push(detail.pharmacy.barangay)
+    }
+  }
+  const description = ready
+    ? descriptionParts.join(' · ')
+    : 'Loading the seeded pharmacy record.'
+  const medicineById = new Map(
+    (detail?.medicines ?? []).map((medicine) => [
+      medicine.medicine_id,
+      medicine,
+    ]),
+  )
+  const hasReport = reported || submitted
+  const medicineIds = basketItems.map((item) => item.medicine_id)
+
+  return (
+    <Dialog
+      description={description}
+      onOpenChange={onOpenChange}
+      open={open}
+      title={title}
+    >
+      {status === 'loading' && (
+        <p className="text-sm text-muted-foreground" role="status">
+          Loading pharmacy details…
+        </p>
+      )}
+
+      {status === 'error' && (
+        <div>
+          <Alert>{loadError ?? 'Pharmacy details are unavailable.'}</Alert>
+          <div className="mt-4">
+            <Button
+              onClick={() => {
+                setReloadToken((token) => token + 1)
+              }}
+              type="button"
+            >
+              Try again
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {ready && (
+        <div className="space-y-6">
+          <section
+            aria-label="Pharmacy information"
+            className="grid gap-4 text-sm sm:grid-cols-2"
+          >
+            <div>
+              <p className="font-semibold text-foreground">Distance</p>
+              <p className="text-muted-foreground">
+                {formatDistance(detail.pharmacy.distance_m)} away
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">Hours</p>
+              <p className="text-muted-foreground">
+                {formatOpenNow(detail.pharmacy.open_now)}
+                {detail.pharmacy.hours_text !== null
+                  ? ` · ${detail.pharmacy.hours_text}`
+                  : ''}
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">Phone</p>
+              {detail.pharmacy.phone === null ? (
+                <p className="text-muted-foreground">Not verified</p>
+              ) : (
+                <a
+                  className="font-semibold text-primary underline-offset-2 hover:underline"
+                  href={`tel:${detail.pharmacy.phone}`}
+                >
+                  {detail.pharmacy.phone}
+                </a>
+              )}
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">Record</p>
+              <p className="text-muted-foreground">
+                {detail.pharmacy.verification_status === 'verified'
+                  ? 'Verified pharmacy identity'
+                  : 'Identity not verified'}
+              </p>
+            </div>
+          </section>
+
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={onShowRoute} type="button">
+              Show route on map
+            </Button>
+          </div>
+
+          {detail.basket !== undefined && (
+            <DetailBasketSummary basket={detail.basket} />
+          )}
+
+          <section aria-labelledby="detail-stock-heading">
+            <h3
+              className="font-display text-xl font-semibold"
+              id="detail-stock-heading"
+            >
+              Full stock list ({detail.prices.length})
+            </h3>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+              Seeded reference shelf prices for the packs shown. Confirm the
+              price at the pharmacy.
+            </p>
+            {detail.prices.length === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">
+                This pharmacy has no price records in the seeded catalog.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-3">
+                {detail.prices.map((price) => (
+                  <PriceLineItem
+                    key={price.medicine_id}
+                    medicine={medicineById.get(price.medicine_id)}
+                    price={price}
+                  />
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {resultKey !== null && medicineIds.length > 0 ? (
+            hasReport ? (
+              <section
+                aria-label="Report status"
+                className="rounded-2xl border border-border p-4"
+              >
+                <Badge variant="primary">Price reported</Badge>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  Reported{' '}
+                  {reportedAt === null
+                    ? 'just now'
+                    : `on ${formatVerified(reportedAt)}`}
+                  . The data operator will review it.
+                </p>
+              </section>
+            ) : (
+              <ReportForm
+                medicineIds={medicineIds}
+                onSubmitted={() => {
+                  setSubmitted(true)
+                  onReported()
+                }}
+                pharmacyId={pharmacyId}
+              />
+            )
+          ) : (
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Reporting is available on priced results. This pharmacy has no
+              usable price for the basket.
+            </p>
+          )}
+        </div>
+      )}
+    </Dialog>
+  )
+}
