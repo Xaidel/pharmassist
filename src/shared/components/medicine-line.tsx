@@ -1,12 +1,20 @@
 import { Badge } from '#/shared/components/ui/badge'
 
-import type { MedicineSummary } from '../search.schema'
-
-type MedicineLineProps = {
-  medicine: MedicineSummary
+/** The exact-product identity a medicine line renders. */
+export type MedicineLineMedicine = {
+  brand_name: string | null
+  generic_name: string
+  strength: string
+  dosage_form: string
+  pack_size: string | null
+  rx_otc: 'Rx' | 'OTC'
 }
 
-/** Render one exact product's identity in search results. */
+type MedicineLineProps = {
+  medicine: MedicineLineMedicine
+}
+
+/** Render one exact product's identity in search and price results. */
 export function MedicineLine({
   medicine,
 }: MedicineLineProps): React.JSX.Element {
