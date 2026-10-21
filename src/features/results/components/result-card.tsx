@@ -23,8 +23,8 @@ type ResultCardProps = {
   result: Result
   medicines: readonly MedicineSummary[]
   cheapest: boolean
-  selected: boolean
-  onSelect: () => void
+  routeActive: boolean
+  onShowRoute: () => void
   onOpenDetail: () => void
 }
 
@@ -44,8 +44,8 @@ export function ResultCard({
   result,
   medicines,
   cheapest,
-  selected,
-  onSelect,
+  routeActive,
+  onShowRoute,
   onOpenDetail,
 }: ResultCardProps): React.JSX.Element {
   const medicineById = new Map(
@@ -60,7 +60,7 @@ export function ResultCard({
 
   return (
     <Card
-      aria-current={selected ? 'true' : undefined}
+      aria-current={routeActive ? 'true' : undefined}
       className="h-full"
       id={id}
     >
@@ -146,13 +146,13 @@ export function ResultCard({
             View details
           </Button>
           <Button
-            aria-pressed={selected}
-            onClick={onSelect}
+            aria-pressed={routeActive}
+            onClick={onShowRoute}
             size="sm"
             type="button"
             variant="outline"
           >
-            {selected ? 'Shown on map' : 'Show on map'}
+            {routeActive ? 'Route shown' : 'Show route'}
           </Button>
         </div>
 

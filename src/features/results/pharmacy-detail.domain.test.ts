@@ -5,7 +5,6 @@ import type { MedicineSummary } from '#/shared/domain/medicine-summary'
 import {
   buildDetailBasket,
   DETAIL_MAX_MEDICINES,
-  directionsUrl,
   parsePharmacyDetailQuery,
 } from './pharmacy-detail.domain'
 import type { PriceFacts } from './results.domain'
@@ -50,14 +49,6 @@ function price(
     ...overrides,
   }
 }
-
-describe('directionsUrl', () => {
-  it('builds the Google Maps directions deep link at full precision', () => {
-    expect(directionsUrl(13.623234, 123.185995)).toBe(
-      'https://www.google.com/maps/dir/?api=1&destination=13.623234,123.185995',
-    )
-  })
-})
 
 describe('parsePharmacyDetailQuery', () => {
   it('accepts an empty query and a full query', () => {

@@ -62,13 +62,6 @@ export type PharmacyDetailQueryOutcome =
   | { ok: true; value: PharmacyDetailQuery }
   | { ok: false; code: DetailQueryFailureCode; message: string }
 
-/** The Google Maps directions deep link for a pharmacy's coordinates. */
-export function directionsUrl(latitude: number, longitude: number): string {
-  return `https://www.google.com/maps/dir/?api=1&destination=${latitude.toFixed(
-    6,
-  )},${longitude.toFixed(6)}`
-}
-
 function missingItem(
   medicine: MedicineSummary,
   reason: MissingReason,

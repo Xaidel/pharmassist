@@ -54,12 +54,48 @@ test.afterAll(async () => {
   await deleteReportsForResultKey()
 })
 
-test('opens pharmacy detail from a result and hands off directions', async ({
-  page,
-}) => {
+test('opens pharmacy detail and renders a native route', async ({ page }) => {
   const databaseUrl = requireDatabaseUrl()
   const startedAt = new Date()
+  let directionsRequested = false
+
+  await page.context().grantPermissions(['geolocation'])
+  await page.context().setGeolocation({
+    latitude: 13.6215,
+    longitude: 123.1945,
+  })
+
+  await page.route('**/api/directions**', async (route) => {
+    directionsRequested = true
+    await new Promise((resolve) => {
+      setTimeout(resolve, 800)
+    })
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        pharmacy_id: 'generika-lcc-cbd2',
+        origin: { latitude: 13.6215, longitude: 123.1945 },
+        route: {
+          type: 'LineString',
+          coordinates: [
+            [123.1945, 13.6215],
+            [123.1912, 13.6204],
+            [123.189712, 13.619626],
+          ],
+        },
+        distance_m: 1234,
+        duration_s: 456,
+        provider: 'osrm',
+        generated_at: '2026-10-21T10:00:00Z',
+      }),
+    })
+  })
+
   await openJanumetResults(page)
+  await expect(
+    page.getByText('Distances use your current location.'),
+  ).toBeVisible()
   await openCheapestDetail(page)
 
   const dialog = page.getByRole('dialog')
@@ -74,23 +110,23 @@ test('opens pharmacy detail from a result and hands off directions', async ({
     dialog.getByText('Complete basket', { exact: false }),
   ).toBeVisible()
 
-  await page.evaluate(() => {
-    const target = window as Window & { __pharmassistOpenedUrl?: string }
-    window.open = (url?: string | URL) => {
-      target.__pharmassistOpenedUrl = String(url)
-      return null
-    }
-  })
-
-  await dialog.getByRole('button', { name: 'Directions' }).click()
-
-  const openedUrl = await page.evaluate(
-    () =>
-      (window as Window & { __pharmassistOpenedUrl?: string })
-        .__pharmassistOpenedUrl,
+  await dialog.getByRole('button', { name: 'Show route on map' }).click()
+  await expect(dialog).not.toBeVisible()
+  await expect(page.getByText('Calculating route…')).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: /Route to Generika Drugstore/ }),
+  ).toBeVisible()
+  await expect(page.getByText(/1\.2 km/).first()).toBeVisible()
+  await expect(page.getByText(/8 min/).first()).toBeVisible()
+  await expect(
+    page.getByText(/Route preview, not turn-by-turn navigation/),
+  ).toBeVisible()
+  await expect(page.locator('#results-map')).toHaveAttribute(
+    'data-route-active',
+    'true',
   )
-  expect(openedUrl).toContain('https://www.google.com/maps/dir/?api=1')
-  expect(openedUrl).toMatch(/destination=13\.\d{4,6},123\.\d{4,6}$/)
+  await expect(page.locator('[data-route-layer="true"]')).toBeVisible()
+  expect(directionsRequested).toBe(true)
 
   const client = new Client({ connectionString: databaseUrl })
   await client.connect()
@@ -164,9 +200,7 @@ test('serves the detail and report contract errors', async ({ request }) => {
     },
     basket: { complete: true },
   })
-  expect(JSON.stringify(detailBody)).toContain(
-    'https://www.google.com/maps/dir/?api=1&destination=',
-  )
+  expect(JSON.stringify(detailBody)).not.toContain('directions_url')
 
   const unknownPharmacy = await request.get('/api/pharmacies/not-a-pharmacy')
   expect(unknownPharmacy.status()).toBe(404)
@@ -188,6 +222,22 @@ test('serves the detail and report contract errors', async ({ request }) => {
   expect(badOrigin.status()).toBe(400)
   expect(await badOrigin.json()).toMatchObject({
     error: { code: 'INVALID_ORIGIN' },
+  })
+
+  const missingDirectionOrigin = await request.get(
+    '/api/directions?pharmacy_id=mercury-naga-penafrancia',
+  )
+  expect(missingDirectionOrigin.status()).toBe(400)
+  expect(await missingDirectionOrigin.json()).toMatchObject({
+    error: { code: 'INVALID_ORIGIN' },
+  })
+
+  const unknownDirectionPharmacy = await request.get(
+    '/api/directions?pharmacy_id=not-a-pharmacy&origin_latitude=13.6215&origin_longitude=123.1945',
+  )
+  expect(unknownDirectionPharmacy.status()).toBe(404)
+  expect(await unknownDirectionPharmacy.json()).toMatchObject({
+    error: { code: 'UNKNOWN_PHARMACY' },
   })
 
   const badReport = await request.post('/api/reports', {

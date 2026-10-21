@@ -8,6 +8,8 @@ import { Button } from '#/shared/components/ui/button'
 import { Card } from '#/shared/components/ui/card'
 
 import { isAbortError, postResults, ResultsRequestError } from '../results.api'
+import { DirectionsRequestError, fetchDirections } from '../directions.api'
+import type { DirectionsResponse } from '../directions.schema'
 import {
   addBasketLine,
   clearBasket,
@@ -23,7 +25,11 @@ import {
   type Origin,
   type ResultSort,
 } from '../results.domain'
-import { formatPesoCompact } from '../results.format'
+import {
+  formatDistance,
+  formatDuration,
+  formatPesoCompact,
+} from '../results.format'
 import type { ResultsResponse } from '../results.schema'
 
 import { BasketPanel } from './basket-panel'
@@ -38,6 +44,12 @@ type ResultsExperienceProps = {
 }
 
 type LoadStatus = 'idle' | 'loading' | 'updating'
+type RouteStatus = 'idle' | 'loading' | 'error'
+
+type ActiveRoute = {
+  response: DirectionsResponse
+  pharmacyName: string
+}
 
 function resultErrorMessage(error: unknown): string {
   if (error instanceof ResultsRequestError) {
@@ -57,6 +69,7 @@ function locationLabel(source: 'device' | 'naga_center'): string {
 
 type DetailContext = {
   pharmacyId: string
+  pharmacyName: string
   resultKey: string | null
   reported: boolean
   reportedAt: string | null
@@ -67,8 +80,16 @@ function detailContextForKey(
   data: ResultsResponse,
 ): DetailContext | null {
   if (key.startsWith(NO_PRICE_KEY_PREFIX)) {
+    const pharmacyId = key.slice(NO_PRICE_KEY_PREFIX.length)
+    const pharmacy = data.no_price_data.find(
+      (entry) => entry.pharmacy.pharmacy_id === pharmacyId,
+    )?.pharmacy
+    if (pharmacy === undefined) {
+      return null
+    }
     return {
-      pharmacyId: key.slice(NO_PRICE_KEY_PREFIX.length),
+      pharmacyId,
+      pharmacyName: pharmacy.name,
       resultKey: null,
       reported: false,
       reportedAt: null,
@@ -83,6 +104,7 @@ function detailContextForKey(
   }
   return {
     pharmacyId: result.pharmacy.pharmacy_id,
+    pharmacyName: result.pharmacy.name,
     resultKey: result.result_key,
     reported: result.reported,
     reportedAt: result.reported_at,
@@ -107,10 +129,15 @@ export function ResultsExperience({
   const [notice, setNotice] = useState<string | null>(null)
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [detailKey, setDetailKey] = useState<string | null>(null)
+  const [activeRoute, setActiveRoute] = useState<ActiveRoute | null>(null)
+  const [routeStatus, setRouteStatus] = useState<RouteStatus>('idle')
+  const [routeError, setRouteError] = useState<string | null>(null)
+  const [locationAttempt, setLocationAttempt] = useState(0)
   const [reloadToken, setReloadToken] = useState(0)
 
   const initialAddHandledRef = useRef(false)
   const lastViewedRef = useRef<string | null>(null)
+  const routeRequestRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     if (initialAddHandledRef.current) {
@@ -160,6 +187,7 @@ export function ResultsExperience({
       return
     }
 
+    setLocationState('locating')
     let cancelled = false
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -184,7 +212,44 @@ export function ResultsExperience({
     return () => {
       cancelled = true
     }
+  }, [locationAttempt])
+
+  useEffect(() => {
+    routeRequestRef.current?.abort()
+    setActiveRoute(null)
+    setRouteStatus('idle')
+    setRouteError(null)
+  }, [origin])
+
+  useEffect(() => {
+    if (routeStatus === 'idle' && activeRoute === null) {
+      return
+    }
+    const element = document.getElementById('results-map')
+    if (element === null) {
+      return
+    }
+    const reduced = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
+    element.scrollIntoView({
+      behavior: reduced ? 'auto' : 'smooth',
+      block: 'start',
+    })
+  }, [activeRoute, routeStatus])
+
+  useEffect(() => {
+    return () => {
+      routeRequestRef.current?.abort()
+    }
   }, [])
+
+  function requestLocation(): void {
+    setRouteError(null)
+    setRouteStatus('idle')
+    setLocationState('locating')
+    setLocationAttempt((attempt) => attempt + 1)
+  }
 
   useEffect(() => {
     if (!hydrated) {
@@ -344,6 +409,7 @@ export function ResultsExperience({
   }
 
   function handleClear(): void {
+    clearRoute()
     clearBasket(getSessionStorage())
     setBasketLines([])
     setSelectedKey(null)
@@ -351,6 +417,78 @@ export function ResultsExperience({
     setError(null)
     setNotice(null)
     lastViewedRef.current = null
+  }
+
+  function clearRoute(): void {
+    routeRequestRef.current?.abort()
+    setActiveRoute(null)
+    setRouteStatus('idle')
+    setRouteError(null)
+  }
+
+  function handleShowRoute(key: string): void {
+    if (data === null) {
+      return
+    }
+    const context = detailContextForKey(key, data)
+    if (context === null) {
+      return
+    }
+
+    if (activeRoute?.response.pharmacy_id === context.pharmacyId) {
+      clearRoute()
+      return
+    }
+
+    setSelectedKey(key)
+    setDetailKey(null)
+    routeRequestRef.current?.abort()
+    setActiveRoute(null)
+    setRouteError(null)
+
+    if (origin === null) {
+      setRouteStatus('error')
+      setRouteError(
+        'Turn on location to see a route from your current position.',
+      )
+      return
+    }
+
+    const controller = new AbortController()
+    routeRequestRef.current = controller
+    setRouteStatus('loading')
+    sendEvents([
+      {
+        name: 'directions_tapped',
+        properties: { pharmacy_id: context.pharmacyId },
+      },
+    ]).catch(() => undefined)
+
+    void fetchDirections(
+      { pharmacyId: context.pharmacyId, origin },
+      controller.signal,
+    )
+      .then((response) => {
+        if (controller.signal.aborted) {
+          return
+        }
+        setActiveRoute({
+          response,
+          pharmacyName: context.pharmacyName,
+        })
+        setRouteStatus('idle')
+      })
+      .catch((error: unknown) => {
+        if (isAbortError(error)) {
+          return
+        }
+        setRouteError(
+          error instanceof DirectionsRequestError
+            ? error.message
+            : 'A route is unavailable right now. Check your connection and try again.',
+        )
+        setRouteStatus('error')
+      })
   }
 
   function handleSort(nextSort: ResultSort): void {
@@ -527,6 +665,55 @@ export function ResultsExperience({
             </p>
           </div>
 
+          {routeStatus === 'error' && (
+            <div className="mt-4">
+              <Alert>
+                {routeError}
+                {origin === null && (
+                  <div className="mt-3">
+                    <Button
+                      onClick={requestLocation}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      Use my location
+                    </Button>
+                  </div>
+                )}
+              </Alert>
+            </div>
+          )}
+
+          {activeRoute !== null && (
+            <section
+              aria-labelledby="active-route-heading"
+              className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4"
+            >
+              <div>
+                <h2
+                  className="font-display text-lg font-semibold"
+                  id="active-route-heading"
+                >
+                  Route to {activeRoute.pharmacyName}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {formatDistance(activeRoute.response.distance_m)} · about{' '}
+                  {formatDuration(activeRoute.response.duration_s)} · Route
+                  preview, not turn-by-turn navigation.
+                </p>
+              </div>
+              <Button
+                onClick={clearRoute}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                Clear route
+              </Button>
+            </section>
+          )}
+
           <div className={busy ? 'opacity-60' : undefined}>
             <ResultsMap
               onSelect={(key) => {
@@ -535,18 +722,20 @@ export function ResultsExperience({
               }}
               origin={origin}
               pins={pins}
+              route={activeRoute?.response.route ?? null}
+              routeLoading={routeStatus === 'loading'}
               selectedKey={selectedKey}
             />
           </div>
 
           <div className={busy ? 'opacity-60' : undefined}>
             <ResultsList
+              activePharmacyId={activeRoute?.response.pharmacy_id ?? null}
               cheapestKey={cheapestKey}
               data={data}
               medicines={medicines}
               onOpenDetail={setDetailKey}
-              onSelect={setSelectedKey}
-              selectedKey={selectedKey}
+              onShowRoute={handleShowRoute}
             />
           </div>
 
@@ -565,6 +754,11 @@ export function ResultsExperience({
               }}
               onReported={() => {
                 setReloadToken((token) => token + 1)
+              }}
+              onShowRoute={() => {
+                if (detailKey !== null) {
+                  handleShowRoute(detailKey)
+                }
               }}
               open={detailKey !== null}
               origin={origin}

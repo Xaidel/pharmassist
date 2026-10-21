@@ -53,6 +53,7 @@ type PharmacyDetailSheetProps = {
   reported: boolean
   reportedAt: string | null
   onReported: () => void
+  onShowRoute: () => void
 }
 
 type ReportFormProps = {
@@ -250,6 +251,7 @@ export function PharmacyDetailSheet({
   reported,
   reportedAt,
   onReported,
+  onShowRoute,
 }: PharmacyDetailSheetProps): React.JSX.Element {
   const [detail, setDetail] = useState<PharmacyDetailResponse | null>(null)
   const [status, setStatus] = useState<LoadStatus>('idle')
@@ -318,16 +320,6 @@ export function PharmacyDetailSheet({
       },
     ]).catch(() => undefined)
   }, [open, status, detail, pharmacyId])
-
-  function handleDirections(url: string): void {
-    sendEvents([
-      {
-        name: 'directions_tapped',
-        properties: { pharmacy_id: pharmacyId },
-      },
-    ]).catch(() => undefined)
-    window.open(url, '_blank', 'noopener,noreferrer')
-  }
 
   const ready = status === 'ready' && detail !== null
   const title = ready ? detail.pharmacy.name : 'Pharmacy details'
@@ -424,13 +416,8 @@ export function PharmacyDetailSheet({
           </section>
 
           <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={() => {
-                handleDirections(detail.pharmacy.directions_url)
-              }}
-              type="button"
-            >
-              Directions
+            <Button onClick={onShowRoute} type="button">
+              Show route on map
             </Button>
           </div>
 

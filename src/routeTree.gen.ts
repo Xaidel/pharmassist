@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ResultsRouteImport } from './routes/results'
 import { Route as ApiBasketRouteImport } from './routes/api.basket'
+import { Route as ApiDirectionsRouteImport } from './routes/api.directions'
 import { Route as ApiEventsRouteImport } from './routes/api.events'
 import { Route as ApiHealthRouteImport } from './routes/api.health'
 import { Route as ApiReportsRouteImport } from './routes/api.reports'
@@ -32,6 +33,11 @@ const ResultsRoute = ResultsRouteImport.update({
 const ApiBasketRoute = ApiBasketRouteImport.update({
   id: '/api/basket',
   path: '/api/basket',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDirectionsRoute = ApiDirectionsRouteImport.update({
+  id: '/api/directions',
+  path: '/api/directions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiEventsRoute = ApiEventsRouteImport.update({
@@ -69,6 +75,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/results': typeof ResultsRoute
   '/api/basket': typeof ApiBasketRoute
+  '/api/directions': typeof ApiDirectionsRoute
   '/api/events': typeof ApiEventsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/reports': typeof ApiReportsRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/results': typeof ResultsRoute
   '/api/basket': typeof ApiBasketRoute
+  '/api/directions': typeof ApiDirectionsRoute
   '/api/events': typeof ApiEventsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/reports': typeof ApiReportsRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/results': typeof ResultsRoute
   '/api/basket': typeof ApiBasketRoute
+  '/api/directions': typeof ApiDirectionsRoute
   '/api/events': typeof ApiEventsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/reports': typeof ApiReportsRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/'
     | '/results'
     | '/api/basket'
+    | '/api/directions'
     | '/api/events'
     | '/api/health'
     | '/api/reports'
@@ -116,6 +126,7 @@ export interface FileRouteTypes {
     | '/'
     | '/results'
     | '/api/basket'
+    | '/api/directions'
     | '/api/events'
     | '/api/health'
     | '/api/reports'
@@ -127,6 +138,7 @@ export interface FileRouteTypes {
     | '/'
     | '/results'
     | '/api/basket'
+    | '/api/directions'
     | '/api/events'
     | '/api/health'
     | '/api/reports'
@@ -139,6 +151,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ResultsRoute: typeof ResultsRoute
   ApiBasketRoute: typeof ApiBasketRoute
+  ApiDirectionsRoute: typeof ApiDirectionsRoute
   ApiEventsRoute: typeof ApiEventsRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiReportsRoute: typeof ApiReportsRoute
@@ -168,6 +181,13 @@ declare module '@tanstack/react-router' {
       path: '/api/basket'
       fullPath: '/api/basket'
       preLoaderRoute: typeof ApiBasketRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/directions': {
+      id: '/api/directions'
+      path: '/api/directions'
+      fullPath: '/api/directions'
+      preLoaderRoute: typeof ApiDirectionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/events': {
@@ -219,6 +239,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ResultsRoute: ResultsRoute,
   ApiBasketRoute: ApiBasketRoute,
+  ApiDirectionsRoute: ApiDirectionsRoute,
   ApiEventsRoute: ApiEventsRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiReportsRoute: ApiReportsRoute,

@@ -4,7 +4,6 @@ import type { MedicineSummary } from '#/shared/domain/medicine-summary'
 
 import {
   buildDetailBasket,
-  directionsUrl,
   type PharmacyDetailQuery,
 } from './pharmacy-detail.domain'
 import {
@@ -97,10 +96,7 @@ export async function handlePharmacyDetail(
         })
 
   const payload = {
-    pharmacy: {
-      ...pharmacySummary,
-      directions_url: directionsUrl(pharmacy.latitude, pharmacy.longitude),
-    },
+    pharmacy: pharmacySummary,
     medicines: pricedMedicines,
     prices: prices.map((price) => toPriceLine(price)),
     ...(basket === undefined ? {} : { basket }),

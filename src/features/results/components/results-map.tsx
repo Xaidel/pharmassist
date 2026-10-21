@@ -8,9 +8,13 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import { useEffect, useRef, useState } from 'react'
 
+import type { RouteGeometry } from '../directions.schema'
 import { NAGA_CENTER } from '../results.domain'
 
 const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/positron'
+const ROUTE_SOURCE_ID = 'active-route'
+const ROUTE_LAYER_ID = 'active-route-line'
+const ROUTE_COLOR = '#0f6b57'
 
 /** One pharmacy pin the results map renders. */
 export type MapPin = {
@@ -73,6 +77,8 @@ type ResultsMapProps = {
   pins: readonly MapPin[]
   selectedKey: string | null
   origin: { latitude: number; longitude: number } | null
+  route: RouteGeometry | null
+  routeLoading: boolean
   onSelect: (key: string) => void
 }
 
@@ -81,6 +87,8 @@ export function ResultsMap({
   pins,
   selectedKey,
   origin,
+  route,
+  routeLoading,
   onSelect,
 }: ResultsMapProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -200,7 +208,91 @@ export function ResultsMap({
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map || selectedKey === null) {
+    if (!map || !isReady) {
+      return
+    }
+
+    const apply = (): void => {
+      if (map.getLayer(ROUTE_LAYER_ID)) {
+        map.removeLayer(ROUTE_LAYER_ID)
+      }
+      if (map.getSource(ROUTE_SOURCE_ID)) {
+        map.removeSource(ROUTE_SOURCE_ID)
+      }
+      if (route === null) {
+        if (containerRef.current !== null) {
+          containerRef.current.dataset.routeLayer = 'false'
+        }
+        return
+      }
+
+      map.addSource(ROUTE_SOURCE_ID, {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: {},
+          geometry: route,
+        },
+      })
+      map.addLayer({
+        id: ROUTE_LAYER_ID,
+        type: 'line',
+        source: ROUTE_SOURCE_ID,
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round',
+        },
+        paint: {
+          'line-color': ROUTE_COLOR,
+          'line-width': 5,
+          'line-opacity': 0.85,
+        },
+      })
+      if (containerRef.current !== null) {
+        containerRef.current.dataset.routeLayer = 'true'
+      }
+
+      const first = route.coordinates[0]
+      if (first === undefined) {
+        return
+      }
+      let west = first[0]
+      let east = first[0]
+      let south = first[1]
+      let north = first[1]
+      for (const coordinate of route.coordinates) {
+        west = Math.min(west, coordinate[0])
+        east = Math.max(east, coordinate[0])
+        south = Math.min(south, coordinate[1])
+        north = Math.max(north, coordinate[1])
+      }
+      map.fitBounds(
+        [
+          [west, south],
+          [east, north],
+        ],
+        {
+          padding: 56,
+          maxZoom: 15,
+          duration: prefersReducedMotion() ? 0 : 600,
+        },
+      )
+    }
+
+    if (map.isStyleLoaded()) {
+      apply()
+    } else {
+      map.once('load', apply)
+    }
+
+    return () => {
+      map.off('load', apply)
+    }
+  }, [isReady, route])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || selectedKey === null || route !== null) {
       return
     }
     const pin = pins.find((candidate) => candidate.key === selectedKey)
@@ -212,16 +304,34 @@ export function ResultsMap({
       zoom: Math.max(map.getZoom(), 13.5),
       duration: prefersReducedMotion() ? 0 : 450,
     })
-  }, [pins, selectedKey])
+  }, [pins, selectedKey, route])
 
   return (
-    <div className="relative mt-4 overflow-hidden rounded-3xl border border-border bg-muted">
+    <div
+      className="relative mt-4 overflow-hidden rounded-3xl border border-border bg-muted"
+      data-route-active={route === null ? 'false' : 'true'}
+      id="results-map"
+    >
       <div
         aria-label="Map of pharmacy prices"
         className="h-96 w-full"
         ref={containerRef}
         role="region"
       />
+      {routeLoading && isReady && (
+        <div className="pointer-events-none absolute inset-x-0 top-4 z-10 flex justify-center">
+          <div
+            className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground shadow-md"
+            role="status"
+          >
+            <span
+              aria-hidden="true"
+              className="size-4 animate-spin rounded-full border-2 border-border border-t-primary motion-reduce:animate-none"
+            />
+            Calculating route…
+          </div>
+        </div>
+      )}
       {!isReady && mapError === null && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center bg-background/70 text-sm font-medium text-muted-foreground">
           Loading the map…

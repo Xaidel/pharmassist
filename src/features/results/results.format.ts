@@ -48,6 +48,19 @@ export function formatDistance(metres: number): string {
   return `${(metres / 1000).toFixed(1)} km`
 }
 
+/** Format a route duration in seconds as minutes or hours and minutes. */
+export function formatDuration(seconds: number): string {
+  const minutes = Math.max(1, Math.round(seconds / 60))
+  if (minutes < 60) {
+    return `${String(minutes)} min`
+  }
+  const hours = Math.floor(minutes / 60)
+  const remainder = minutes % 60
+  return remainder === 0
+    ? `${String(hours)} hr`
+    : `${String(hours)} hr ${String(remainder)} min`
+}
+
 /** Format a verification instant as a short local date. */
 export function formatVerified(isoTimestamp: string): string {
   const parsed = new Date(isoTimestamp)

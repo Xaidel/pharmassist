@@ -27,6 +27,7 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-pharmassist}:${POSTGRES_PASSWORD:-pharmassist}@postgres:5432/${POSTGRES_DB:-pharmassist}
       HOST: 0.0.0.0
       PORT: 3000
+      ROUTING_BASE_URL: ${ROUTING_BASE_URL:-https://router.project-osrm.org}
     depends_on:
       postgres:
         condition: service_healthy

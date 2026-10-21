@@ -23,9 +23,9 @@ type ResultsListProps = {
   data: ResultsResponse
   medicines: readonly MedicineSummary[]
   cheapestKey: string | null
-  selectedKey: string | null
-  onSelect: (key: string) => void
+  activePharmacyId: string | null
   onOpenDetail: (key: string) => void
+  onShowRoute: (key: string) => void
 }
 
 /** Render the ranked list that mirrors the map, grouped by completeness. */
@@ -33,9 +33,9 @@ export function ResultsList({
   data,
   medicines,
   cheapestKey,
-  selectedKey,
-  onSelect,
+  activePharmacyId,
   onOpenDetail,
+  onShowRoute,
 }: ResultsListProps): React.JSX.Element {
   return (
     <>
@@ -80,11 +80,11 @@ export function ResultsList({
                   onOpenDetail={() => {
                     onOpenDetail(result.result_key)
                   }}
-                  onSelect={() => {
-                    onSelect(result.result_key)
+                  onShowRoute={() => {
+                    onShowRoute(result.result_key)
                   }}
                   result={result}
-                  selected={result.result_key === selectedKey}
+                  routeActive={activePharmacyId === result.pharmacy.pharmacy_id}
                 />
               </li>
             ))}
@@ -121,11 +121,11 @@ export function ResultsList({
                   onOpenDetail={() => {
                     onOpenDetail(result.result_key)
                   }}
-                  onSelect={() => {
-                    onSelect(result.result_key)
+                  onShowRoute={() => {
+                    onShowRoute(result.result_key)
                   }}
                   result={result}
-                  selected={result.result_key === selectedKey}
+                  routeActive={activePharmacyId === result.pharmacy.pharmacy_id}
                 />
               </li>
             ))}
@@ -152,7 +152,7 @@ export function ResultsList({
           <ul className="mt-4 space-y-3">
             {data.no_price_data.map(({ pharmacy }) => {
               const key = noPriceKey(pharmacy.pharmacy_id)
-              const selected = selectedKey === key
+              const routeActive = activePharmacyId === pharmacy.pharmacy_id
               const hoursText = pharmacy.hours_text
               return (
                 <li id={`result-${key}`} key={key}>
@@ -190,15 +190,15 @@ export function ResultsList({
                             View details
                           </Button>
                           <Button
-                            aria-pressed={selected}
+                            aria-pressed={routeActive}
                             onClick={() => {
-                              onSelect(key)
+                              onShowRoute(key)
                             }}
                             size="sm"
                             type="button"
                             variant="outline"
                           >
-                            {selected ? 'Shown on map' : 'Show on map'}
+                            {routeActive ? 'Route shown' : 'Show route'}
                           </Button>
                         </div>
                       </div>

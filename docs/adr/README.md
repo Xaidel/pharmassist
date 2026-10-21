@@ -32,4 +32,4 @@ Records start in `proposed/`. Maintainers move a record to `accepted/` or `rejec
 
 ## Current Records
 
-None yet. This collection is described and gated so that the first application decision has an unambiguous home, but the scaffold made no decision that is not already governed by a template record. The first record — a persistence, identity, deployment, or external-provider choice, for example — is written here, and the handle table in [`template_docs/adr/README.md`](../../template_docs/adr/README.md#citing-a-record) grows with it.
+The first application record is the proposed [`native-pharmacy-directions`](proposed/architecture/2026-10-21-native-pharmacy-directions.md) decision. The folder tree remains the inventory; this note is not an index.

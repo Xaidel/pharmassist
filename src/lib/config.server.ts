@@ -20,6 +20,7 @@ const serverConfigSchema = z.object({
   databaseUrl: databaseUrlSchema,
   appEnv: appEnvSchema,
   nagaCenter: coordinateSchema,
+  routingBaseUrl: z.url(),
 })
 
 /** Runtime environments the application recognizes. */
@@ -39,5 +40,6 @@ export function readServerConfig(
       latitude: Number(env.NAGA_CENTER_LAT ?? '13.6215'),
       longitude: Number(env.NAGA_CENTER_LNG ?? '123.1945'),
     },
+    routingBaseUrl: env.ROUTING_BASE_URL ?? 'https://router.project-osrm.org',
   })
 }

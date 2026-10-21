@@ -32,9 +32,7 @@ export const detailBasketSchema = z.strictObject({
 
 /** The pharmacy detail and its full price list. */
 export const pharmacyDetailResponseSchema = z.strictObject({
-  pharmacy: pharmacySummarySchema.extend({
-    directions_url: z.string(),
-  }),
+  pharmacy: pharmacySummarySchema,
   medicines: z.array(medicineSummarySchema),
   prices: z.array(priceLineSchema),
   basket: detailBasketSchema.optional(),
