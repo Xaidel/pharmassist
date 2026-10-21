@@ -1,4 +1,3 @@
-import { MedicineLine } from '#/shared/components/medicine-line'
 import { Badge } from '#/shared/components/ui/badge'
 import { Button } from '#/shared/components/ui/button'
 import { Card } from '#/shared/components/ui/card'
@@ -10,9 +9,10 @@ import {
   formatMissingReason,
   formatOpenNow,
   formatPeso,
-  formatStockStatus,
   formatVerified,
 } from '../results.format'
+
+import { PriceLineItem } from './price-line'
 
 type CompleteResult = ResultsResponse['complete'][number]
 type IncompleteResult = ResultsResponse['incomplete'][number]
@@ -25,6 +25,7 @@ type ResultCardProps = {
   cheapest: boolean
   selected: boolean
   onSelect: () => void
+  onOpenDetail: () => void
 }
 
 function oldestVerifiedAt(result: Result): string | null {
@@ -45,6 +46,7 @@ export function ResultCard({
   cheapest,
   selected,
   onSelect,
+  onOpenDetail,
 }: ResultCardProps): React.JSX.Element {
   const medicineById = new Map(
     medicines.map((medicine) => [medicine.medicine_id, medicine]),
@@ -139,15 +141,18 @@ export function ResultCard({
           )}
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button onClick={onOpenDetail} size="sm" type="button">
+            View details
+          </Button>
           <Button
             aria-pressed={selected}
             onClick={onSelect}
             size="sm"
             type="button"
-            variant={selected ? 'default' : 'outline'}
+            variant="outline"
           >
-            {selected ? 'Showing on map' : 'Show on map'}
+            {selected ? 'Shown on map' : 'Show on map'}
           </Button>
         </div>
 
@@ -159,53 +164,11 @@ export function ResultCard({
             {result.prices.map((price) => {
               const medicine = medicineById.get(price.medicine_id)
               return (
-                <li
-                  className="rounded-2xl bg-muted p-3"
+                <PriceLineItem
                   key={price.medicine_id}
-                >
-                  {medicine === undefined ? (
-                    <p className="font-semibold">{price.medicine_id}</p>
-                  ) : (
-                    <MedicineLine medicine={medicine} />
-                  )}
-                  <p className="mt-2 text-sm">
-                    <span className="font-semibold">
-                      {formatPeso(price.shelf_price_php)}
-                    </span>{' '}
-                    per {price.pack_size}
-                    {price.unit_price_php !== null &&
-                      ` · ${formatPeso(price.unit_price_php)}/${
-                        price.pack_unit ?? 'unit'
-                      }`}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {formatStockStatus(price.stock_status)} · Verified{' '}
-                    {formatVerified(price.verified_at)}
-                    {price.stale ? ' · Possibly outdated' : ''}
-                  </p>
-                  {price.mdrp !== null && (
-                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                      MDRP ceiling ({price.mdrp.order}, row{' '}
-                      {price.mdrp.annex_row}):{' '}
-                      {formatPeso(price.mdrp.ceiling_php)} per{' '}
-                      {price.mdrp.ceiling_unit ?? 'pack'}
-                      {price.mdrp.vat_exclusive ? ' (VAT-exclusive)' : ''};
-                      observed{' '}
-                      {formatPeso(
-                        price.mdrp.observed_unit_price_php ??
-                          price.mdrp.observed_pack_price_php,
-                      )}{' '}
-                      per{' '}
-                      {price.mdrp.ceiling_basis === 'per_unit'
-                        ? (price.mdrp.ceiling_unit ?? 'unit')
-                        : price.pack_size}
-                      .{' '}
-                      {price.mdrp.above
-                        ? 'Above the published ceiling — verify at the pharmacy.'
-                        : 'At or below the published ceiling.'}
-                    </p>
-                  )}
-                </li>
+                  medicine={medicine}
+                  price={price}
+                />
               )
             })}
           </ul>

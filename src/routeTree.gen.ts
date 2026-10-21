@@ -14,8 +14,10 @@ import { Route as ResultsRouteImport } from './routes/results'
 import { Route as ApiBasketRouteImport } from './routes/api.basket'
 import { Route as ApiEventsRouteImport } from './routes/api.events'
 import { Route as ApiHealthRouteImport } from './routes/api.health'
+import { Route as ApiReportsRouteImport } from './routes/api.reports'
 import { Route as ApiResultsRouteImport } from './routes/api.results'
 import { Route as ApiSearchRouteImport } from './routes/api.search'
+import { Route as ApiPharmaciesPharmacyIdRouteImport } from './routes/api.pharmacies.$pharmacyId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -42,6 +44,11 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiReportsRoute = ApiReportsRouteImport.update({
+  id: '/api/reports',
+  path: '/api/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiResultsRoute = ApiResultsRouteImport.update({
   id: '/api/results',
   path: '/api/results',
@@ -52,6 +59,11 @@ const ApiSearchRoute = ApiSearchRouteImport.update({
   path: '/api/search',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPharmaciesPharmacyIdRoute = ApiPharmaciesPharmacyIdRouteImport.update({
+  id: '/api/pharmacies/$pharmacyId',
+  path: '/api/pharmacies/$pharmacyId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -59,8 +71,10 @@ export interface FileRoutesByFullPath {
   '/api/basket': typeof ApiBasketRoute
   '/api/events': typeof ApiEventsRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/reports': typeof ApiReportsRoute
   '/api/results': typeof ApiResultsRoute
   '/api/search': typeof ApiSearchRoute
+  '/api/pharmacies/$pharmacyId': typeof ApiPharmaciesPharmacyIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -68,8 +82,10 @@ export interface FileRoutesByTo {
   '/api/basket': typeof ApiBasketRoute
   '/api/events': typeof ApiEventsRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/reports': typeof ApiReportsRoute
   '/api/results': typeof ApiResultsRoute
   '/api/search': typeof ApiSearchRoute
+  '/api/pharmacies/$pharmacyId': typeof ApiPharmaciesPharmacyIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -78,8 +94,10 @@ export interface FileRoutesById {
   '/api/basket': typeof ApiBasketRoute
   '/api/events': typeof ApiEventsRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/reports': typeof ApiReportsRoute
   '/api/results': typeof ApiResultsRoute
   '/api/search': typeof ApiSearchRoute
+  '/api/pharmacies/$pharmacyId': typeof ApiPharmaciesPharmacyIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -89,8 +107,10 @@ export interface FileRouteTypes {
     | '/api/basket'
     | '/api/events'
     | '/api/health'
+    | '/api/reports'
     | '/api/results'
     | '/api/search'
+    | '/api/pharmacies/$pharmacyId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -98,8 +118,10 @@ export interface FileRouteTypes {
     | '/api/basket'
     | '/api/events'
     | '/api/health'
+    | '/api/reports'
     | '/api/results'
     | '/api/search'
+    | '/api/pharmacies/$pharmacyId'
   id:
     | '__root__'
     | '/'
@@ -107,8 +129,10 @@ export interface FileRouteTypes {
     | '/api/basket'
     | '/api/events'
     | '/api/health'
+    | '/api/reports'
     | '/api/results'
     | '/api/search'
+    | '/api/pharmacies/$pharmacyId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -117,8 +141,10 @@ export interface RootRouteChildren {
   ApiBasketRoute: typeof ApiBasketRoute
   ApiEventsRoute: typeof ApiEventsRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  ApiReportsRoute: typeof ApiReportsRoute
   ApiResultsRoute: typeof ApiResultsRoute
   ApiSearchRoute: typeof ApiSearchRoute
+  ApiPharmaciesPharmacyIdRoute: typeof ApiPharmaciesPharmacyIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -158,6 +184,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/reports': {
+      id: '/api/reports'
+      path: '/api/reports'
+      fullPath: '/api/reports'
+      preLoaderRoute: typeof ApiReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/results': {
       id: '/api/results'
       path: '/api/results'
@@ -172,6 +205,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/pharmacies/$pharmacyId': {
+      id: '/api/pharmacies/$pharmacyId'
+      path: '/api/pharmacies/$pharmacyId'
+      fullPath: '/api/pharmacies/$pharmacyId'
+      preLoaderRoute: typeof ApiPharmaciesPharmacyIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -181,8 +221,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBasketRoute: ApiBasketRoute,
   ApiEventsRoute: ApiEventsRoute,
   ApiHealthRoute: ApiHealthRoute,
+  ApiReportsRoute: ApiReportsRoute,
   ApiResultsRoute: ApiResultsRoute,
   ApiSearchRoute: ApiSearchRoute,
+  ApiPharmaciesPharmacyIdRoute: ApiPharmaciesPharmacyIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

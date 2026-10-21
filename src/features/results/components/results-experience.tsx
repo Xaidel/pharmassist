@@ -28,7 +28,8 @@ import type { ResultsResponse } from '../results.schema'
 
 import { BasketPanel } from './basket-panel'
 import { CandidateGenerics } from './candidate-generics'
-import { noPriceKey, ResultsList } from './results-list'
+import { PharmacyDetailSheet } from './pharmacy-detail-sheet'
+import { noPriceKey, NO_PRICE_KEY_PREFIX, ResultsList } from './results-list'
 import { ResultsMap, type MapPin } from './results-map'
 
 type ResultsExperienceProps = {
@@ -54,6 +55,40 @@ function locationLabel(source: 'device' | 'naga_center'): string {
     : 'Distances use the Naga City center.'
 }
 
+type DetailContext = {
+  pharmacyId: string
+  resultKey: string | null
+  reported: boolean
+  reportedAt: string | null
+}
+
+function detailContextForKey(
+  key: string,
+  data: ResultsResponse,
+): DetailContext | null {
+  if (key.startsWith(NO_PRICE_KEY_PREFIX)) {
+    return {
+      pharmacyId: key.slice(NO_PRICE_KEY_PREFIX.length),
+      resultKey: null,
+      reported: false,
+      reportedAt: null,
+    }
+  }
+
+  const result =
+    data.complete.find((entry) => entry.result_key === key) ??
+    data.incomplete.find((entry) => entry.result_key === key)
+  if (result === undefined) {
+    return null
+  }
+  return {
+    pharmacyId: result.pharmacy.pharmacy_id,
+    resultKey: result.result_key,
+    reported: result.reported,
+    reportedAt: result.reported_at,
+  }
+}
+
 /** Run the map-first basket comparison experience. */
 export function ResultsExperience({
   initialAdd,
@@ -71,6 +106,7 @@ export function ResultsExperience({
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const [detailKey, setDetailKey] = useState<string | null>(null)
   const [reloadToken, setReloadToken] = useState(0)
 
   const initialAddHandledRef = useRef(false)
@@ -233,6 +269,14 @@ export function ResultsExperience({
     [data],
   )
 
+  const detailContext = useMemo(
+    () =>
+      detailKey === null || data === null
+        ? null
+        : detailContextForKey(detailKey, data),
+    [detailKey, data],
+  )
+
   const pins = useMemo<MapPin[]>(() => {
     if (data === null) {
       return []
@@ -289,6 +333,7 @@ export function ResultsExperience({
     persist(next)
     if (next.length === 0) {
       setSelectedKey(null)
+      setDetailKey(null)
     }
     sendEvents([
       {
@@ -302,6 +347,7 @@ export function ResultsExperience({
     clearBasket(getSessionStorage())
     setBasketLines([])
     setSelectedKey(null)
+    setDetailKey(null)
     setError(null)
     setNotice(null)
     lastViewedRef.current = null
@@ -483,7 +529,10 @@ export function ResultsExperience({
 
           <div className={busy ? 'opacity-60' : undefined}>
             <ResultsMap
-              onSelect={setSelectedKey}
+              onSelect={(key) => {
+                setSelectedKey(key)
+                setDetailKey(key)
+              }}
               origin={origin}
               pins={pins}
               selectedKey={selectedKey}
@@ -495,6 +544,7 @@ export function ResultsExperience({
               cheapestKey={cheapestKey}
               data={data}
               medicines={medicines}
+              onOpenDetail={setDetailKey}
               onSelect={setSelectedKey}
               selectedKey={selectedKey}
             />
@@ -504,6 +554,26 @@ export function ResultsExperience({
             groups={data.candidate_generics}
             medicines={medicines}
           />
+
+          {detailContext !== null && (
+            <PharmacyDetailSheet
+              basketItems={basketLines}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setDetailKey(null)
+                }
+              }}
+              onReported={() => {
+                setReloadToken((token) => token + 1)
+              }}
+              open={detailKey !== null}
+              origin={origin}
+              pharmacyId={detailContext.pharmacyId}
+              reported={detailContext.reported}
+              reportedAt={detailContext.reportedAt}
+              resultKey={detailContext.resultKey}
+            />
+          )}
 
           <section className="mt-10 rounded-3xl border border-border bg-card p-5 text-sm leading-relaxed text-muted-foreground">
             <h2 className="font-display text-xl font-semibold text-foreground">

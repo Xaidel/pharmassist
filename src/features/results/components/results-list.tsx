@@ -12,8 +12,11 @@ import type { ResultsResponse } from '../results.schema'
 
 import { ResultCard } from './result-card'
 
+/** The prefix that marks a no-price pharmacy key in the results UI. */
+export const NO_PRICE_KEY_PREFIX = 'no-price:'
+
 export function noPriceKey(pharmacyId: string): string {
-  return `no-price:${pharmacyId}`
+  return `${NO_PRICE_KEY_PREFIX}${pharmacyId}`
 }
 
 type ResultsListProps = {
@@ -22,6 +25,7 @@ type ResultsListProps = {
   cheapestKey: string | null
   selectedKey: string | null
   onSelect: (key: string) => void
+  onOpenDetail: (key: string) => void
 }
 
 /** Render the ranked list that mirrors the map, grouped by completeness. */
@@ -31,6 +35,7 @@ export function ResultsList({
   cheapestKey,
   selectedKey,
   onSelect,
+  onOpenDetail,
 }: ResultsListProps): React.JSX.Element {
   return (
     <>
@@ -72,6 +77,9 @@ export function ResultsList({
                   cheapest={result.result_key === cheapestKey}
                   id={`result-${result.result_key}`}
                   medicines={medicines}
+                  onOpenDetail={() => {
+                    onOpenDetail(result.result_key)
+                  }}
                   onSelect={() => {
                     onSelect(result.result_key)
                   }}
@@ -110,6 +118,9 @@ export function ResultsList({
                   cheapest={false}
                   id={`result-${result.result_key}`}
                   medicines={medicines}
+                  onOpenDetail={() => {
+                    onOpenDetail(result.result_key)
+                  }}
                   onSelect={() => {
                     onSelect(result.result_key)
                   }}
@@ -168,17 +179,28 @@ export function ResultsList({
                       </div>
                       <div className="flex flex-col items-end gap-2">
                         <Badge>No price data</Badge>
-                        <Button
-                          aria-pressed={selected}
-                          onClick={() => {
-                            onSelect(key)
-                          }}
-                          size="sm"
-                          type="button"
-                          variant={selected ? 'default' : 'outline'}
-                        >
-                          {selected ? 'Showing on map' : 'Show on map'}
-                        </Button>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Button
+                            onClick={() => {
+                              onOpenDetail(key)
+                            }}
+                            size="sm"
+                            type="button"
+                          >
+                            View details
+                          </Button>
+                          <Button
+                            aria-pressed={selected}
+                            onClick={() => {
+                              onSelect(key)
+                            }}
+                            size="sm"
+                            type="button"
+                            variant="outline"
+                          >
+                            {selected ? 'Shown on map' : 'Show on map'}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </Card>

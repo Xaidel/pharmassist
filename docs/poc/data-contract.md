@@ -1261,6 +1261,21 @@ Response `200`:
     "verification_status": "verified",
     "directions_url": "https://www.google.com/maps/dir/?api=1&destination=13.623234,123.185995"
   },
+  "medicines": [
+    {
+      "medicine_id": "POC-001",
+      "category": "Cardiovascular",
+      "brand_name": "Norvasc",
+      "generic_name": "Amlodipine (as besilate/camsylate)",
+      "strength": "5 mg",
+      "dosage_form": "Tablet",
+      "pack_size": "Box of 100 tablets",
+      "manufacturer": "Viatris Pharmaceuticals LLC",
+      "rx_otc": "Rx",
+      "pnf_listed": true,
+      "konsulta_listed": true
+    }
+  ],
   "prices": [
     {
       "medicine_id": "POC-001",
@@ -1297,6 +1312,7 @@ Response `200`:
 ```
 
 - `prices` is always the pharmacy's full available price list, sorted by medicine brand/generic. It powers the detail sheet's stock list.
+- `medicines` carries the `MedicineSummary` for every medicine in `prices`, so the detail sheet can label its stock list without a second catalog request. It is an additive field on this response only.
 - `basket` is present only when `medicine_ids` is supplied. It uses the same completeness rules as results.
 - `directions_url` is the Google Maps directions deep link for the pharmacy's coordinates. The client opens it in a new tab; no other map interaction leaves the app.
 - `open_now` is null when hours are unknown. `hours_text` is the display string; the client must not parse it to decide open/closed.

@@ -110,4 +110,116 @@ describe('createResultsRepository', () => {
 
     await expect(repository.readPrices(['POC-016'])).rejects.toThrow()
   })
+
+  it('reads one pharmacy by id and returns null when it is unknown', async () => {
+    const calls: { text: string; values: readonly unknown[] }[] = []
+    const repository = createResultsRepository(
+      recordingQuery(calls, [pharmacyRow]),
+    )
+
+    await expect(
+      repository.readPharmacy('mercury-naga-penafrancia'),
+    ).resolves.toMatchObject({
+      pharmacy_id: 'mercury-naga-penafrancia',
+      open_24h: true,
+    })
+    expect(calls[0]?.text).toContain('where id = $1')
+
+    const empty = createResultsRepository(recordingQuery([], []))
+    await expect(empty.readPharmacy('missing')).resolves.toBeNull()
+  })
+
+  it('reads the full price list for one pharmacy through the MDRP view', async () => {
+    const calls: { text: string; values: readonly unknown[] }[] = []
+    const repository = createResultsRepository(
+      recordingQuery(calls, [priceRow]),
+    )
+
+    const prices = await repository.readPharmacyPrices(
+      'mercury-naga-penafrancia',
+    )
+
+    expect(prices[0]?.mdrp?.entry_id).toBe('EO104-044')
+    expect(calls[0]?.text).toContain('price_record_with_mdrp')
+    expect(calls[0]?.text).toContain('join medicine')
+    expect(calls[0]?.values).toEqual([
+      'mercury-naga-penafrancia',
+      STALE_AFTER_DAYS,
+    ])
+  })
+
+  it('inserts an immutable report snapshot and returns its public fields', async () => {
+    const calls: { text: string; values: readonly unknown[] }[] = []
+    const repository = createResultsRepository(
+      recordingQuery(calls, [
+        {
+          report_id: '9b2f',
+          status: 'open',
+          created_at: '2026-10-21T10:05:00Z',
+        },
+      ]),
+    )
+
+    const created = await repository.createReport({
+      resultKey: 'mercury-naga-penafrancia|POC-001',
+      pharmacyId: 'mercury-naga-penafrancia',
+      pharmacyName: 'Mercury Drug',
+      medicineIds: ['POC-001'],
+      medicineLabels: ['Norvasc 5 mg Tablet'],
+      reason: 'wrong_price',
+      note: 'Shelf price differs.',
+    })
+
+    expect(created).toEqual({
+      report_id: '9b2f',
+      status: 'open',
+      created_at: '2026-10-21T10:05:00Z',
+    })
+    expect(calls[0]?.text).toContain('insert into price_report')
+    expect(calls[0]?.values).toEqual([
+      'mercury-naga-penafrancia|POC-001',
+      'mercury-naga-penafrancia',
+      'Mercury Drug',
+      ['POC-001'],
+      ['Norvasc 5 mg Tablet'],
+      'wrong_price',
+      'Shelf price differs.',
+    ])
+  })
+
+  it('returns a zero report summary when a result has no reports', async () => {
+    const repository = createResultsRepository(recordingQuery([], []))
+    await expect(
+      repository.readReportSummary('mercury-naga-penafrancia|POC-001'),
+    ).resolves.toEqual({ count: 0, latest: null })
+  })
+
+  it('returns the latest public report summary without its note', async () => {
+    const repository = createResultsRepository(
+      recordingQuery(
+        [],
+        [
+          {
+            count: 2,
+            report_id: '9b2f',
+            reason: 'wrong_stock',
+            status: 'open',
+            created_at: '2026-10-21T10:05:00Z',
+          },
+        ],
+      ),
+    )
+
+    await expect(
+      repository.readReportSummary('mercury-naga-penafrancia|POC-001'),
+    ).resolves.toEqual({
+      count: 2,
+      latest: {
+        report_id: '9b2f',
+        reason: 'wrong_stock',
+        status: 'open',
+        created_at: '2026-10-21T10:05:00Z',
+      },
+    })
+  })
 })
