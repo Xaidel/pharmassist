@@ -1,0 +1,54 @@
+[
+  {
+    "medicine_id": "POC-016",
+    "pharmacy_id": "mercury-naga-penafrancia",
+    "shelf_price_php": 980.0,
+    "pack_size": "Box of 28 tablets",
+    "pack_quantity": 28,
+    "pack_unit": "tablet",
+    "stock_status": "in_stock",
+    "verified_at": "2026-10-20T00:00:00Z",
+    "verified_by": "poc-seed",
+    "source": "poc-seed",
+    "notes": "Mock POC price for the tooling fixture; not collected."
+  },
+  {
+    "medicine_id": "POC-016",
+    "pharmacy_id": "south-star-naga-3",
+    "shelf_price_php": 1008.0,
+    "pack_size": "Box of 28 tablets",
+    "pack_quantity": 28,
+    "pack_unit": "tablet",
+    "stock_status": "low_stock",
+    "verified_at": "2026-10-20T00:00:00Z",
+    "verified_by": "poc-seed",
+    "source": "poc-seed",
+    "notes": "Mock POC price for the tooling fixture; not collected."
+  },
+  {
+    "medicine_id": "POC-001",
+    "pharmacy_id": "mercury-naga-penafrancia",
+    "shelf_price_php": 950.0,
+    "pack_size": "Box of 100 tablets",
+    "pack_quantity": 100,
+    "pack_unit": "tablet",
+    "stock_status": "in_stock",
+    "verified_at": "2026-10-20T00:00:00Z",
+    "verified_by": "poc-seed",
+    "source": "poc-seed",
+    "notes": "Mock POC price for the tooling fixture; not collected."
+  },
+  {
+    "medicine_id": "POC-090",
+    "pharmacy_id": "mercury-naga-penafrancia",
+    "shelf_price_php": 450.0,
+    "pack_size": "Box of 100 tablets",
+    "pack_quantity": 100,
+    "pack_unit": "tablet",
+    "stock_status": "in_stock",
+    "verified_at": "2026-10-20T00:00:00Z",
+    "verified_by": "poc-seed",
+    "source": "poc-seed",
+    "notes": "Mock POC price for the tooling fixture; not collected."
+  }
+]

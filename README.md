@@ -8,7 +8,9 @@ Medicine price-and-availability map for Naga City, Camarines Sur. The repository
 | --- | --- |
 | `src/` | TanStack Start routes, feature slices, shared UI, and app utilities |
 | `public/` | PWA manifest, icons, offline fallback, and app-shell service worker |
-| `tests/`, `e2e/` | Unit, route-contract, capability, and browser tests |
+| `migrations/` | Postgres schema migrations applied by `bun run db:migrate` |
+| `scripts/` | Database migrations and seed/wipe tooling |
+| `tests/`, `e2e/` | Unit, route-contract, capability, database-tooling, and browser tests |
 | `template_docs/` | Reusable TanStack Start architecture and engineering guidance inherited from the template |
 | `docs/PRD.md` | Product requirements |
 | `docs/poc/data-contract.md` | POC schema, seed/wipe, and HTTP API contract |
@@ -32,7 +34,7 @@ bun install --frozen-lockfile
 bun run dev
 ```
 
-The dev server listens on <http://localhost:3000>. The app shell does not require Postgres yet; the database arrives with the schema ticket.
+The dev server listens on <http://localhost:3000>. The app shell does not read Postgres yet; the database tooling and schema are ready for the feature slices.
 
 ## Container stack
 
@@ -48,7 +50,32 @@ To reset the database volume:
 docker compose down -v
 ```
 
-Copy `.env.example` to `.env` to override the Compose defaults.
+Copy `.env.example` to `.env` to override the Compose defaults. Postgres is published on `127.0.0.1:${POSTGRES_PORT}` so the host-side tooling can reach the Compose database; keep `DATABASE_URL` in `.env` aligned with `POSTGRES_*`.
+
+## Database
+
+Start Postgres, apply the schema, and load the seed fixture:
+
+```sh
+cp .env.example .env
+docker compose up -d postgres
+bun run db:migrate
+bun run db:seed
+```
+
+The seeder reads `scripts/seed/fixtures/poc-seed/` (a small tooling fixture until the full seed lands), writes one `poc-seed` batch in a single transaction, and is idempotent. The wipe removes only rows tagged `seed_batch_id = 'poc-seed'`; it refuses to run while a non-seed row depends on seeded data, and it never touches reports or anonymous events.
+
+```sh
+bun run db:wipe
+```
+
+Both commands refuse to touch `APP_ENV=pilot` unless `ALLOW_POC_SEED=1` or `ALLOW_POC_WIPE=1` is set deliberately. To exercise the full acceptance sequence against a scratch database:
+
+```sh
+bun run db:acceptance
+```
+
+`db:acceptance` creates and drops `pharmassist_tooling_*` on the server in `DATABASE_URL`; it never touches the application database.
 
 ## Scripts
 
@@ -61,6 +88,10 @@ Copy `.env.example` to `.env` to override the Compose defaults.
 | `bun run typecheck` | Strict TypeScript check |
 | `bun run test` | Vitest unit and route tests |
 | `bun run test:e2e` | Build and run the Playwright browser spec |
+| `bun run db:migrate` | Apply pending Postgres migrations |
+| `bun run db:seed` | Load the seed fixture in one idempotent transaction |
+| `bun run db:wipe` | Remove `poc-seed` rows without touching non-seed data |
+| `bun run db:acceptance` | Prove migrations, idempotent seed, and guarded wipe on a scratch database |
 | `bun run verify` | Format, lint, typecheck, tests, browser acceptance, and capability fixture |
 
 Install Chromium once before browser tests: `bunx playwright install chromium`.
@@ -81,4 +112,4 @@ Material that governs derived applications belongs in `template_docs/`. Material
 
 ## Status
 
-This is the scaffold slice only: app shell, PWA, and Compose stack. Search, map results, basket ranking, pharmacy detail, directions, mocked scan, and report flows are subsequent slices in [the POC map](https://github.com/Xaidel/pharmassist/issues/17).
+The scaffold, PWA, Compose stack, Postgres schema, and seed/wipe tooling are in place. Search, map results, basket ranking, pharmacy detail, directions, mocked scan, and report flows are subsequent slices in [the POC map](https://github.com/Xaidel/pharmassist/issues/17).

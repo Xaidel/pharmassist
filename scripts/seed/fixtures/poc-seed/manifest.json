@@ -1,0 +1,15 @@
+{
+  "batch_id": "poc-seed",
+  "kind": "poc-seed",
+  "expect": {
+    "counts": {
+      "medicine": 4,
+      "medicine_alternative": 1,
+      "pharmacy": 2,
+      "mdrp_ceiling": 1,
+      "price_record": 4
+    },
+    "inactive_medicine_ids": ["POC-028"],
+    "mdrp_attachments": [{ "medicine_id": "POC-016", "entry_id": "EO104-044" }]
+  }
+}

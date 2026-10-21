@@ -27,6 +27,7 @@
     "src",
     "tests",
     "e2e",
+    "scripts",
     "vitest.setup.ts",
     "*.config.ts",
     "vite.config.ts"
