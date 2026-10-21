@@ -51,7 +51,7 @@ A caller may change layout only; appearance belongs to the primitive. Contracts 
 | Everything | Layout: placement, width, margin, flex, position |
 | `CardHeader`, `CardContent` | Layout and spacing |
 | `Button` | Use `variant` and `size`; no styling overrides |
-| `Badge` | Use `variant`: `default`, `primary`, `primary-strong`, `inactive` |
+| `Badge` | Use `variant`: `default`, `primary`, `primary-strong`, `destructive`, `inactive` |
 | `Card` | `interactive` for the hover-lift treatment |
 
 `Card` itself keeps the global layout-only contract, because the primitive owns its internal spacing; the widened contract applies to the parts a caller composes inside it.

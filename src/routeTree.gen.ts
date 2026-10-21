@@ -10,13 +10,26 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ResultsRouteImport } from './routes/results'
+import { Route as ApiBasketRouteImport } from './routes/api.basket'
 import { Route as ApiEventsRouteImport } from './routes/api.events'
 import { Route as ApiHealthRouteImport } from './routes/api.health'
+import { Route as ApiResultsRouteImport } from './routes/api.results'
 import { Route as ApiSearchRouteImport } from './routes/api.search'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResultsRoute = ResultsRouteImport.update({
+  id: '/results',
+  path: '/results',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBasketRoute = ApiBasketRouteImport.update({
+  id: '/api/basket',
+  path: '/api/basket',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiEventsRoute = ApiEventsRouteImport.update({
@@ -29,6 +42,11 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiResultsRoute = ApiResultsRouteImport.update({
+  id: '/api/results',
+  path: '/api/results',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSearchRoute = ApiSearchRouteImport.update({
   id: '/api/search',
   path: '/api/search',
@@ -37,35 +55,69 @@ const ApiSearchRoute = ApiSearchRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/results': typeof ResultsRoute
+  '/api/basket': typeof ApiBasketRoute
   '/api/events': typeof ApiEventsRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/results': typeof ApiResultsRoute
   '/api/search': typeof ApiSearchRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/results': typeof ResultsRoute
+  '/api/basket': typeof ApiBasketRoute
   '/api/events': typeof ApiEventsRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/results': typeof ApiResultsRoute
   '/api/search': typeof ApiSearchRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/results': typeof ResultsRoute
+  '/api/basket': typeof ApiBasketRoute
   '/api/events': typeof ApiEventsRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/results': typeof ApiResultsRoute
   '/api/search': typeof ApiSearchRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/events' | '/api/health' | '/api/search'
+  fullPaths:
+    | '/'
+    | '/results'
+    | '/api/basket'
+    | '/api/events'
+    | '/api/health'
+    | '/api/results'
+    | '/api/search'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/events' | '/api/health' | '/api/search'
-  id: '__root__' | '/' | '/api/events' | '/api/health' | '/api/search'
+  to:
+    | '/'
+    | '/results'
+    | '/api/basket'
+    | '/api/events'
+    | '/api/health'
+    | '/api/results'
+    | '/api/search'
+  id:
+    | '__root__'
+    | '/'
+    | '/results'
+    | '/api/basket'
+    | '/api/events'
+    | '/api/health'
+    | '/api/results'
+    | '/api/search'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ResultsRoute: typeof ResultsRoute
+  ApiBasketRoute: typeof ApiBasketRoute
   ApiEventsRoute: typeof ApiEventsRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  ApiResultsRoute: typeof ApiResultsRoute
   ApiSearchRoute: typeof ApiSearchRoute
 }
 
@@ -76,6 +128,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/results': {
+      id: '/results'
+      path: '/results'
+      fullPath: '/results'
+      preLoaderRoute: typeof ResultsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/basket': {
+      id: '/api/basket'
+      path: '/api/basket'
+      fullPath: '/api/basket'
+      preLoaderRoute: typeof ApiBasketRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/events': {
@@ -92,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/results': {
+      id: '/api/results'
+      path: '/api/results'
+      fullPath: '/api/results'
+      preLoaderRoute: typeof ApiResultsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/search': {
       id: '/api/search'
       path: '/api/search'
@@ -104,8 +177,11 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ResultsRoute: ResultsRoute,
+  ApiBasketRoute: ApiBasketRoute,
   ApiEventsRoute: ApiEventsRoute,
   ApiHealthRoute: ApiHealthRoute,
+  ApiResultsRoute: ApiResultsRoute,
   ApiSearchRoute: ApiSearchRoute,
 }
 export const routeTree = rootRouteImport

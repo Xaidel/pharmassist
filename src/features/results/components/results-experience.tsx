@@ -1,0 +1,539 @@
+import { Link } from '@tanstack/react-router'
+import { useEffect, useMemo, useRef, useState } from 'react'
+
+import { sendEvents } from '#/lib/events'
+import { Alert } from '#/shared/components/ui/alert'
+import { Badge } from '#/shared/components/ui/badge'
+import { Button } from '#/shared/components/ui/button'
+import { Card } from '#/shared/components/ui/card'
+
+import { isAbortError, postResults, ResultsRequestError } from '../results.api'
+import {
+  addBasketLine,
+  clearBasket,
+  getSessionStorage,
+  readBasket,
+  removeBasketLine,
+  setBasketPacks,
+  writeBasket,
+} from '../results.basket'
+import {
+  cheapestCompleteResultKey,
+  type BasketLine,
+  type Origin,
+  type ResultSort,
+} from '../results.domain'
+import { formatPesoCompact } from '../results.format'
+import type { ResultsResponse } from '../results.schema'
+
+import { BasketPanel } from './basket-panel'
+import { CandidateGenerics } from './candidate-generics'
+import { noPriceKey, ResultsList } from './results-list'
+import { ResultsMap, type MapPin } from './results-map'
+
+type ResultsExperienceProps = {
+  initialAdd: string | undefined
+  onAddHandled: () => void
+}
+
+type LoadStatus = 'idle' | 'loading' | 'updating'
+
+function resultErrorMessage(error: unknown): string {
+  if (error instanceof ResultsRequestError) {
+    if (error.code === 'UNKNOWN_MEDICINE') {
+      return 'One medicine in this basket is no longer in the catalog. Remove it or clear the basket.'
+    }
+    return error.message
+  }
+  return 'Prices are unavailable right now. Check your connection and try again.'
+}
+
+function locationLabel(source: 'device' | 'naga_center'): string {
+  return source === 'device'
+    ? 'Distances use your current location.'
+    : 'Distances use the Naga City center.'
+}
+
+/** Run the map-first basket comparison experience. */
+export function ResultsExperience({
+  initialAdd,
+  onAddHandled,
+}: ResultsExperienceProps): React.JSX.Element {
+  const [basketLines, setBasketLines] = useState<BasketLine[]>([])
+  const [hydrated, setHydrated] = useState(false)
+  const [origin, setOrigin] = useState<Origin | null>(null)
+  const [locationState, setLocationState] = useState<
+    'locating' | 'device' | 'fallback'
+  >('locating')
+  const [sort, setSort] = useState<ResultSort>('price')
+  const [data, setData] = useState<ResultsResponse | null>(null)
+  const [status, setStatus] = useState<LoadStatus>('idle')
+  const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const [reloadToken, setReloadToken] = useState(0)
+
+  const initialAddHandledRef = useRef(false)
+  const lastViewedRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (initialAddHandledRef.current) {
+      return
+    }
+    initialAddHandledRef.current = true
+
+    const storage = getSessionStorage()
+    let next = readBasket(storage)
+    let added = false
+    let addNotice: string | null = null
+
+    if (initialAdd !== undefined) {
+      const outcome = addBasketLine(next, initialAdd)
+      next = outcome.lines
+      added = outcome.added
+      if (!outcome.added) {
+        addNotice =
+          outcome.reason === 'full'
+            ? 'A basket can hold up to 10 medicines. Remove one before adding another.'
+            : 'That medicine is already in your basket.'
+      }
+    }
+
+    writeBasket(storage, next)
+    setBasketLines(next)
+    setHydrated(true)
+    if (addNotice !== null) {
+      setNotice(addNotice)
+    }
+    if (added) {
+      sendEvents([
+        {
+          name: 'basket_item_added',
+          properties: { source: 'search', item_count: next.length },
+        },
+      ]).catch(() => undefined)
+    }
+    if (initialAdd !== undefined) {
+      onAddHandled()
+    }
+  }, [initialAdd, onAddHandled])
+
+  useEffect(() => {
+    if (!('geolocation' in navigator)) {
+      setLocationState('fallback')
+      return
+    }
+
+    let cancelled = false
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        if (cancelled) {
+          return
+        }
+        setOrigin({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        })
+        setLocationState('device')
+      },
+      () => {
+        if (!cancelled) {
+          setOrigin(null)
+          setLocationState('fallback')
+        }
+      },
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 },
+    )
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!hydrated) {
+      return
+    }
+    if (basketLines.length === 0) {
+      setData(null)
+      setError(null)
+      setStatus('idle')
+      return
+    }
+
+    const controller = new AbortController()
+    setStatus(data === null ? 'loading' : 'updating')
+    setError(null)
+
+    void postResults({ items: basketLines, origin, sort }, controller.signal)
+      .then((response) => {
+        setData(response)
+        setStatus('idle')
+        const signature = [
+          response.meta.sort,
+          response.origin.source,
+          response.basket.items
+            .map((item) => `${item.medicine_id}:${String(item.packs)}`)
+            .join(','),
+          localeOriginKey(response.origin),
+        ].join('|')
+        if (lastViewedRef.current !== signature) {
+          lastViewedRef.current = signature
+          sendEvents([
+            {
+              name: 'results_viewed',
+              properties: {
+                item_count: response.basket.item_count,
+                complete_count: response.complete.length,
+                incomplete_count: response.incomplete.length,
+                no_price_count: response.no_price_data.length,
+                sort: response.meta.sort,
+              },
+            },
+          ]).catch(() => undefined)
+        }
+      })
+      .catch((requestError: unknown) => {
+        if (isAbortError(requestError)) {
+          return
+        }
+        setError(resultErrorMessage(requestError))
+        setStatus('idle')
+      })
+
+    return () => {
+      controller.abort()
+    }
+  }, [hydrated, basketLines, origin, sort, reloadToken])
+
+  useEffect(() => {
+    if (selectedKey === null) {
+      return
+    }
+    const element = document.getElementById(`result-${selectedKey}`)
+    if (element === null) {
+      return
+    }
+    const reduced = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
+    element.scrollIntoView({
+      behavior: reduced ? 'auto' : 'smooth',
+      block: 'nearest',
+    })
+  }, [selectedKey])
+
+  const medicines = useMemo(
+    () => data?.basket.items.map((item) => item.medicine) ?? [],
+    [data],
+  )
+
+  const cheapestKey = useMemo(
+    () => (data === null ? null : cheapestCompleteResultKey(data.complete)),
+    [data],
+  )
+
+  const pins = useMemo<MapPin[]>(() => {
+    if (data === null) {
+      return []
+    }
+    const next: MapPin[] = []
+    for (const result of data.complete) {
+      next.push({
+        key: result.result_key,
+        pharmacyId: result.pharmacy.pharmacy_id,
+        name: result.pharmacy.name,
+        latitude: result.pharmacy.latitude,
+        longitude: result.pharmacy.longitude,
+        label: formatPesoCompact(result.total_shelf_price_php),
+        variant: result.result_key === cheapestKey ? 'cheapest' : 'complete',
+      })
+    }
+    for (const result of data.incomplete) {
+      next.push({
+        key: result.result_key,
+        pharmacyId: result.pharmacy.pharmacy_id,
+        name: result.pharmacy.name,
+        latitude: result.pharmacy.latitude,
+        longitude: result.pharmacy.longitude,
+        label: `${String(result.missing_items.length)} missing`,
+        variant: 'incomplete',
+      })
+    }
+    for (const { pharmacy } of data.no_price_data) {
+      next.push({
+        key: noPriceKey(pharmacy.pharmacy_id),
+        pharmacyId: pharmacy.pharmacy_id,
+        name: pharmacy.name,
+        latitude: pharmacy.latitude,
+        longitude: pharmacy.longitude,
+        label: 'No price',
+        variant: 'no-price',
+      })
+    }
+    return next
+  }, [data, cheapestKey])
+
+  function persist(next: BasketLine[]): void {
+    const storage = getSessionStorage()
+    writeBasket(storage, next)
+    setBasketLines(next)
+  }
+
+  function handlePacksChange(medicineId: string, packs: number): void {
+    persist(setBasketPacks(basketLines, medicineId, packs))
+  }
+
+  function handleRemove(medicineId: string): void {
+    const next = removeBasketLine(basketLines, medicineId)
+    persist(next)
+    if (next.length === 0) {
+      setSelectedKey(null)
+    }
+    sendEvents([
+      {
+        name: 'basket_item_removed',
+        properties: { item_count: next.length },
+      },
+    ]).catch(() => undefined)
+  }
+
+  function handleClear(): void {
+    clearBasket(getSessionStorage())
+    setBasketLines([])
+    setSelectedKey(null)
+    setError(null)
+    setNotice(null)
+    lastViewedRef.current = null
+  }
+
+  function handleSort(nextSort: ResultSort): void {
+    if (nextSort === sort) {
+      return
+    }
+    setSort(nextSort)
+    sendEvents([
+      { name: 'results_sorted', properties: { sort: nextSort } },
+    ]).catch(() => undefined)
+  }
+
+  const busy = status !== 'idle'
+  const empty = hydrated && basketLines.length === 0
+
+  return (
+    <main className="mx-auto min-h-screen w-full max-w-5xl px-5 pb-16 pt-8 sm:px-8 sm:pt-12">
+      <header>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-xs font-bold uppercase tracking-eyebrow-wide text-primary">
+            Pharmassist POC
+          </p>
+          <Badge variant="primary">Demo data</Badge>
+        </div>
+        <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="font-display text-4xl font-semibold leading-display tracking-tight sm:text-5xl">
+              Compare basket prices
+            </h1>
+            <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
+              Seeded shelf prices across 10 real Naga pharmacy locations.
+              Distances, completeness, and price freshness are shown for every
+              result.
+            </p>
+          </div>
+          <Link
+            className="text-sm font-semibold text-primary underline-offset-2 hover:underline"
+            to="/"
+          >
+            Search medicines
+          </Link>
+        </div>
+      </header>
+
+      {!hydrated && (
+        <Card aria-busy="true" className="mt-6">
+          <p className="p-6 text-sm text-muted-foreground" role="status">
+            Loading your basket…
+          </p>
+        </Card>
+      )}
+
+      {empty && (
+        <Card className="mt-6">
+          <div className="p-6">
+            <h2 className="font-display text-2xl font-semibold">
+              Your basket is empty
+            </h2>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
+              Search for a medicine and choose Compare prices to rank the seeded
+              pharmacies for your basket.
+            </p>
+            <Link
+              className="mt-4 inline-flex text-sm font-semibold text-primary underline-offset-2 hover:underline"
+              to="/"
+            >
+              Search for a medicine
+            </Link>
+          </div>
+        </Card>
+      )}
+
+      {!empty && hydrated && isInitialLoading(data, status) && (
+        <Card aria-busy="true" className="mt-6">
+          <p className="p-6 text-sm text-muted-foreground" role="status">
+            Checking prices and stock at the seeded pharmacies…
+          </p>
+        </Card>
+      )}
+
+      {!empty && hydrated && error !== null && data === null && (
+        <Card className="mt-6">
+          <div className="p-6">
+            <Alert>{error}</Alert>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Button
+                onClick={() => {
+                  setReloadToken((token) => token + 1)
+                }}
+                type="button"
+              >
+                Try again
+              </Button>
+              <Button onClick={handleClear} type="button" variant="outline">
+                Clear basket
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {!empty && data !== null && (
+        <>
+          <BasketPanel
+            busy={busy}
+            items={basketLines}
+            medicines={medicines}
+            onClear={handleClear}
+            onPacksChange={handlePacksChange}
+            onRemove={handleRemove}
+          />
+
+          {notice !== null && <Alert className="mt-4">{notice}</Alert>}
+          {error !== null && (
+            <div className="mt-4">
+              <Alert>
+                {error}{' '}
+                <button
+                  className="font-semibold underline underline-offset-2"
+                  onClick={() => {
+                    setReloadToken((token) => token + 1)
+                  }}
+                  type="button"
+                >
+                  Try again
+                </button>
+              </Alert>
+            </div>
+          )}
+
+          <div className="mt-6 flex flex-wrap items-end justify-between gap-3">
+            <div
+              aria-label="Sort results"
+              className="flex flex-wrap gap-2"
+              role="group"
+            >
+              <Button
+                aria-pressed={sort === 'price'}
+                onClick={() => {
+                  handleSort('price')
+                }}
+                size="sm"
+                type="button"
+                variant={sort === 'price' ? 'default' : 'outline'}
+              >
+                Cheapest first
+              </Button>
+              <Button
+                aria-pressed={sort === 'distance'}
+                onClick={() => {
+                  handleSort('distance')
+                }}
+                size="sm"
+                type="button"
+                variant={sort === 'distance' ? 'default' : 'outline'}
+              >
+                Nearest first
+              </Button>
+              {busy && (
+                <span
+                  className="self-center text-sm text-muted-foreground"
+                  role="status"
+                >
+                  Updating prices…
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {locationState === 'device'
+                ? locationLabel('device')
+                : locationState === 'locating'
+                  ? 'Using Naga City center while we check your location.'
+                  : locationLabel('naga_center')}
+            </p>
+          </div>
+
+          <div className={busy ? 'opacity-60' : undefined}>
+            <ResultsMap
+              onSelect={setSelectedKey}
+              origin={origin}
+              pins={pins}
+              selectedKey={selectedKey}
+            />
+          </div>
+
+          <div className={busy ? 'opacity-60' : undefined}>
+            <ResultsList
+              cheapestKey={cheapestKey}
+              data={data}
+              medicines={medicines}
+              onSelect={setSelectedKey}
+              selectedKey={selectedKey}
+            />
+          </div>
+
+          <CandidateGenerics
+            groups={data.candidate_generics}
+            medicines={medicines}
+          />
+
+          <section className="mt-10 rounded-3xl border border-border bg-card p-5 text-sm leading-relaxed text-muted-foreground">
+            <h2 className="font-display text-xl font-semibold text-foreground">
+              About these prices
+            </h2>
+            <p className="mt-2">
+              Every amount is a reference shelf price for the pack shown, not a
+              quote. Seeded demo prices and stock are mocked; pharmacy names and
+              locations are real. Confirm the price at the pharmacy.
+            </p>
+            <p className="mt-2">
+              MDRP ceilings come from EO 104 s. 2020 and EO 155 s. 2021 and are
+              shown separately from the observed price. Statutory senior and PWD
+              discounts are applied at the point of sale and are not computed
+              here.
+            </p>
+          </section>
+        </>
+      )}
+    </main>
+  )
+}
+
+function localeOriginKey(origin: ResultsResponse['origin']): string {
+  return `${origin.latitude.toFixed(5)},${origin.longitude.toFixed(5)}`
+}
+
+function isInitialLoading(
+  data: ResultsResponse | null,
+  status: LoadStatus,
+): boolean {
+  return data === null && status !== 'idle'
+}

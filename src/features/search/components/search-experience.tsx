@@ -1,8 +1,10 @@
+import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { ChangeEvent, KeyboardEvent, SyntheticEvent } from 'react'
 
 import { cn } from '#/lib/cn'
 import { sendEvents } from '#/lib/events'
+import { MedicineLine } from '#/shared/components/medicine-line'
 import { Alert } from '#/shared/components/ui/alert'
 import { Button } from '#/shared/components/ui/button'
 import { Card, CardContent, CardHeader } from '#/shared/components/ui/card'
@@ -15,8 +17,6 @@ import {
   type SearchMatch,
 } from '../search.domain'
 import type { SearchItem } from '../search.schema'
-
-import { MedicineLine } from './medicine-line'
 
 const DEMO_SEARCHES = [
   'amlodipine',
@@ -58,6 +58,7 @@ export function SearchExperience(): React.JSX.Element {
   const statusId = useId()
   const resultsHeadingId = useId()
 
+  const navigate = useNavigate()
   const suppressSuggestions = useRef(false)
   const suggestionController = useRef<AbortController | null>(null)
 
@@ -163,6 +164,22 @@ export function SearchExperience(): React.JSX.Element {
     suppressSuggestions.current = true
     setQuery(label)
     void runSearch(label)
+  }
+
+  function compareItem(item: SearchItem, rank: number): void {
+    sendEvents([
+      {
+        name: 'search_result_selected',
+        properties: {
+          rank,
+          result_count: results?.length ?? 0,
+        },
+      },
+    ]).catch(() => undefined)
+    void navigate({
+      to: '/results',
+      search: { add: item.medicine.medicine_id },
+    })
   }
 
   function startDemoSearch(value: string): void {
@@ -336,8 +353,12 @@ export function SearchExperience(): React.JSX.Element {
             >
               {resultsHeading}
             </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Choose a medicine to compare its seeded shelf price across Naga
+              pharmacies. You can add more medicines from the results screen.
+            </p>
             <ul className="mt-3 space-y-3">
-              {results.map((item) => (
+              {results.map((item, index) => (
                 <li
                   className="rounded-2xl border border-border bg-background p-4"
                   key={item.medicine.medicine_id}
@@ -351,6 +372,17 @@ export function SearchExperience(): React.JSX.Element {
                       {candidateLabel(item.candidate_generic_count)}
                     </p>
                   )}
+                  <div className="mt-3">
+                    <Button
+                      onClick={() => {
+                        compareItem(item, index + 1)
+                      }}
+                      size="sm"
+                      type="button"
+                    >
+                      Compare prices
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>

@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { medicineSummarySchema } from '#/shared/domain/medicine-summary'
+
 import {
   classifySearchMatch,
   normalizeSearchQuery,
@@ -9,23 +11,8 @@ import {
   type SearchMatch,
 } from './search.domain'
 
-/** The exact-product view the search endpoint exposes. */
-export const medicineSummarySchema = z.strictObject({
-  medicine_id: z.string(),
-  category: z.string(),
-  brand_name: z.string().nullable(),
-  generic_name: z.string(),
-  strength: z.string(),
-  dosage_form: z.string(),
-  pack_size: z.string().nullable(),
-  manufacturer: z.string().nullable(),
-  rx_otc: z.enum(['Rx', 'OTC']),
-  pnf_listed: z.boolean().nullable(),
-  konsulta_listed: z.boolean().nullable(),
-})
-
-/** The exact-product view the search endpoint exposes. */
-export type MedicineSummary = z.infer<typeof medicineSummarySchema>
+export { medicineSummarySchema } from '#/shared/domain/medicine-summary'
+export type { MedicineSummary } from '#/shared/domain/medicine-summary'
 
 const searchMatchSchema = z.strictObject({
   field: z.enum(['brand', 'generic', 'both']),
