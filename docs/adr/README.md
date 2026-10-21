@@ -29,7 +29,3 @@ The header contract, the skeleton each lifecycle requires, the closed classifica
 ## Decision Process
 
 Records start in `proposed/`. Maintainers move a record to `accepted/` or `rejected/` through pull-request review, which is the only thing that changes its status. Acceptance is never inferred from authorship, from implementation, or from silence.
-
-## Current Records
-
-The first application record is the proposed [`native-pharmacy-directions`](proposed/architecture/2026-10-21-native-pharmacy-directions.md) decision. The folder tree remains the inventory; this note is not an index.

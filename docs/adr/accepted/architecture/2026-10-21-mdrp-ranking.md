@@ -1,7 +1,7 @@
 # ADR: Rank MDRP-Compliant Results Before Above-Ceiling Results
 
 Type: project
-Status: proposed
+Status: accepted
 Classification: architecture
 
 ## Problem
@@ -16,16 +16,16 @@ The VAT basis is part of the same problem. The [EO 104 Annex A](https://www.offi
 
 The decision question is: when a complete result contains an above-ceiling MDRP price, how should it rank, may it be called cheapest, what should the patient be told, and how should a VAT-exclusive ceiling be compared with a VAT-inclusive shelf price? The originating decision ticket is [#37](https://github.com/Xaidel/pharmassist/issues/37).
 
-## Proposal
+## Decision
 
-If accepted, we will gate the cheapest claim and the complete-basket ranking on MDRP compliance.
+We gate the cheapest claim and the complete-basket ranking on MDRP compliance.
 
-- Complete results split into two tiers: results with no above-ceiling item rank before any result with one. Within each tier, the existing order applies: total shelf price ascending, then distance, most recent verification, and pharmacy name.
+- Complete results split into two tiers: a complete basket with no above-ceiling item ranks before every complete basket with one. Within each tier the existing order applies: total shelf price ascending, then distance, most recent verification, and pharmacy name.
 - The "Cheapest complete" highlight goes only to the first result in the compliant tier. If no complete result is compliant, no result is highlighted. An above-ceiling result is never labelled "cheapest".
-- Above-ceiling results remain visible in a separate group rather than being excluded, so the all-above case still shows every option. Incomplete and no-price groups keep their current treatment.
+- Above-ceiling results remain visible in a separate group rather than being excluded, so the all-above case still shows every option. They are labelled "Above MDRP ceiling" and keep the report action. Incomplete and no-price groups keep their current treatment.
 - The MDRP flag stays a data-quality signal, not an adjudication. Copy uses "Above MDRP ceiling" and "verify at the pharmacy", keeps the report action, and avoids "overcharging", "illegal", "violation", and any red-strip mimicry.
-- VAT normalization becomes part of the ceiling comparison. A VAT-inclusive MRP is compared directly. A VAT-exclusive MRP is compared at 1.12 × MRP, rounded to the nearest centavo, when the product is VATable, and directly when the product is VAT-exempt. The comparison exposes whether the ceiling is VAT-exclusive. POC-016 remains a direct comparison at ₱30.31.
-- The rule applies to the PRD ranking and MDRP requirements, the POC data contract, the results API, the results UI, and their tests. This record does not by itself authorize implementation; follow-up tickets own the change.
+- VAT normalization is part of the ceiling comparison. A VAT-inclusive MRP is compared directly. A VAT-exclusive MRP is compared at 1.12 × MRP, rounded to the nearest centavo, when the product is VATable, and directly when the product is VAT-exempt. The comparison exposes whether the ceiling is VAT-exclusive. POC-016 remains a direct comparison at ₱30.31, so it stays flagged: nine price records, all above ₱30.31/tablet, with Generika at ₱32.14 no longer highlighted.
+- The rule governs the PRD ranking and MDRP requirements in FR-25, FR-39, and §8, the POC data contract in §4.5–4.6, the results API, the results UI, and their tests. This record does not by itself authorize implementation; [#46](https://github.com/Xaidel/pharmassist/issues/46) owns the change.
 
 ## Alternatives considered
 
@@ -39,20 +39,27 @@ If accepted, we will gate the cheapest claim and the complete-basket ranking on 
 
 **Defer the general VAT rule and fix only POC-016.** POC-016 happens to be VAT-exempt, so the current flag is correct by accident. Every other asterisked ceiling would still be compared on the wrong basis. It is rejected because the rule is cheap to state now and expensive to discover after the pilot data is collected.
 
-## Acceptance criteria
+## Consequences
 
-- A complete basket with no above-ceiling item ranks before every complete basket with one, and the existing tie-breakers still apply within each tier.
-- "Cheapest complete" appears only on the first compliant complete result; when every complete result is above the ceiling, no result carries the highlight.
-- Above-ceiling results remain visible, are labelled "Above MDRP ceiling", are never labelled "cheapest", and use the neutral copy and report action.
-- POC-016 remains flagged: nine price records, all above ₱30.31/tablet, with Generika at ₱32.14 no longer highlighted.
-- The data contract states both VAT cases and the tests cover them: a VAT-exempt product compares directly, and a VATable product with a VAT-exclusive ceiling compares at 1.12 × MRP.
-- The PRD's FR-25, FR-39, and §8, and the POC data contract's §4.5–4.6, describe the same rule.
-- Results unit tests cover the all-above case, the mixed case, and both VAT cases; the browser acceptance test covers the visible grouping and the absence of a cheapest label in the all-above case.
-
-## Risks
-
+- Compliance now governs the headline claim: the product no longer presents a possibly unlawful price as the best option, and above-ceiling options stay visible rather than being hidden.
+- A patient may pay more by following the compliant tier. The product chooses legal compliance and trust over the absolute lowest observed price, and the above-ceiling results remain visible so the patient can still see them.
 - The above-ceiling flag is derived from collected data and can be wrong. Demoting on an unverified flag penalizes a pharmacy and may steer a patient away from a lawful price. The verify/report copy, correction SLA, and neutral wording limit the harm; the product must not call the price illegal.
-- A patient may pay more by following the compliant tier. The product is choosing legal compliance and trust over the absolute lowest observed price, and the above-ceiling results stay visible so the patient can still see them.
 - VAT-exempt status varies by product and can change. A missing or stale status makes the effective ceiling wrong. The comparison must expose the basis and default to the published ceiling when status is unknown.
-- The POC seed has only one MDRP product, all of whose prices are above the ceiling. The mixed and VATable cases need synthetic fixtures rather than relying on seed data.
-- This record is proposed. The repository's ADR process moves it to accepted through pull-request review; implementation should follow that acceptance and the owning PRD/data-contract updates.
+- The POC seed has only one MDRP product, all of whose prices are above the ceiling. The mixed and VATable cases need synthetic fixtures rather than reliance on seed data.
+- The PRD's FR-25, FR-39, and §8 and the POC data contract's §4.5–4.6 must be updated to state the same rule. [#46](https://github.com/Xaidel/pharmassist/issues/46) owns those updates and the implementation.
+
+## Testing
+
+- Review confirms the record's path, status, skeleton, and links with the repository check, `check_adr.py docs/adr`.
+- [#46](https://github.com/Xaidel/pharmassist/issues/46) adds results unit tests covering the all-above case, the mixed case, and both VAT cases; until they land, the ranking and copy rules are review-enforced against this record.
+- [#46](https://github.com/Xaidel/pharmassist/issues/46) adds browser acceptance coverage for the visible grouping and the absence of a cheapest label in the all-above POC-016 case.
+- Review confirms the PRD and the POC data contract describe the same tiering, gated highlight, neutral flag copy, and VAT rule before [#46](https://github.com/Xaidel/pharmassist/issues/46) closes.
+
+## Related
+
+- [#37](https://github.com/Xaidel/pharmassist/issues/37) — originating decision ticket
+- [#46](https://github.com/Xaidel/pharmassist/issues/46) — POC implementation follow-up
+- [PR #47](https://github.com/Xaidel/pharmassist/pull/47) — acceptance pull request
+- [PRD](../../../PRD.md)
+- [POC data contract](../../../poc/data-contract.md)
+- [Research 15](../../../research/15-mdpr-ra11967-local-ordinances.md)
