@@ -25,10 +25,15 @@ export type SeedReport = {
 }
 
 type CountRow = { count: number }
-type PriceOwnershipRow = { medicine_id: string; pharmacy_id: string }
+type PriceOwnershipRow = {
+  medicine_id: string
+  pharmacy_id: string
+  sale_form: string
+}
 type PriceMdrpRow = {
   medicine_id: string
   pharmacy_id: string
+  sale_form: string
   mdrp_entry_id: string | null
 }
 
@@ -37,7 +42,7 @@ type ProtectedTable =
   | 'medicine_alternative'
   | 'mdrp_ceiling'
   | 'pharmacy'
-  | 'price_record'
+  | 'price_observation'
 
 async function countRows(
   client: Client,
@@ -71,29 +76,37 @@ async function assertNoForeignOwnership(
 
 async function assertPriceOwnership(
   client: Client,
-  prices: readonly { medicine_id: string; pharmacy_id: string }[],
+  prices: readonly {
+    medicine_id: string
+    pharmacy_id: string
+    sale_form: string
+  }[],
   batchId: string,
 ): Promise<void> {
   if (prices.length === 0) {
     return
   }
   const result = await client.query<PriceOwnershipRow>(
-    `select pr.medicine_id, pr.pharmacy_id
-       from price_record pr
-       join unnest($1::text[], $2::text[]) as key(medicine_id, pharmacy_id)
-         on key.medicine_id = pr.medicine_id and key.pharmacy_id = pr.pharmacy_id
-      where pr.seed_batch_id is distinct from $3`,
+    `select po.medicine_id, po.pharmacy_id, po.sale_form
+       from price_observation po
+       join unnest($1::text[], $2::text[], $3::text[])
+         as key(medicine_id, pharmacy_id, sale_form)
+         on key.medicine_id = po.medicine_id
+        and key.pharmacy_id = po.pharmacy_id
+        and key.sale_form = po.sale_form::text
+      where po.seed_batch_id is distinct from $4`,
     [
       prices.map((price) => price.medicine_id),
       prices.map((price) => price.pharmacy_id),
+      prices.map((price) => price.sale_form),
       batchId,
     ],
   )
   if (result.rowCount !== 0) {
     throw new ToolingError(
       'SEED_CONFLICT',
-      `Refusing to overwrite non-seed price records: ${result.rows
-        .map((row) => `${row.medicine_id}/${row.pharmacy_id}`)
+      `Refusing to overwrite non-seed price observations: ${result.rows
+        .map((row) => `${row.medicine_id}/${row.pharmacy_id}/${row.sale_form}`)
         .join(', ')}`,
     )
   }
@@ -159,7 +172,7 @@ async function upsertMedicines(
   for (const row of bundle.medicines) {
     await client.query(
       `insert into medicine (
-         id, category, brand_name, generic_name, strength, dosage_form, pack_size, manufacturer,
+         id, category, brand_name, generic_name, strength, dosage_form, base_unit, manufacturer,
          rx_otc, fda_registration_no, fda_registration_expiry, pnf_listed, pnf_entry, pnf_page,
          konsulta_listed, konsulta_entry, konsulta_as_of, generic_group_id, active, data_source,
          seed_batch_id
@@ -173,7 +186,7 @@ async function upsertMedicines(
          generic_name = excluded.generic_name,
          strength = excluded.strength,
          dosage_form = excluded.dosage_form,
-         pack_size = excluded.pack_size,
+         base_unit = excluded.base_unit,
          manufacturer = excluded.manufacturer,
          rx_otc = excluded.rx_otc,
          fda_registration_no = excluded.fda_registration_no,
@@ -195,7 +208,7 @@ async function upsertMedicines(
         row.generic_name,
         row.strength,
         row.dosage_form,
-        row.pack_size,
+        row.base_unit,
         row.manufacturer,
         row.rx_otc,
         row.fda_registration_no,
@@ -363,7 +376,7 @@ async function upsertAlternatives(
   for (const row of bundle.alternatives) {
     await client.query(
       `insert into medicine_alternative (
-         id, medicine_id, brand_name, manufacturer, pack_size, rx_otc, fda_registration_no,
+         id, medicine_id, brand_name, manufacturer, reference_pack_size, rx_otc, fda_registration_no,
          registration_expiry, note, display_order, seed_batch_id
        ) values (
          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
@@ -372,7 +385,7 @@ async function upsertAlternatives(
          medicine_id = excluded.medicine_id,
          brand_name = excluded.brand_name,
          manufacturer = excluded.manufacturer,
-         pack_size = excluded.pack_size,
+         reference_pack_size = excluded.reference_pack_size,
          rx_otc = excluded.rx_otc,
          fda_registration_no = excluded.fda_registration_no,
          registration_expiry = excluded.registration_expiry,
@@ -384,7 +397,7 @@ async function upsertAlternatives(
         row.medicine_id,
         row.brand_name,
         row.manufacturer,
-        row.pack_size,
+        row.reference_pack_size,
         row.rx_otc,
         row.fda_registration_no,
         row.registration_expiry,
@@ -396,25 +409,42 @@ async function upsertAlternatives(
   }
 }
 
-async function upsertPrices(client: Client, bundle: SeedBundle): Promise<void> {
+function observationKey(
+  medicineId: string,
+  pharmacyId: string,
+  saleForm: string,
+): string {
+  return `${medicineId}\u0000${pharmacyId}\u0000${saleForm}`
+}
+
+async function upsertPriceObservations(
+  client: Client,
+  bundle: SeedBundle,
+): Promise<void> {
   await assertPriceOwnership(client, bundle.prices, POC_SEED_BATCH_ID)
   const attachments = expectedMdrpAttachments(
     bundle.medicines,
     bundle.mdrpCeilings,
+    bundle.prices,
   )
 
   for (const row of bundle.prices) {
-    const mdrpEntryId = attachments.get(row.medicine_id) ?? null
+    const mdrpEntryId =
+      attachments.get(
+        observationKey(row.medicine_id, row.pharmacy_id, row.sale_form),
+      ) ?? null
     await client.query(
-      `insert into price_record (
-         medicine_id, pharmacy_id, shelf_price_php, pack_size, pack_quantity, pack_unit,
-         stock_status, verified_at, verified_by, source, notes, mdrp_entry_id, seed_batch_id
+      `insert into price_observation (
+         medicine_id, pharmacy_id, sale_form, sale_state, form_label, shelf_price_php,
+         pack_quantity, pack_unit, stock_status, verified_at, verified_by, source, notes,
+         mdrp_entry_id, seed_batch_id
        ) values (
-         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
        )
-       on conflict (medicine_id, pharmacy_id) do update set
+       on conflict (medicine_id, pharmacy_id, sale_form) do update set
+         sale_state = excluded.sale_state,
+         form_label = excluded.form_label,
          shelf_price_php = excluded.shelf_price_php,
-         pack_size = excluded.pack_size,
          pack_quantity = excluded.pack_quantity,
          pack_unit = excluded.pack_unit,
          stock_status = excluded.stock_status,
@@ -427,8 +457,10 @@ async function upsertPrices(client: Client, bundle: SeedBundle): Promise<void> {
       [
         row.medicine_id,
         row.pharmacy_id,
+        row.sale_form,
+        row.sale_state,
+        row.form_label,
         row.shelf_price_php,
-        row.pack_size,
         row.pack_quantity,
         row.pack_unit,
         row.stock_status,
@@ -472,13 +504,28 @@ function assertFixtureExpectations(bundle: SeedBundle): void {
     }
   }
 
+  const attachments = expectedMdrpAttachments(
+    bundle.medicines,
+    bundle.mdrpCeilings,
+    bundle.prices,
+  )
   const derivedAttachments = [
-    ...expectedMdrpAttachments(bundle.medicines, bundle.mdrpCeilings),
-  ]
-    .flatMap(([medicineId, entryId]) =>
-      entryId === null ? [] : [attachmentKey(medicineId, entryId)],
-    )
-    .sort()
+    ...new Set(
+      bundle.prices.flatMap((price) => {
+        const entryId =
+          attachments.get(
+            observationKey(
+              price.medicine_id,
+              price.pharmacy_id,
+              price.sale_form,
+            ),
+          ) ?? null
+        return entryId === null
+          ? []
+          : [attachmentKey(price.medicine_id, entryId)]
+      }),
+    ),
+  ].sort()
   const declaredAttachments = bundle.manifest.expect.mdrp_attachments
     .map((entry) => attachmentKey(entry.medicine_id, entry.entry_id))
     .sort()
@@ -501,7 +548,7 @@ async function validateSeed(
     medicine_alternative: bundle.alternatives.length,
     pharmacy: bundle.pharmacies.length,
     mdrp_ceiling: bundle.mdrpCeilings.length,
-    price_record: bundle.prices.length,
+    price_observation: bundle.prices.length,
   }
 
   for (const [table, expected] of Object.entries(counts)) {
@@ -542,30 +589,115 @@ async function validateSeed(
   const badPrices = await countRows(
     client,
     `select count(*)::int as count
-       from price_record pr
-       join medicine m on m.id = pr.medicine_id
-       join pharmacy p on p.id = pr.pharmacy_id
-      where pr.seed_batch_id = $1
-        and (m.seed_batch_id is distinct from $1 or not m.active or p.seed_batch_id is distinct from $1)`,
+       from price_observation po
+       join medicine m on m.id = po.medicine_id
+       join pharmacy p on p.id = po.pharmacy_id
+      where po.seed_batch_id = $1
+        and (m.seed_batch_id is distinct from $1 or p.seed_batch_id is distinct from $1)`,
     [POC_SEED_BATCH_ID],
   )
   if (badPrices !== 0) {
     throw new ToolingError(
       'SEED_VALIDATION',
-      `${String(badPrices)} price rows reference an inactive medicine or a non-seed pharmacy`,
+      `${String(badPrices)} price observations reference a non-seed medicine or pharmacy`,
     )
   }
 
-  const missingPackMetadata = await countRows(
+  const incompleteForms = await countRows(
     client,
-    `select count(*)::int as count from price_record
-      where seed_batch_id = $1 and (pack_quantity is null or pack_unit is null)`,
+    `select count(*)::int as count
+       from (select medicine_id, pharmacy_id
+               from price_observation
+              where seed_batch_id = $1
+              group by medicine_id, pharmacy_id
+             having count(distinct sale_form) <> 3) forms`,
     [POC_SEED_BATCH_ID],
   )
-  if (missingPackMetadata !== 0) {
+  if (incompleteForms !== 0) {
     throw new ToolingError(
       'SEED_VALIDATION',
-      `${String(missingPackMetadata)} price rows are missing pack quantity/unit`,
+      `${String(incompleteForms)} medicine/pharmacy pairs do not have all three sale forms`,
+    )
+  }
+
+  const missingAvailableFields = await countRows(
+    client,
+    `select count(*)::int as count from price_observation
+      where seed_batch_id = $1
+        and sale_state = 'available'
+        and (form_label is null
+          or shelf_price_php is null
+          or pack_quantity is null
+          or pack_unit is null
+          or stock_status is null
+          or verified_at is null
+          or verified_by is null
+          or source is null)`,
+    [POC_SEED_BATCH_ID],
+  )
+  if (missingAvailableFields !== 0) {
+    throw new ToolingError(
+      'SEED_VALIDATION',
+      `${String(missingAvailableFields)} available forms are missing required fields`,
+    )
+  }
+
+  const pricedNonAvailable = await countRows(
+    client,
+    `select count(*)::int as count from price_observation
+      where seed_batch_id = $1
+        and sale_state <> 'available'
+        and (shelf_price_php is not null
+          or pack_quantity is not null
+          or pack_unit is not null
+          or stock_status is not null
+          or mdrp_entry_id is not null)`,
+    [POC_SEED_BATCH_ID],
+  )
+  if (pricedNonAvailable !== 0) {
+    throw new ToolingError(
+      'SEED_VALIDATION',
+      `${String(pricedNonAvailable)} non-available forms carry price fields`,
+    )
+  }
+
+  const badPackOnly = await countRows(
+    client,
+    `select count(*)::int as count
+       from price_observation po
+      where po.seed_batch_id = $1
+        and po.sale_state = 'pack_only'
+        and not exists (
+          select 1 from price_observation pack
+           where pack.seed_batch_id = $1
+             and pack.medicine_id = po.medicine_id
+             and pack.pharmacy_id = po.pharmacy_id
+             and pack.sale_form = 'pack'
+             and pack.sale_state = 'available')`,
+    [POC_SEED_BATCH_ID],
+  )
+  if (badPackOnly !== 0) {
+    throw new ToolingError(
+      'SEED_VALIDATION',
+      `${String(badPackOnly)} pack_only forms lack an available pack`,
+    )
+  }
+
+  const mixedNotStocked = await countRows(
+    client,
+    `select count(*)::int as count
+       from (select medicine_id, pharmacy_id
+               from price_observation
+              where seed_batch_id = $1
+              group by medicine_id, pharmacy_id
+             having count(*) filter (where sale_state = 'not_stocked')
+                    not in (0, 3)) pairs`,
+    [POC_SEED_BATCH_ID],
+  )
+  if (mixedNotStocked !== 0) {
+    throw new ToolingError(
+      'SEED_VALIDATION',
+      `${String(mixedNotStocked)} pairs mix not_stocked with other states`,
     )
   }
 
@@ -605,50 +737,85 @@ async function validateSeed(
        from medicine m
       where m.seed_batch_id = $1
         and m.active
-        and m.pack_size is not null
+        and m.id <> 'POC-041'
         and not exists (
-          select 1 from price_record pr
-           where pr.medicine_id = m.id and pr.seed_batch_id = $1
+          select 1 from price_observation po
+           where po.medicine_id = m.id
+             and po.seed_batch_id = $1
+             and po.sale_form = 'pack'
+             and po.sale_state = 'available'
         )`,
     [POC_SEED_BATCH_ID],
   )
   if (uncoveredMedicines !== 0) {
     throw new ToolingError(
       'SEED_VALIDATION',
-      `${String(uncoveredMedicines)} active medicines with a known pack have no price record`,
+      `${String(uncoveredMedicines)} active medicines with a reference pack have no available pack`,
+    )
+  }
+
+  const unavailablePoc041 = await countRows(
+    client,
+    `select count(*)::int as count from price_observation
+      where seed_batch_id = $1 and medicine_id = 'POC-041'
+        and sale_state <> 'unknown'`,
+    [POC_SEED_BATCH_ID],
+  )
+  if (unavailablePoc041 !== 0) {
+    throw new ToolingError(
+      'SEED_VALIDATION',
+      'POC-041 must only have unknown form observations',
+    )
+  }
+
+  const availablePoc028 = await countRows(
+    client,
+    `select count(*)::int as count from price_observation
+      where seed_batch_id = $1 and medicine_id = 'POC-028'
+        and sale_state <> 'unknown'`,
+    [POC_SEED_BATCH_ID],
+  )
+  if (availablePoc028 !== 0) {
+    throw new ToolingError(
+      'SEED_VALIDATION',
+      'POC-028 must only have unknown form observations',
     )
   }
 
   const attachments = expectedMdrpAttachments(
     bundle.medicines,
     bundle.mdrpCeilings,
+    bundle.prices,
   )
   const priceRows = await client.query<PriceMdrpRow>(
-    `select medicine_id, pharmacy_id, mdrp_entry_id
-       from price_record where seed_batch_id = $1`,
+    `select medicine_id, pharmacy_id, sale_form, mdrp_entry_id
+       from price_observation where seed_batch_id = $1`,
     [POC_SEED_BATCH_ID],
   )
   for (const price of priceRows.rows) {
-    const expected = attachments.get(price.medicine_id) ?? null
+    const expected =
+      attachments.get(
+        observationKey(price.medicine_id, price.pharmacy_id, price.sale_form),
+      ) ?? null
     if (price.mdrp_entry_id !== expected) {
       throw new ToolingError(
         'SEED_VALIDATION',
-        `Price ${price.medicine_id}/${price.pharmacy_id} has MDRP ${price.mdrp_entry_id ?? 'null'}, expected ${expected ?? 'null'}`,
+        `Observation ${price.medicine_id}/${price.pharmacy_id}/${price.sale_form} has MDRP ${price.mdrp_entry_id ?? 'null'}, expected ${expected ?? 'null'}`,
       )
     }
   }
 
   const foreignMdrp = await countRows(
     client,
-    `select count(*)::int as count from price_record pr
-       join mdrp_ceiling mc on mc.id = pr.mdrp_entry_id
-      where pr.seed_batch_id = $1 and mc.seed_batch_id is distinct from $1`,
+    `select count(*)::int as count from price_observation po
+       join mdrp_ceiling mc on mc.id = po.mdrp_entry_id
+      where po.seed_batch_id = $1 and mc.seed_batch_id is distinct from $1`,
     [POC_SEED_BATCH_ID],
   )
   if (foreignMdrp !== 0) {
     throw new ToolingError(
       'SEED_VALIDATION',
-      `${String(foreignMdrp)} price rows reference a non-seed MDRP ceiling`,
+      `${String(foreignMdrp)} price observations reference a non-seed MDRP ceiling`,
     )
   }
 
@@ -687,7 +854,7 @@ export async function runSeed(options: SeedOptions): Promise<SeedReport> {
       await upsertPharmacies(client, bundle)
       await upsertMdrpCeilings(client, bundle)
       await upsertAlternatives(client, bundle)
-      await upsertPrices(client, bundle)
+      await upsertPriceObservations(client, bundle)
       const counts = await validateSeed(client, bundle)
       await assertDemoCases(client, POC_SEED_BATCH_ID)
       return counts

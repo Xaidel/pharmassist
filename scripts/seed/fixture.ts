@@ -29,6 +29,34 @@ const timeSchema = z
   .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/, 'expected HH:MM')
 const dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 
+const baseUnits = [
+  'tablet',
+  'capsule',
+  'mL',
+  'g',
+  'actuation',
+  'sachet',
+  'unit-dose',
+] as const
+const saleForms = ['pack', 'strip', 'loose'] as const
+const saleStates = [
+  'available',
+  'pack_only',
+  'not_applicable',
+  'not_stocked',
+  'unknown',
+] as const
+const stockStatuses = [
+  'in_stock',
+  'low_stock',
+  'out_of_stock',
+  'unknown',
+] as const
+
+export const baseUnitSchema = z.enum(baseUnits)
+export const saleFormSchema = z.enum(saleForms)
+export const saleStateSchema = z.enum(saleStates)
+
 const openingHoursSchema = z.record(
   z.enum(dayKeys),
   z.array(z.object({ open: timeSchema, close: timeSchema }).strict()),
@@ -42,7 +70,7 @@ export const medicineSeedSchema = z
     generic_name: z.string().min(1),
     strength: z.string().min(1),
     dosage_form: z.string().min(1),
-    pack_size: z.string().min(1).nullable(),
+    base_unit: baseUnitSchema,
     manufacturer: z.string().min(1).nullable(),
     rx_otc: z.enum(['Rx', 'OTC']),
     fda_registration_no: z.string().min(1).nullable(),
@@ -65,7 +93,7 @@ export const alternativeSeedSchema = z
     medicine_id: idSchema,
     brand_name: z.string().min(1),
     manufacturer: z.string().min(1).nullable(),
-    pack_size: z.string().min(1).nullable(),
+    reference_pack_size: z.string().min(1).nullable(),
     rx_otc: z.enum(['Rx', 'OTC']),
     fda_registration_no: z.string().min(1).nullable(),
     registration_expiry: isoDate.nullable(),
@@ -146,22 +174,89 @@ export const priceSeedSchema = z
   .object({
     medicine_id: idSchema,
     pharmacy_id: slugSchema,
-    shelf_price_php: moneySchema,
-    pack_size: z.string().min(1),
+    sale_form: saleFormSchema,
+    sale_state: saleStateSchema,
+    form_label: z.string().min(1).nullable(),
+    shelf_price_php: moneySchema.nullable(),
     pack_quantity: z.number().positive().nullable(),
-    pack_unit: z.string().min(1).nullable(),
-    stock_status: z.enum(['in_stock', 'low_stock', 'out_of_stock', 'unknown']),
-    verified_at: isoDateTime,
-    verified_by: z.string().min(1),
-    source: z.string().min(1),
+    pack_unit: baseUnitSchema.nullable(),
+    stock_status: z.enum(stockStatuses).nullable(),
+    verified_at: isoDateTime.nullable(),
+    verified_by: z.string().min(1).nullable(),
+    source: z.string().min(1).nullable(),
     notes: z.string().min(1).nullable(),
   })
   .strict()
   .superRefine((value, context) => {
-    if ((value.pack_quantity === null) !== (value.pack_unit === null)) {
+    const available = value.sale_state === 'available'
+    const priceFields = [
+      'form_label',
+      'shelf_price_php',
+      'pack_quantity',
+      'pack_unit',
+      'stock_status',
+      'verified_at',
+      'verified_by',
+      'source',
+    ] as const
+
+    if (available) {
+      for (const field of priceFields) {
+        if (value[field] === null) {
+          context.addIssue({
+            code: 'custom',
+            path: [field],
+            message: `${field} is required when sale_state is available`,
+          })
+        }
+      }
+    } else {
+      for (const field of [
+        'shelf_price_php',
+        'pack_quantity',
+        'pack_unit',
+        'stock_status',
+      ] as const) {
+        if (value[field] !== null) {
+          context.addIssue({
+            code: 'custom',
+            path: [field],
+            message: `${field} must be null unless sale_state is available`,
+          })
+        }
+      }
+    }
+
+    if (value.sale_form === 'loose' && available && value.pack_quantity !== 1) {
       context.addIssue({
         code: 'custom',
-        message: 'pack_quantity and pack_unit are set together or both null',
+        path: ['pack_quantity'],
+        message: 'an available loose form contains one base unit',
+      })
+    }
+    if (
+      value.sale_form === 'strip' &&
+      available &&
+      (value.pack_quantity ?? 0) < 2
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['pack_quantity'],
+        message: 'an available strip contains at least two base units',
+      })
+    }
+    if (value.sale_state === 'pack_only' && value.sale_form === 'pack') {
+      context.addIssue({
+        code: 'custom',
+        path: ['sale_form'],
+        message: 'pack_only applies only to a strip or loose form',
+      })
+    }
+    if (value.sale_state === 'not_applicable' && value.sale_form === 'pack') {
+      context.addIssue({
+        code: 'custom',
+        path: ['sale_form'],
+        message: 'not_applicable applies only to a strip or loose form',
       })
     }
   })
@@ -178,7 +273,7 @@ export const seedManifestSchema = z
             medicine_alternative: z.number().int().nonnegative(),
             pharmacy: z.number().int().nonnegative(),
             mdrp_ceiling: z.number().int().nonnegative(),
-            price_record: z.number().int().nonnegative(),
+            price_observation: z.number().int().nonnegative(),
           })
           .strict(),
         inactive_medicine_ids: z.array(idSchema),
@@ -245,11 +340,25 @@ function assertUnique<T>(
   }
 }
 
+function priceKey(
+  medicineId: string,
+  pharmacyId: string,
+  saleForm: string,
+): string {
+  return `${medicineId}\u0000${pharmacyId}\u0000${saleForm}`
+}
+
 function assertReferences(
   bundle: Omit<SeedBundle, 'sourceManifestSha256'>,
 ): void {
-  const medicineIds = new Set(bundle.medicines.map((row) => row.id))
+  const medicineById = new Map(bundle.medicines.map((row) => [row.id, row]))
   const pharmacyIds = new Set(bundle.pharmacies.map((row) => row.id))
+  const pricesByKey = new Map(
+    bundle.prices.map((row) => [
+      priceKey(row.medicine_id, row.pharmacy_id, row.sale_form),
+      row,
+    ]),
+  )
 
   for (const row of bundle.medicines) {
     if (row.active && row.fda_registration_no === null) {
@@ -261,7 +370,7 @@ function assertReferences(
   }
 
   for (const row of bundle.alternatives) {
-    if (!medicineIds.has(row.medicine_id)) {
+    if (!medicineById.has(row.medicine_id)) {
       throw new ToolingError(
         'FIXTURE_INVARIANT',
         `Alternative ${row.id} references unknown medicine ${row.medicine_id}`,
@@ -270,7 +379,8 @@ function assertReferences(
   }
 
   for (const row of bundle.prices) {
-    if (!medicineIds.has(row.medicine_id)) {
+    const medicine = medicineById.get(row.medicine_id)
+    if (medicine === undefined) {
       throw new ToolingError(
         'FIXTURE_INVARIANT',
         `Price references unknown medicine ${row.medicine_id}`,
@@ -281,6 +391,54 @@ function assertReferences(
         'FIXTURE_INVARIANT',
         `Price references unknown pharmacy ${row.pharmacy_id}`,
       )
+    }
+    if (row.pack_unit !== null && row.pack_unit !== medicine.base_unit) {
+      throw new ToolingError(
+        'FIXTURE_INVARIANT',
+        `Price ${row.medicine_id}/${row.pharmacy_id}/${row.sale_form} has pack unit ${row.pack_unit}, expected ${medicine.base_unit}`,
+      )
+    }
+  }
+
+  for (const medicine of bundle.medicines) {
+    for (const pharmacy of bundle.pharmacies) {
+      for (const saleForm of saleForms) {
+        if (!pricesByKey.has(priceKey(medicine.id, pharmacy.id, saleForm))) {
+          throw new ToolingError(
+            'FIXTURE_INVARIANT',
+            `Missing ${saleForm} observation for ${medicine.id}/${pharmacy.id}`,
+          )
+        }
+      }
+
+      const pack = pricesByKey.get(priceKey(medicine.id, pharmacy.id, 'pack'))
+      for (const saleForm of ['strip', 'loose'] as const) {
+        const row = pricesByKey.get(
+          priceKey(medicine.id, pharmacy.id, saleForm),
+        )
+        if (
+          row?.sale_state === 'pack_only' &&
+          pack?.sale_state !== 'available'
+        ) {
+          throw new ToolingError(
+            'FIXTURE_INVARIANT',
+            `${medicine.id}/${pharmacy.id}/${saleForm} is pack_only without an available pack`,
+          )
+        }
+      }
+
+      const states = saleForms.map(
+        (saleForm) =>
+          pricesByKey.get(priceKey(medicine.id, pharmacy.id, saleForm))
+            ?.sale_state,
+      )
+      const notStocked = states.filter((state) => state === 'not_stocked')
+      if (notStocked.length !== 0 && notStocked.length !== states.length) {
+        throw new ToolingError(
+          'FIXTURE_INVARIANT',
+          `${medicine.id}/${pharmacy.id} must be not_stocked on all forms or none`,
+        )
+      }
     }
   }
 }
@@ -332,7 +490,7 @@ export async function loadFixture(directory: string): Promise<SeedBundle> {
   )
   assertUnique(
     prices,
-    (row) => `${row.medicine_id}\u0000${row.pharmacy_id}`,
+    (row) => priceKey(row.medicine_id, row.pharmacy_id, row.sale_form),
     'price natural key',
   )
   assertReferences(bundle)

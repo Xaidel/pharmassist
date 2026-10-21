@@ -1,4 +1,4 @@
-import { join, resolve } from 'node:path'
+﻿import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { Client } from 'pg'
@@ -16,7 +16,7 @@ const seededTables = [
   'medicine_alternative',
   'mdrp_ceiling',
   'pharmacy',
-  'price_record',
+  'price_observation',
 ] as const
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -91,8 +91,8 @@ async function verifySchema(databaseUrl: string): Promise<void> {
       ).rows.map((row) => row.viewname),
     )
     assert(
-      views.has('price_record_with_mdrp'),
-      'Missing view price_record_with_mdrp',
+      views.has('price_observation_with_mdrp'),
+      'Missing view price_observation_with_mdrp',
     )
 
     const enums = new Set(
@@ -110,6 +110,9 @@ async function verifySchema(databaseUrl: string): Promise<void> {
       'mdrp_basis',
       'report_reason',
       'report_status',
+      'base_unit',
+      'sale_form',
+      'sale_state',
     ]) {
       assert(enums.has(enumName), `Missing enum ${enumName}`)
     }
@@ -130,10 +133,11 @@ async function verifySchema(databaseUrl: string): Promise<void> {
       'medicine_alternative_medicine_idx',
       'mdrp_ceiling_match_idx',
       'pharmacy_type_idx',
-      'price_record_pharmacy_idx',
-      'price_record_medicine_idx',
-      'price_record_verified_idx',
-      'price_record_mdrp_idx',
+      'price_observation_pharmacy_idx',
+      'price_observation_medicine_idx',
+      'price_observation_verified_idx',
+      'price_observation_state_idx',
+      'price_observation_mdrp_idx',
       'price_report_result_key_idx',
       'price_report_status_idx',
       'app_event_name_occurred_idx',
@@ -153,7 +157,7 @@ async function verifySchema(databaseUrl: string): Promise<void> {
       'medicine_set_updated_at',
       'medicine_alternative_set_updated_at',
       'pharmacy_set_updated_at',
-      'price_record_set_updated_at',
+      'price_observation_set_updated_at',
       'price_report_set_updated_at',
     ]) {
       assert(triggers.has(triggerName), `Missing trigger ${triggerName}`)
@@ -194,7 +198,7 @@ async function insertSyntheticNonSeedRows(databaseUrl: string): Promise<void> {
          result_key, pharmacy_id, pharmacy_name_snapshot, medicine_ids, medicine_labels, reason
        ) values (
          'mercury-naga-penafrancia|POC-001', 'mercury-naga-penafrancia',
-         'Mercury Drug – Naga City Peñafrancia', array['POC-001'], array['Norvasc'], 'wrong_price'
+         'Mercury Drug - Naga City Penafrancia', array['POC-001'], array['Norvasc'], 'wrong_price'
        )`,
     )
     await client.query(
@@ -210,12 +214,12 @@ async function insertBlockingPrice(databaseUrl: string): Promise<void> {
   const client = await connect(databaseUrl)
   try {
     await client.query(
-      `insert into price_record (
-         medicine_id, pharmacy_id, shelf_price_php, pack_size, pack_quantity, pack_unit,
-         stock_status, verified_at, verified_by, source
+      `insert into price_observation (
+         medicine_id, pharmacy_id, sale_form, sale_state, form_label, shelf_price_php,
+         pack_quantity, pack_unit, stock_status, verified_at, verified_by, source
        ) values (
-         'POC-001', 'pilot-test-pharmacy', 1.00, 'Box of 1 tablet', 1, 'tablet',
-         'in_stock', now(), 'pilot', 'acceptance-test'
+         'POC-001', 'pilot-test-pharmacy', 'pack', 'available', 'Box of 1 tablet', 1.00,
+         1, 'tablet', 'in_stock', now(), 'pilot', 'acceptance-test'
        )`,
     )
   } finally {
@@ -227,7 +231,7 @@ async function deleteBlockingPrice(databaseUrl: string): Promise<void> {
   const client = await connect(databaseUrl)
   try {
     await client.query(
-      `delete from price_record where medicine_id = 'POC-001' and pharmacy_id = 'pilot-test-pharmacy'`,
+      `delete from price_observation where medicine_id = 'POC-001' and pharmacy_id = 'pilot-test-pharmacy'`,
     )
   } finally {
     await client.end()
@@ -269,35 +273,55 @@ async function verifyMdrp(databaseUrl: string): Promise<void> {
     const rows = await client.query<{
       medicine_id: string
       pharmacy_id: string
+      sale_form: string
       mdrp_entry_id: string | null
+      mdrp_rate_basis: string | null
       above_mdrp_flag: boolean | null
-      mdrp_observed_price_php: string | null
+      mdrp_observed_rate_php: string | null
     }>(
-      `select medicine_id, pharmacy_id, mdrp_entry_id, above_mdrp_flag,
-              mdrp_observed_price_php
-         from price_record_with_mdrp
-        where seed_batch_id = 'poc-seed'`,
+      `select medicine_id, pharmacy_id, sale_form, mdrp_entry_id,
+              mdrp_rate_basis, above_mdrp_flag, mdrp_observed_rate_php
+         from price_observation_with_mdrp
+        where seed_batch_id = 'poc-seed'
+          and medicine_id = 'POC-016'
+          and pharmacy_id = 'mercury-naga-penafrancia'`,
     )
-    const janumet = rows.rows.find(
-      (row) =>
-        row.medicine_id === 'POC-016' &&
-        row.pharmacy_id === 'mercury-naga-penafrancia',
+    const expected = new Map([
+      ['pack', { basis: 'box_rate', rate: 35 }],
+      ['strip', { basis: 'strip_rate', rate: 36 }],
+      ['loose', { basis: 'loose_price', rate: 38 }],
+    ])
+    for (const row of rows.rows) {
+      const form = expected.get(row.sale_form)
+      assert(form !== undefined, `Unexpected POC-016 form ${row.sale_form}`)
+      assert(
+        row.mdrp_entry_id === 'EO104-044',
+        'POC-016 must carry EO104-044 on every form',
+      )
+      assert(
+        row.above_mdrp_flag === true,
+        'POC-016 must be above the MDRP ceiling',
+      )
+      assert(
+        row.mdrp_rate_basis === form.basis,
+        `POC-016 ${row.sale_form} must use ${form.basis}`,
+      )
+      assert(
+        Number(row.mdrp_observed_rate_php) === form.rate,
+        `POC-016 ${row.sale_form} observed rate must be ${String(form.rate)}`,
+      )
+    }
+    assert(rows.rows.length === 3, 'POC-016 must expose all three forms')
+
+    const component = await client.query<{ count: number }>(
+      `select count(*)::int as count
+         from price_observation
+        where seed_batch_id = 'poc-seed'
+          and medicine_id = 'POC-015'
+          and mdrp_entry_id is not null`,
     )
     assert(
-      janumet?.mdrp_entry_id === 'EO104-044',
-      'POC-016 must carry EO104-044',
-    )
-    assert(
-      janumet.above_mdrp_flag === true,
-      'POC-016 must be above the MDRP ceiling',
-    )
-    assert(
-      Number(janumet.mdrp_observed_price_php) === 35,
-      'POC-016 observed unit price must be 35.00',
-    )
-    const component = rows.rows.find((row) => row.medicine_id === 'POC-015')
-    assert(
-      component?.mdrp_entry_id === null,
+      (component.rows[0]?.count ?? 0) === 0,
       'A combination ceiling must not attach to its metformin component',
     )
   } finally {
@@ -354,8 +378,8 @@ export async function runAcceptance(baseDatabaseUrl: string): Promise<void> {
   try {
     const firstMigration = await runMigrations({ databaseUrl: scratch.url })
     assert(
-      firstMigration.applied.length === 1,
-      'The clean database should apply one migration',
+      firstMigration.applied.length === 2,
+      'The clean database should apply two migrations',
     )
     const secondMigration = await runMigrations({ databaseUrl: scratch.url })
     assert(
@@ -463,7 +487,7 @@ export async function runAcceptance(baseDatabaseUrl: string): Promise<void> {
 
     const reseed = await runSeed({ config, fixtureDirectory })
     assert(
-      reseed.counts.medicine === 50,
+      reseed.counts.medicine === 50 && reseed.counts.price_observation === 1500,
       'Reseeding after a wipe should restore the full fixture',
     )
     await runWipe({ config })

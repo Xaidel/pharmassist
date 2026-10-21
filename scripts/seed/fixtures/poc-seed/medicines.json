@@ -6,7 +6,6 @@
     "generic_name": "Amlodipine (as besilate/camsylate)",
     "strength": "5 mg",
     "dosage_form": "Tablet",
-    "pack_size": "Box of 100 tablets",
     "manufacturer": "Viatris Pharmaceuticals LLC",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-3419",
@@ -19,7 +18,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-002",
@@ -28,7 +28,6 @@
     "generic_name": "Amlodipine (as besilate/camsylate)",
     "strength": "10 mg",
     "dosage_form": "Tablet",
-    "pack_size": "Box of 100 tablets",
     "manufacturer": "Viatris Pharmaceuticals LLC",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-3429",
@@ -41,7 +40,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-003",
@@ -50,7 +50,6 @@
     "generic_name": "Losartan (as potassium salt)",
     "strength": "50 mg",
     "dosage_form": "Tablet",
-    "pack_size": "Box of 30 tablets",
     "manufacturer": "Organon Pharma (UK) Limited",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-6249",
@@ -63,7 +62,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-004",
@@ -72,7 +72,6 @@
     "generic_name": "Losartan (as potassium salt)",
     "strength": "100 mg",
     "dosage_form": "Tablet",
-    "pack_size": "Box of 30 tablets",
     "manufacturer": "Organon Pharma (UK) Limited",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-6250",
@@ -85,7 +84,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-005",
@@ -94,7 +94,6 @@
     "generic_name": "Losartan + hydrochlorothiazide",
     "strength": "50 mg + 12.5 mg",
     "dosage_form": "Film-coated tablet",
-    "pack_size": "Box of 30 tablets",
     "manufacturer": "Organon Pharma (UK) Limited",
     "rx_otc": "Rx",
     "fda_registration_no": "DR-XY24847",
@@ -107,7 +106,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF"
+    "data_source": "FDA Verification Portal; DOH PNF",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-006",
@@ -116,7 +116,6 @@
     "generic_name": "Enalapril (as maleate)",
     "strength": "5 mg",
     "dosage_form": "Tablet",
-    "pack_size": "Box of 100 tablets",
     "manufacturer": "Scheele Laboratories Phils., Inc.",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-1079",
@@ -129,7 +128,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-007",
@@ -138,7 +138,6 @@
     "generic_name": "Enalapril (as maleate)",
     "strength": "20 mg",
     "dosage_form": "Tablet",
-    "pack_size": "Box of 100 tablets",
     "manufacturer": "Scheele Laboratories Phils., Inc.",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-1078",
@@ -151,7 +150,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-008",
@@ -160,7 +160,6 @@
     "generic_name": "Metoprolol (as tartrate)",
     "strength": "50 mg",
     "dosage_form": "Tablet",
-    "pack_size": "Box of 100 tablets",
     "manufacturer": "AstraZeneca Pharmaceutical Company Ltd.",
     "rx_otc": "Rx",
     "fda_registration_no": "DR-X1848",
@@ -173,7 +172,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-009",
@@ -182,7 +182,6 @@
     "generic_name": "Metoprolol (as tartrate)",
     "strength": "100 mg",
     "dosage_form": "Tablet",
-    "pack_size": "Box of 105 tablets",
     "manufacturer": "AstraZeneca Pharmaceutical Company Ltd.",
     "rx_otc": "Rx",
     "fda_registration_no": "DR-X1812",
@@ -195,7 +194,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-010",
@@ -204,7 +204,6 @@
     "generic_name": "Hydrochlorothiazide",
     "strength": "25 mg",
     "dosage_form": "Tablet",
-    "pack_size": "Box of 200 tablets",
     "manufacturer": "Amherst Laboratories, Inc.",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-9982",
@@ -217,7 +216,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-011",
@@ -226,7 +226,6 @@
     "generic_name": "Simvastatin",
     "strength": "20 mg",
     "dosage_form": "Tablet",
-    "pack_size": "Box of 30 tablets",
     "manufacturer": "Organon Pharma (UK) Limited",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-6241",
@@ -239,7 +238,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-012",
@@ -248,7 +248,6 @@
     "generic_name": "Simvastatin",
     "strength": "40 mg",
     "dosage_form": "Tablet",
-    "pack_size": "Box of 30 tablets",
     "manufacturer": "Organon Pharma (UK) Limited",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-6243",
@@ -261,7 +260,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-013",
@@ -270,7 +270,6 @@
     "generic_name": "Atorvastatin (as calcium)",
     "strength": "20 mg",
     "dosage_form": "Tablet",
-    "pack_size": "Box of 100 tablets",
     "manufacturer": "Pfizer Pharmaceuticals LLC",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-3362",
@@ -283,7 +282,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF"
+    "data_source": "FDA Verification Portal; DOH PNF",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-014",
@@ -292,7 +292,6 @@
     "generic_name": "Aspirin",
     "strength": "80 mg",
     "dosage_form": "Tablet",
-    "pack_size": "Box of 500 tablets",
     "manufacturer": "Amherst Laboratories, Inc.",
     "rx_otc": "Rx",
     "fda_registration_no": "DR-2350",
@@ -305,7 +304,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-015",
@@ -314,7 +314,6 @@
     "generic_name": "Metformin (as hydrochloride)",
     "strength": "500 mg",
     "dosage_form": "Film-coated tablet",
-    "pack_size": "Box of 100 tablets",
     "manufacturer": "Hizon Laboratories, Inc.",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-7406-03",
@@ -327,7 +326,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-016",
@@ -336,7 +336,6 @@
     "generic_name": "Metformin (as hydrochloride) + sitagliptin (as phosphate monohydrate)",
     "strength": "500 mg + 50 mg",
     "dosage_form": "Film-coated tablet",
-    "pack_size": "Box of 28 tablets",
     "manufacturer": "Patheon Puerto Rico, Inc.",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-4010",
@@ -349,7 +348,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal"
+    "data_source": "FDA Verification Portal",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-017",
@@ -358,7 +358,6 @@
     "generic_name": "Gliclazide",
     "strength": "30 mg",
     "dosage_form": "Modified-release tablet",
-    "pack_size": "Box of 60 tablets",
     "manufacturer": "Lloyd Laboratories, Inc.",
     "rx_otc": "Rx",
     "fda_registration_no": "DR-XY38504",
@@ -371,7 +370,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-018",
@@ -380,7 +380,6 @@
     "generic_name": "Gliclazide",
     "strength": "60 mg",
     "dosage_form": "Modified-release tablet",
-    "pack_size": "Box of 60 tablets",
     "manufacturer": "Les Laboratoires Servier lndustrie",
     "rx_otc": "Rx",
     "fda_registration_no": "DR-XY38522",
@@ -393,7 +392,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-019",
@@ -402,7 +402,6 @@
     "generic_name": "Salbutamol (as sulfate)",
     "strength": "100 mcg/dose",
     "dosage_form": "Metered-dose inhaler (200 actuations)",
-    "pack_size": "1 inhaler (200 actuations)",
     "manufacturer": "Glaxo Wellcome S.A.",
     "rx_otc": "Rx",
     "fda_registration_no": "DR-XY23941",
@@ -415,7 +414,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "actuation"
   },
   {
     "id": "POC-020",
@@ -424,7 +424,6 @@
     "generic_name": "Salbutamol (as sulfate)",
     "strength": "2 mg/5 mL",
     "dosage_form": "Syrup",
-    "pack_size": "Bottle of 60 mL",
     "manufacturer": "Amherst Laboratories, Inc.",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-12186",
@@ -437,7 +436,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "mL"
   },
   {
     "id": "POC-021",
@@ -446,7 +446,6 @@
     "generic_name": "Salbutamol (as sulfate)",
     "strength": "1 mg/mL",
     "dosage_form": "Nebuliser solution, 2.5 mL unit-dose",
-    "pack_size": "Box of 20 ampoules (2.5 mL each)",
     "manufacturer": "GlaxoSmithKline Australia Pty Ltd",
     "rx_otc": "Rx",
     "fda_registration_no": "DR-XY13579",
@@ -459,7 +458,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "unit-dose"
   },
   {
     "id": "POC-022",
@@ -468,7 +468,6 @@
     "generic_name": "Ipratropium + salbutamol",
     "strength": "500 mcg + 2.5 mg per 2.5 mL",
     "dosage_form": "Nebuliser solution, unit-dose",
-    "pack_size": "Box of 20 unit-dose vials (2.5 mL each)",
     "manufacturer": "Laboratoire Unither",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-7891",
@@ -481,7 +480,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "unit-dose"
   },
   {
     "id": "POC-023",
@@ -490,7 +490,6 @@
     "generic_name": "Fluticasone (as propionate) + salmeterol (as xinafoate)",
     "strength": "100 mcg + 50 mcg per dose",
     "dosage_form": "Dry-powder inhaler",
-    "pack_size": "1 Diskus (60 doses)",
     "manufacturer": "Glaxo Wellcome Production",
     "rx_otc": "Rx",
     "fda_registration_no": "DR-XY25838",
@@ -503,7 +502,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "actuation"
   },
   {
     "id": "POC-024",
@@ -512,7 +512,6 @@
     "generic_name": "Montelukast (as sodium)",
     "strength": "10 mg",
     "dosage_form": "Film-coated tablet",
-    "pack_size": "Box of 28 tablets",
     "manufacturer": "Organon Pharma (UK) Limited",
     "rx_otc": "Rx",
     "fda_registration_no": "DR-XY24157",
@@ -525,7 +524,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF"
+    "data_source": "FDA Verification Portal; DOH PNF",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-025",
@@ -534,7 +534,6 @@
     "generic_name": "Amoxicillin (as trihydrate)",
     "strength": "500 mg",
     "dosage_form": "Capsule",
-    "pack_size": "Box of 100 capsules",
     "manufacturer": "Glaxo Wellcome Production",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-6461",
@@ -547,7 +546,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "capsule"
   },
   {
     "id": "POC-026",
@@ -556,7 +556,6 @@
     "generic_name": "Amoxicillin (as trihydrate)",
     "strength": "250 mg/5 mL",
     "dosage_form": "Powder for suspension, 60 mL",
-    "pack_size": "Bottle of 60 mL",
     "manufacturer": "Asian Antibiotics, Inc.",
     "rx_otc": "Rx",
     "fda_registration_no": "DR-X8346",
@@ -569,7 +568,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "mL"
   },
   {
     "id": "POC-027",
@@ -578,7 +578,6 @@
     "generic_name": "Co-amoxiclav (amoxicillin + potassium clavulanate)",
     "strength": "500 mg + 125 mg",
     "dosage_form": "Film-coated tablet",
-    "pack_size": "Box of 14 tablets",
     "manufacturer": "Yeluri Formulations Pvt. Ltd.",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-11805",
@@ -591,7 +590,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-028",
@@ -600,7 +600,6 @@
     "generic_name": "Co-amoxiclav (amoxicillin + potassium clavulanate)",
     "strength": "400 mg + 57 mg per 5 mL",
     "dosage_form": "Powder for suspension, 70 mL",
-    "pack_size": null,
     "manufacturer": null,
     "rx_otc": "Rx",
     "fda_registration_no": null,
@@ -613,7 +612,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": false,
-    "data_source": "DOH PNF; PhilHealth Konsulta"
+    "data_source": "DOH PNF; PhilHealth Konsulta",
+    "base_unit": "mL"
   },
   {
     "id": "POC-029",
@@ -622,7 +622,6 @@
     "generic_name": "Ciprofloxacin (as hydrochloride)",
     "strength": "500 mg",
     "dosage_form": "Film-coated tablet",
-    "pack_size": "Box of 50 tablets",
     "manufacturer": "Bayer AG",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-7194",
@@ -635,7 +634,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-030",
@@ -644,7 +644,6 @@
     "generic_name": "Clarithromycin",
     "strength": "500 mg",
     "dosage_form": "Film-coated tablet",
-    "pack_size": "Box of 28 tablets",
     "manufacturer": "Interphil Laboratories, Inc.",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-2331-04",
@@ -657,7 +656,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-031",
@@ -666,7 +666,6 @@
     "generic_name": "Cotrimoxazole (sulfamethoxazole + trimethoprim)",
     "strength": "400 mg + 80 mg",
     "dosage_form": "Tablet",
-    "pack_size": "Box of 100 tablets",
     "manufacturer": "Lloyd Laboratories, Inc.",
     "rx_otc": "Rx",
     "fda_registration_no": "DR-XY17719-B",
@@ -679,7 +678,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-032",
@@ -688,7 +688,6 @@
     "generic_name": "Nitrofurantoin",
     "strength": "100 mg",
     "dosage_form": "Capsule",
-    "pack_size": "Box of 100 capsules",
     "manufacturer": "Scheele Laboratories Phils., Inc.",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-049-04",
@@ -701,7 +700,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "capsule"
   },
   {
     "id": "POC-033",
@@ -710,7 +710,6 @@
     "generic_name": "Cefixime (as trihydrate)",
     "strength": "200 mg",
     "dosage_form": "Capsule",
-    "pack_size": "Box of 50 capsules",
     "manufacturer": "Lloyd Laboratories, Inc.",
     "rx_otc": "Rx",
     "fda_registration_no": "DR-XY44294",
@@ -723,7 +722,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF"
+    "data_source": "FDA Verification Portal; DOH PNF",
+    "base_unit": "capsule"
   },
   {
     "id": "POC-034",
@@ -732,7 +732,6 @@
     "generic_name": "Azithromycin (as dihydrate)",
     "strength": "500 mg",
     "dosage_form": "Film-coated tablet",
-    "pack_size": "Box of 3 tablets",
     "manufacturer": "Viatris Pharmaceuticals LLC",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-8702",
@@ -745,7 +744,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF"
+    "data_source": "FDA Verification Portal; DOH PNF",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-035",
@@ -754,7 +754,6 @@
     "generic_name": "Doxycycline (as hyclate)",
     "strength": "100 mg",
     "dosage_form": "Capsule",
-    "pack_size": "Box of 50 capsules",
     "manufacturer": "Amherst Laboratories, Inc.",
     "rx_otc": "Rx",
     "fda_registration_no": "DR-X1308",
@@ -767,7 +766,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF"
+    "data_source": "FDA Verification Portal; DOH PNF",
+    "base_unit": "capsule"
   },
   {
     "id": "POC-036",
@@ -776,7 +776,6 @@
     "generic_name": "Paracetamol",
     "strength": "500 mg",
     "dosage_form": "Tablet",
-    "pack_size": "Box of 500 tablets",
     "manufacturer": "UNILAB, Inc.",
     "rx_otc": "OTC",
     "fda_registration_no": "DR-153",
@@ -789,7 +788,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-037",
@@ -798,7 +798,6 @@
     "generic_name": "Paracetamol",
     "strength": "120 mg/5 mL",
     "dosage_form": "Syrup/suspension, 60 mL",
-    "pack_size": "Bottle of 60 mL",
     "manufacturer": "PT Sterling Products Indonesia",
     "rx_otc": "OTC",
     "fda_registration_no": "DRHR-2132",
@@ -811,7 +810,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "mL"
   },
   {
     "id": "POC-038",
@@ -820,7 +820,6 @@
     "generic_name": "Mefenamic acid",
     "strength": "500 mg",
     "dosage_form": "Tablet",
-    "pack_size": "Box of 200 tablets",
     "manufacturer": "P.T. Pfizer Indonesia",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-2092",
@@ -833,7 +832,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF"
+    "data_source": "FDA Verification Portal; DOH PNF",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-039",
@@ -842,7 +842,6 @@
     "generic_name": "Ibuprofen",
     "strength": "200 mg",
     "dosage_form": "Tablet",
-    "pack_size": "Box of 500 tablets",
     "manufacturer": "UNILAB, Inc.",
     "rx_otc": "OTC",
     "fda_registration_no": "DR-XY24958",
@@ -855,7 +854,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF"
+    "data_source": "FDA Verification Portal; DOH PNF",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-040",
@@ -864,7 +864,6 @@
     "generic_name": "Diclofenac (as sodium)",
     "strength": "50 mg",
     "dosage_form": "Enteric-coated tablet",
-    "pack_size": "Box of 100 tablets",
     "manufacturer": "Novartis Saglik, Gida Ve Tarim Urunleri San. Ve Tic. A.S.",
     "rx_otc": "Rx",
     "fda_registration_no": "DR-XY27769",
@@ -877,7 +876,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF"
+    "data_source": "FDA Verification Portal; DOH PNF",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-041",
@@ -886,7 +886,6 @@
     "generic_name": "Omeprazole",
     "strength": "20 mg",
     "dosage_form": "Capsule",
-    "pack_size": null,
     "manufacturer": "AstraZeneca AB",
     "rx_otc": "Rx",
     "fda_registration_no": "DR-XY18227",
@@ -899,7 +898,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF"
+    "data_source": "FDA Verification Portal; DOH PNF",
+    "base_unit": "capsule"
   },
   {
     "id": "POC-042",
@@ -908,7 +908,6 @@
     "generic_name": "Oral rehydration salts (ORS 75-replacement)",
     "strength": "20.5 g per sachet",
     "dosage_form": "Powder for oral solution",
-    "pack_size": "Box of 10 sachets",
     "manufacturer": "Medicamen Biotech Limited",
     "rx_otc": "OTC",
     "fda_registration_no": "DRP-9468",
@@ -921,7 +920,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "sachet"
   },
   {
     "id": "POC-043",
@@ -930,7 +930,6 @@
     "generic_name": "Bisacodyl",
     "strength": "5 mg",
     "dosage_form": "Enteric-coated tablet",
-    "pack_size": "Box of 120 tablets",
     "manufacturer": "Sanofi Vietnam Shareholding Company",
     "rx_otc": "OTC",
     "fda_registration_no": "DR-XY42393",
@@ -943,7 +942,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF"
+    "data_source": "FDA Verification Portal; DOH PNF",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-044",
@@ -952,7 +952,6 @@
     "generic_name": "Domperidone",
     "strength": "10 mg",
     "dosage_form": "Tablet",
-    "pack_size": "Box of 100 tablets",
     "manufacturer": "Interphil Laboratories, Inc",
     "rx_otc": "Rx",
     "fda_registration_no": "DR-XY25762",
@@ -965,7 +964,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF"
+    "data_source": "FDA Verification Portal; DOH PNF",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-045",
@@ -974,7 +974,6 @@
     "generic_name": "Loratadine",
     "strength": "10 mg",
     "dosage_form": "Tablet",
-    "pack_size": "Box of 100 tablets",
     "manufacturer": "PT. Bayer Indonesia",
     "rx_otc": "OTC",
     "fda_registration_no": "DR-XY46593",
@@ -987,7 +986,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF"
+    "data_source": "FDA Verification Portal; DOH PNF",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-046",
@@ -996,7 +996,6 @@
     "generic_name": "Chlorphenamine (as maleate)",
     "strength": "4 mg",
     "dosage_form": "Tablet",
-    "pack_size": "Box of 100 tablets",
     "manufacturer": "Pascual Laboratories, Inc.",
     "rx_otc": "Rx",
     "fda_registration_no": "DR-2359",
@@ -1009,7 +1008,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-047",
@@ -1018,7 +1018,6 @@
     "generic_name": "Prednisone",
     "strength": "10 mg",
     "dosage_form": "Film-coated tablet",
-    "pack_size": "Box of 100 tablets",
     "manufacturer": "Lloyd Laboratories, Inc.",
     "rx_otc": "Rx",
     "fda_registration_no": "DR-XY31050",
@@ -1031,7 +1030,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta"
+    "data_source": "FDA Verification Portal; DOH PNF; PhilHealth Konsulta",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-048",
@@ -1040,7 +1040,6 @@
     "generic_name": "Ferrous salt + folic acid",
     "strength": "60 mg elemental iron + 400 mcg folic acid",
     "dosage_form": "Film-coated tablet",
-    "pack_size": "Box of 100 tablets",
     "manufacturer": "Azarias Pharmaceutical Laboratories Inc.",
     "rx_otc": "OTC",
     "fda_registration_no": "DRP-13739-03",
@@ -1053,7 +1052,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF"
+    "data_source": "FDA Verification Portal; DOH PNF",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-049",
@@ -1062,7 +1062,6 @@
     "generic_name": "Multivitamins",
     "strength": "Standard adult tablet",
     "dosage_form": "Tablet",
-    "pack_size": "Bottle of 30 tablets",
     "manufacturer": "UNILAB, Inc.",
     "rx_otc": "OTC",
     "fda_registration_no": "DR-XY30455",
@@ -1075,7 +1074,8 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF"
+    "data_source": "FDA Verification Portal; DOH PNF",
+    "base_unit": "tablet"
   },
   {
     "id": "POC-050",
@@ -1084,7 +1084,6 @@
     "generic_name": "Mupirocin",
     "strength": "2% (20 mg/g)",
     "dosage_form": "Ointment, 5 g tube",
-    "pack_size": "Tube of 5 g",
     "manufacturer": "Glaxo Operations UK Ltd. Trading as Glaxo Wellcome Operations",
     "rx_otc": "Rx",
     "fda_registration_no": "DRP-4193",
@@ -1097,6 +1096,7 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
-    "data_source": "FDA Verification Portal; DOH PNF"
+    "data_source": "FDA Verification Portal; DOH PNF",
+    "base_unit": "g"
   }
 ]

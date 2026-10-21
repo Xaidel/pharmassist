@@ -7,7 +7,7 @@
       "medicine_alternative": 49,
       "pharmacy": 10,
       "mdrp_ceiling": 204,
-      "price_record": 431
+      "price_observation": 1500
     },
     "inactive_medicine_ids": ["POC-028"],
     "mdrp_attachments": [

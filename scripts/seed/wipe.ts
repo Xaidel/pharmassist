@@ -1,4 +1,4 @@
-import { fileURLToPath } from 'node:url'
+﻿import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
 
 import type { Client } from 'pg'
@@ -27,7 +27,7 @@ type CountRow = { count: number }
 type DependencyRow = { dependency: string; dependent_key: string }
 
 const seededTables = [
-  'price_record',
+  'price_observation',
   'medicine_alternative',
   'medicine',
   'pharmacy',
@@ -72,21 +72,21 @@ async function findNonSeedDependencies(
   client: Client,
 ): Promise<DependencyRow[]> {
   const result = await client.query<DependencyRow>(
-    `select 'price_record -> seeded medicine' as dependency,
+    `select 'price_observation -> seeded medicine' as dependency,
             pr.medicine_id || '/' || pr.pharmacy_id as dependent_key
-       from price_record pr
+       from price_observation pr
        join medicine m on m.id = pr.medicine_id
       where pr.seed_batch_id is distinct from $1 and m.seed_batch_id = $1
      union all
-     select 'price_record -> seeded pharmacy' as dependency,
+     select 'price_observation -> seeded pharmacy' as dependency,
             pr.medicine_id || '/' || pr.pharmacy_id as dependent_key
-       from price_record pr
+       from price_observation pr
        join pharmacy p on p.id = pr.pharmacy_id
       where pr.seed_batch_id is distinct from $1 and p.seed_batch_id = $1
      union all
-     select 'price_record -> seeded mdrp_ceiling' as dependency,
+     select 'price_observation -> seeded mdrp_ceiling' as dependency,
             pr.medicine_id || '/' || pr.pharmacy_id as dependent_key
-       from price_record pr
+       from price_observation pr
        join mdrp_ceiling mc on mc.id = pr.mdrp_entry_id
       where pr.seed_batch_id is distinct from $1 and mc.seed_batch_id = $1
      union all
@@ -105,11 +105,12 @@ async function deleteSeededRows(
 ): Promise<Record<string, number>> {
   const deleted: Record<string, number> = {}
 
-  deleted.price_record =
+  deleted.price_observation =
     (
-      await client.query('delete from price_record where seed_batch_id = $1', [
-        POC_SEED_BATCH_ID,
-      ])
+      await client.query(
+        'delete from price_observation where seed_batch_id = $1',
+        [POC_SEED_BATCH_ID],
+      )
     ).rowCount ?? 0
   deleted.medicine_alternative =
     (
