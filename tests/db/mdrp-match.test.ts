@@ -5,6 +5,7 @@ import {
   medicineSeedSchema,
   type MdrpCeilingSeed,
   type MedicineSeed,
+  type PriceSeed,
 } from '../../scripts/seed/fixture'
 import {
   expectedMdrpAttachments,
@@ -23,7 +24,7 @@ function medicine(overrides: Partial<MedicineSeed> = {}): MedicineSeed {
       'Metformin (as hydrochloride) + sitagliptin (as phosphate monohydrate)',
     strength: '500 mg + 50 mg',
     dosage_form: 'Film-coated tablet',
-    pack_size: 'Box of 28 tablets',
+    base_unit: 'tablet',
     manufacturer: 'Patheon Puerto Rico, Inc.',
     rx_otc: 'Rx',
     fda_registration_no: 'DRP-4010',
@@ -68,6 +69,25 @@ function ceiling(overrides: Partial<MdrpCeilingSeed> = {}): MdrpCeilingSeed {
   })
 }
 
+function price(overrides: Partial<PriceSeed> = {}): PriceSeed {
+  return {
+    medicine_id: 'POC-016',
+    pharmacy_id: 'mercury-naga-penafrancia',
+    sale_form: 'pack',
+    sale_state: 'available',
+    form_label: 'Box of 28 tablets',
+    shelf_price_php: 980,
+    pack_quantity: 28,
+    pack_unit: 'tablet',
+    stock_status: 'in_stock',
+    verified_at: '2026-10-20T00:00:00Z',
+    verified_by: 'poc-seed',
+    source: 'poc-seed',
+    notes: null,
+    ...overrides,
+  }
+}
+
 describe('moleculesFromGenericName', () => {
   it('strips salt forms and splits a combination', () => {
     expect(
@@ -109,7 +129,6 @@ describe('findExactMdrpCeiling', () => {
       medicine({
         generic_name: 'Metformin (as hydrochloride)',
         strength: '500 mg',
-        pack_size: 'Box of 100 tablets',
       }),
       [ceiling()],
     )
@@ -123,30 +142,14 @@ describe('findExactMdrpCeiling', () => {
     expect(match).toBeNull()
   })
 
-  it('ignores a medicine pack for a per_unit ceiling', () => {
-    const match = findExactMdrpCeiling(
-      medicine({ pack_size: 'Box of 7 tablets' }),
-      [ceiling()],
-    )
-    expect(match?.id).toBe('EO104-044')
-  })
-
-  it('requires the pack to match for a per_pack ceiling', () => {
+  it('returns a per_pack ceiling for identity matching', () => {
     const perPack = ceiling({
       id: 'EO155-001',
       price_basis: 'per_pack',
       price_unit: null,
-      pack_size: 'Box of 28 tablets',
+      pack_size: '28 tablets',
     })
     expect(findExactMdrpCeiling(medicine(), [perPack])?.id).toBe('EO155-001')
-    expect(
-      findExactMdrpCeiling(medicine({ pack_size: 'Box of 30 tablets' }), [
-        perPack,
-      ]),
-    ).toBeNull()
-    expect(
-      findExactMdrpCeiling(medicine({ pack_size: null }), [perPack]),
-    ).toBeNull()
   })
 
   it('never attaches a ceiling without a dosage form', () => {
@@ -167,7 +170,81 @@ describe('findExactMdrpCeiling', () => {
 })
 
 describe('expectedMdrpAttachments', () => {
-  it('maps the exact match and keeps components unattached', () => {
+  it('attaches a per_unit ceiling to every available form', () => {
+    const prices = [
+      price(),
+      price({
+        sale_form: 'strip',
+        form_label: 'Strip of 7 tablets',
+        shelf_price_php: 252,
+        pack_quantity: 7,
+      }),
+      price({
+        sale_form: 'loose',
+        form_label: 'Loose tablet',
+        shelf_price_php: 38,
+        pack_quantity: 1,
+      }),
+    ]
+    const attachments = expectedMdrpAttachments(
+      [medicine()],
+      [ceiling()],
+      prices,
+    )
+    for (const row of prices) {
+      expect(
+        attachments.get(
+          `${row.medicine_id}\u0000${row.pharmacy_id}\u0000${row.sale_form}`,
+        ),
+      ).toBe('EO104-044')
+    }
+  })
+
+  it('attaches a per_pack ceiling only to the matching pack observation', () => {
+    const perPack = ceiling({
+      id: 'EO155-001',
+      price_basis: 'per_pack',
+      price_unit: null,
+      pack_size: '28 tablets',
+    })
+    const prices = [
+      price(),
+      price({
+        sale_form: 'strip',
+        form_label: 'Strip of 7 tablets',
+        pack_quantity: 7,
+        shelf_price_php: 252,
+      }),
+      price({
+        pharmacy_id: 'south-star-naga-3',
+        pack_quantity: 30,
+        shelf_price_php: 900,
+      }),
+    ]
+    const attachments = expectedMdrpAttachments([medicine()], [perPack], prices)
+    expect(
+      attachments.get('POC-016\u0000mercury-naga-penafrancia\u0000pack'),
+    ).toBe('EO155-001')
+    expect(
+      attachments.get('POC-016\u0000mercury-naga-penafrancia\u0000strip'),
+    ).toBeNull()
+    expect(
+      attachments.get('POC-016\u0000south-star-naga-3\u0000pack'),
+    ).toBeNull()
+  })
+
+  it('never attaches to a non-available form', () => {
+    const attachments = expectedMdrpAttachments(
+      [medicine()],
+      [ceiling()],
+      [price({ sale_state: 'unknown', shelf_price_php: null })],
+    )
+    expect(
+      attachments.get('POC-016\u0000mercury-naga-penafrancia\u0000pack'),
+    ).toBeNull()
+  })
+
+  it('keeps a component unattached', () => {
     const attachments = expectedMdrpAttachments(
       [
         medicine(),
@@ -175,12 +252,23 @@ describe('expectedMdrpAttachments', () => {
           id: 'POC-090',
           generic_name: 'Metformin (as hydrochloride)',
           strength: '500 mg',
-          pack_size: 'Box of 100 tablets',
         }),
       ],
       [ceiling()],
+      [
+        price(),
+        price({
+          medicine_id: 'POC-090',
+          pharmacy_id: 'south-star-naga-3',
+          pack_quantity: 30,
+        }),
+      ],
     )
-    expect(attachments.get('POC-016')).toBe('EO104-044')
-    expect(attachments.get('POC-090')).toBeNull()
+    expect(
+      attachments.get('POC-016\u0000mercury-naga-penafrancia\u0000pack'),
+    ).toBe('EO104-044')
+    expect(
+      attachments.get('POC-090\u0000south-star-naga-3\u0000pack'),
+    ).toBeNull()
   })
 })

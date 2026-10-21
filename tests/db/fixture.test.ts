@@ -20,11 +20,17 @@ const fixtureDirectory = join(
   'poc-seed',
 )
 
-function availablePrices(bundle: SeedBundle, medicineId: string): string[] {
+function availablePharmacies(
+  bundle: SeedBundle,
+  medicineId: string,
+  saleForm: 'pack' | 'strip' | 'loose',
+): string[] {
   return bundle.prices
     .filter(
       (price) =>
         price.medicine_id === medicineId &&
+        price.sale_form === saleForm &&
+        price.sale_state === 'available' &&
         (price.stock_status === 'in_stock' ||
           price.stock_status === 'low_stock'),
     )
@@ -39,13 +45,13 @@ describe('loadFixture', () => {
       medicine_alternative: 49,
       pharmacy: 10,
       mdrp_ceiling: 204,
-      price_record: 431,
+      price_observation: 1500,
     })
     expect(bundle.medicines).toHaveLength(50)
     expect(bundle.alternatives).toHaveLength(49)
     expect(bundle.pharmacies).toHaveLength(10)
     expect(bundle.mdrpCeilings).toHaveLength(204)
-    expect(bundle.prices).toHaveLength(431)
+    expect(bundle.prices).toHaveLength(1500)
   })
 
   it('keeps exactly the intended catalog gaps', async () => {
@@ -58,74 +64,147 @@ describe('loadFixture', () => {
       (medicine) => medicine.id === 'POC-041',
     )
     expect(omeprazole?.active).toBe(true)
-    expect(omeprazole?.pack_size).toBeNull()
-    expect(bundle.prices.some((price) => price.medicine_id === 'POC-041')).toBe(
-      false,
-    )
+    expect(omeprazole?.base_unit).toBe('capsule')
+    expect(
+      bundle.prices
+        .filter((price) => price.medicine_id === 'POC-041')
+        .every((price) => price.sale_state === 'unknown'),
+    ).toBe(true)
   })
 
-  it('attaches the MDRP ceiling to POC-016 only', async () => {
+  it('attaches the MDRP ceiling to POC-016 on every available form', async () => {
     const bundle = await loadFixture(fixtureDirectory)
-    const attachments = [
-      ...expectedMdrpAttachments(bundle.medicines, bundle.mdrpCeilings),
-    ].filter(([, entryId]) => entryId !== null)
-    expect(attachments).toEqual([['POC-016', 'EO104-044']])
+    const attachments = expectedMdrpAttachments(
+      bundle.medicines,
+      bundle.mdrpCeilings,
+      bundle.prices,
+    )
+    const attached = bundle.prices.filter(
+      (price) =>
+        attachments.get(
+          `${price.medicine_id}\u0000${price.pharmacy_id}\u0000${price.sale_form}`,
+        ) !== null,
+    )
+    expect(new Set(attached.map((price) => price.medicine_id))).toEqual(
+      new Set(['POC-016']),
+    )
+    expect(attached.every((price) => price.sale_state === 'available')).toBe(
+      true,
+    )
+    expect(
+      bundle.prices
+        .filter(
+          (price) =>
+            price.medicine_id === 'POC-016' && price.sale_state === 'available',
+        )
+        .every(
+          (price) =>
+            attachments.get(
+              `${price.medicine_id}\u0000${price.pharmacy_id}\u0000${price.sale_form}`,
+            ) === 'EO104-044',
+        ),
+    ).toBe(true)
   })
 
   it('ships the demo basket and trust states', async () => {
     const bundle = await loadFixture(fixtureDirectory)
-    const bundleAvailable = new Set(availablePrices(bundle, 'POC-001'))
-    const paracetamolAvailable = new Set(availablePrices(bundle, 'POC-036'))
+    const amlodipineLoose = new Set(
+      availablePharmacies(bundle, 'POC-001', 'loose'),
+    )
+    const paracetamolLoose = new Set(
+      availablePharmacies(bundle, 'POC-036', 'loose'),
+    )
     const complete = bundle.pharmacies.filter(
       (pharmacy) =>
-        bundleAvailable.has(pharmacy.id) &&
-        paracetamolAvailable.has(pharmacy.id),
+        amlodipineLoose.has(pharmacy.id) && paracetamolLoose.has(pharmacy.id),
     )
     const incomplete = bundle.pharmacies.filter(
       (pharmacy) =>
-        bundleAvailable.has(pharmacy.id) &&
-        !paracetamolAvailable.has(pharmacy.id),
+        amlodipineLoose.has(pharmacy.id) && !paracetamolLoose.has(pharmacy.id),
     )
     const withNoPriceData = bundle.pharmacies.filter(
       (pharmacy) =>
-        !bundleAvailable.has(pharmacy.id) &&
-        !paracetamolAvailable.has(pharmacy.id),
+        !amlodipineLoose.has(pharmacy.id) && !paracetamolLoose.has(pharmacy.id),
     )
 
     expect(complete.length).toBeGreaterThanOrEqual(3)
     expect(
       new Set(
         complete.map((pharmacy) => {
-          const total = bundle.prices
-            .filter(
-              (price) =>
-                price.pharmacy_id === pharmacy.id &&
-                (price.medicine_id === 'POC-001' ||
-                  price.medicine_id === 'POC-036'),
-            )
-            .reduce((sum, price) => sum + price.shelf_price_php, 0)
-          return total.toFixed(2)
+          const first = bundle.prices.find(
+            (price) =>
+              price.medicine_id === 'POC-001' &&
+              price.pharmacy_id === pharmacy.id &&
+              price.sale_form === 'loose',
+          )
+          const second = bundle.prices.find(
+            (price) =>
+              price.medicine_id === 'POC-036' &&
+              price.pharmacy_id === pharmacy.id &&
+              price.sale_form === 'strip',
+          )
+          return (
+            (first?.shelf_price_php ?? 0) * 5 +
+            (second?.shelf_price_php ?? 0)
+          ).toFixed(2)
         }),
       ).size,
     ).toBeGreaterThanOrEqual(2)
     expect(incomplete.length).toBeGreaterThanOrEqual(1)
     expect(withNoPriceData.length).toBeGreaterThanOrEqual(1)
 
+    const exactMix = bundle.prices.find(
+      (price) =>
+        price.medicine_id === 'POC-036' &&
+        price.sale_form === 'strip' &&
+        price.pack_quantity === 10 &&
+        price.sale_state === 'available',
+    )
+    expect(exactMix).toBeDefined()
+
+    const packOnly = bundle.prices.filter(
+      (price) =>
+        price.medicine_id === 'POC-003' && price.sale_state === 'pack_only',
+    )
+    expect(packOnly).toHaveLength(2)
+
+    const inhaler = bundle.prices.filter(
+      (price) =>
+        price.medicine_id === 'POC-019' &&
+        price.pharmacy_id === 'mercury-naga-penafrancia',
+    )
+    expect(
+      inhaler.filter((price) => price.sale_state === 'not_applicable'),
+    ).toHaveLength(2)
+    expect(
+      inhaler.find(
+        (price) =>
+          price.sale_form === 'pack' &&
+          price.pack_quantity === 200 &&
+          price.pack_unit === 'actuation',
+      ),
+    ).toBeDefined()
+
     const janumet = bundle.prices.filter(
-      (price) => price.medicine_id === 'POC-016',
+      (price) =>
+        price.medicine_id === 'POC-016' && price.sale_state === 'available',
     )
     expect(janumet.length).toBeGreaterThanOrEqual(1)
     expect(
       janumet.every(
-        (price) => price.shelf_price_php / (price.pack_quantity ?? 1) > 30.31,
+        (price) =>
+          (price.shelf_price_php ?? 0) / (price.pack_quantity ?? 1) > 30.31,
       ),
     ).toBe(true)
 
     expect(
       bundle.prices.some(
         (price) =>
-          price.medicine_id === 'POC-016' &&
-          Date.parse(price.verified_at) < Date.parse('2026-10-07T00:00:00Z'),
+          price.medicine_id === 'POC-036' &&
+          price.sale_form === 'loose' &&
+          price.sale_state === 'available' &&
+          Date.parse(price.verified_at ?? '') <
+            Date.parse('2026-10-07T00:00:00Z'),
       ),
     ).toBe(true)
 
@@ -207,28 +286,65 @@ describe('fixture schemas', () => {
     expect(result.success).toBe(false)
   })
 
-  it('requires pack quantity and unit together', () => {
+  it('requires price fields only for available forms', () => {
     const base = {
       medicine_id: 'POC-001',
       pharmacy_id: 'mercury-naga-penafrancia',
-      shelf_price_php: 10,
-      pack_size: 'Box of 10 tablets',
-      stock_status: 'in_stock',
+      sale_form: 'loose' as const,
+      sale_state: 'available' as const,
+      form_label: 'Loose tablet',
+      shelf_price_php: 1.5,
+      pack_quantity: 1,
+      pack_unit: 'tablet' as const,
+      stock_status: 'in_stock' as const,
       verified_at: '2026-10-20T00:00:00Z',
       verified_by: 'poc-seed',
       source: 'poc-seed',
       notes: null,
     }
+    expect(priceSeedSchema.safeParse(base).success).toBe(true)
     expect(
-      priceSeedSchema.safeParse({ ...base, pack_quantity: 10, pack_unit: null })
-        .success,
+      priceSeedSchema.safeParse({ ...base, shelf_price_php: null }).success,
     ).toBe(false)
     expect(
       priceSeedSchema.safeParse({
         ...base,
+        sale_state: 'pack_only',
+        form_label: null,
+        shelf_price_php: null,
         pack_quantity: null,
         pack_unit: null,
+        stock_status: null,
       }).success,
     ).toBe(true)
+  })
+
+  it('enforces form quantities and non-sale states', () => {
+    const base = {
+      medicine_id: 'POC-001',
+      pharmacy_id: 'mercury-naga-penafrancia',
+      sale_form: 'strip' as const,
+      sale_state: 'available' as const,
+      form_label: 'Strip of 10 tablets',
+      shelf_price_php: 10,
+      pack_quantity: 10,
+      pack_unit: 'tablet' as const,
+      stock_status: 'in_stock' as const,
+      verified_at: '2026-10-20T00:00:00Z',
+      verified_by: 'poc-seed',
+      source: 'poc-seed',
+      notes: null,
+    }
+    expect(priceSeedSchema.safeParse(base).success).toBe(true)
+    expect(
+      priceSeedSchema.safeParse({ ...base, pack_quantity: 1 }).success,
+    ).toBe(false)
+    expect(
+      priceSeedSchema.safeParse({
+        ...base,
+        sale_form: 'pack',
+        sale_state: 'pack_only',
+      }).success,
+    ).toBe(false)
   })
 })
