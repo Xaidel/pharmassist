@@ -11,7 +11,13 @@ import {
   type PharmacyDetailResponse,
 } from './pharmacy-detail.schema'
 import { createResultsRepository } from './results.repository.server'
-import { manilaClock, toPharmacySummary, toPriceLine } from './results.domain'
+import {
+  manilaClock,
+  SALE_FORM_ORDER,
+  toPharmacySummary,
+  toSaleFormOffer,
+  type StoredFormOffer,
+} from './results.domain'
 
 const repository = createResultsRepository(queryRows)
 
@@ -32,7 +38,18 @@ export type DetailOutcome =
   | { ok: true; response: PharmacyDetailResponse }
   | { ok: false; error: DetailFailure }
 
-/** Read one pharmacy, its full price list, and the optional basket view. */
+function sortForms(forms: readonly StoredFormOffer[]): StoredFormOffer[] {
+  return [...forms].sort(
+    (left, right) =>
+      SALE_FORM_ORDER[left.sale_form] - SALE_FORM_ORDER[right.sale_form],
+  )
+}
+
+function displayName(medicine: MedicineSummary): string {
+  return medicine.brand_name ?? medicine.generic_name
+}
+
+/** Read one pharmacy, its per-form stock list, and the optional basket view. */
 export async function handlePharmacyDetail(
   pharmacyId: string,
   query: PharmacyDetailQuery,
@@ -71,14 +88,42 @@ export async function handlePharmacyDetail(
     }
   }
 
-  const prices = await repository.readPharmacyPrices(pharmacyId)
-  const pricedMedicineIds = [
-    ...new Set(prices.map((price) => price.medicine_id)),
-  ]
-  const pricedMedicines =
-    pricedMedicineIds.length === 0
-      ? []
-      : await repository.readMedicines(pricedMedicineIds)
+  const pharmacyForms = await repository.readPharmacyPrices(pharmacyId)
+  let selectedMedicines: MedicineSummary[]
+  if (query.medicineIds !== null) {
+    selectedMedicines = requestedMedicines
+  } else {
+    const availableIds = new Set(
+      pharmacyForms
+        .filter((form) => form.sale_state === 'available')
+        .map((form) => form.medicine_id),
+    )
+    selectedMedicines =
+      availableIds.size === 0
+        ? []
+        : await repository.readMedicines([...availableIds])
+    selectedMedicines.sort(
+      (left, right) =>
+        displayName(left).localeCompare(displayName(right)) ||
+        left.medicine_id.localeCompare(right.medicine_id),
+    )
+  }
+
+  const selectedIds = new Set(
+    selectedMedicines.map((medicine) => medicine.medicine_id),
+  )
+  const selectedForms = pharmacyForms.filter((form) =>
+    selectedIds.has(form.medicine_id),
+  )
+  const byMedicine = new Map<string, StoredFormOffer[]>()
+  for (const form of selectedForms) {
+    const list = byMedicine.get(form.medicine_id)
+    if (list === undefined) {
+      byMedicine.set(form.medicine_id, [form])
+    } else {
+      list.push(form)
+    }
+  }
 
   const origin = query.origin ?? readServerConfig().nagaCenter
   const pharmacySummary = toPharmacySummary(
@@ -86,19 +131,36 @@ export async function handlePharmacyDetail(
     origin,
     manilaClock(new Date()),
   )
-  const basket =
+  const basketOutcome =
     query.medicineIds === null
       ? undefined
       : buildDetailBasket({
           medicineIds: query.medicineIds,
           medicines: requestedMedicines,
-          prices,
+          forms: pharmacyForms,
         })
+  const basket =
+    basketOutcome === undefined
+      ? undefined
+      : {
+          items: basketOutcome.items,
+          status: basketOutcome.status,
+          complete: basketOutcome.complete,
+          total_shelf_price_php: basketOutcome.total_shelf_price_php,
+          known_total_php: basketOutcome.known_total_php,
+          covering_total_php: basketOutcome.covering_total_php,
+          missing_items: basketOutcome.missing_items,
+        }
 
   const payload = {
     pharmacy: pharmacySummary,
-    medicines: pricedMedicines,
-    prices: prices.map((price) => toPriceLine(price)),
+    medicines: selectedMedicines,
+    forms: selectedMedicines.map((medicine) => ({
+      medicine_id: medicine.medicine_id,
+      forms: sortForms(byMedicine.get(medicine.medicine_id) ?? []).map(
+        toSaleFormOffer,
+      ),
+    })),
     ...(basket === undefined ? {} : { basket }),
   }
 

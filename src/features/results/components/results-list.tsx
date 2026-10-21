@@ -92,6 +92,48 @@ export function ResultsList({
         )}
       </section>
 
+      <section aria-labelledby="pack-only-heading" className="mt-10">
+        <h2
+          className="font-display text-2xl font-semibold"
+          id="pack-only-heading"
+        >
+          Sold per pack only
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          These pharmacies stock every item but cannot match the requested
+          quantity exactly. The amount to buy covers the basket with whole packs
+          or strips, so it is not a comparable exact total.
+        </p>
+        {data.sold_per_pack_only.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Every pharmacy that stocks the basket can fulfill it exactly.
+          </p>
+        ) : (
+          <ul className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 sm:grid sm:grid-cols-2 sm:overflow-visible lg:grid-cols-3">
+            {data.sold_per_pack_only.map((result) => (
+              <li
+                className="w-72 shrink-0 snap-start sm:w-auto"
+                key={result.result_key}
+              >
+                <ResultCard
+                  cheapest={false}
+                  id={`result-${result.result_key}`}
+                  medicines={medicines}
+                  onOpenDetail={() => {
+                    onOpenDetail(result.result_key)
+                  }}
+                  onShowRoute={() => {
+                    onShowRoute(result.result_key)
+                  }}
+                  result={result}
+                  routeActive={activePharmacyId === result.pharmacy.pharmacy_id}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <section aria-labelledby="incomplete-results-heading" className="mt-10">
         <h2
           className="font-display text-2xl font-semibold"
@@ -212,7 +254,7 @@ export function ResultsList({
       </section>
 
       <p className="mt-8 text-xs leading-relaxed text-muted-foreground">
-        Prices are reference shelf prices for the pack shown and must be
+        Prices are reference shelf prices for the form shown and must be
         confirmed at the pharmacy. Seeded demo prices are not live quotes.
         Statutory senior and PWD discounts apply at the point of sale and are
         not included in these totals.
@@ -222,8 +264,9 @@ export function ResultsList({
         seeded catalog.
       </p>
       <p className="sr-only">
-        {data.complete.length} complete and {data.incomplete.length} incomplete
-        pharmacy results, plus {data.no_price_data.length} without price data.
+        {data.complete.length} complete, {data.sold_per_pack_only.length}{' '}
+        sold-per-pack-only, and {data.incomplete.length} incomplete pharmacy
+        results, plus {data.no_price_data.length} without price data.
       </p>
     </>
   )

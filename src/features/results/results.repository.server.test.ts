@@ -9,11 +9,12 @@ import { createResultsRepository } from './results.repository.server'
 const priceRow = {
   medicine_id: 'POC-016',
   pharmacy_id: 'mercury-naga-penafrancia',
+  sale_form: 'pack',
+  sale_state: 'available',
+  form_label: 'Box of 28 tablets',
   shelf_price_php: 980,
-  pack_size: 'Box of 28 tablets',
   pack_quantity: 28,
   pack_unit: 'tablet',
-  unit_price_php: 35,
   stock_status: 'in_stock',
   verified_at: '2026-10-20T00:00:00Z',
   stale: false,
@@ -26,6 +27,8 @@ const priceRow = {
   mdrp_vat_exclusive: true,
   mdrp_source_url: 'https://example.test',
   mdrp_checked_at: '2026-10-21',
+  mdrp_observed_rate_php: 35,
+  mdrp_rate_basis: 'box_rate',
   above_mdrp_flag: true,
 }
 
@@ -74,7 +77,7 @@ describe('createResultsRepository', () => {
       above: true,
     })
     expect(calls).toHaveLength(1)
-    expect(calls[0]?.text).toContain('price_record_with_mdrp')
+    expect(calls[0]?.text).toContain('price_observation_with_mdrp')
     expect(calls[0]?.values).toEqual([['POC-016'], STALE_AFTER_DAYS])
   })
 
@@ -140,7 +143,7 @@ describe('createResultsRepository', () => {
     )
 
     expect(prices[0]?.mdrp?.entry_id).toBe('EO104-044')
-    expect(calls[0]?.text).toContain('price_record_with_mdrp')
+    expect(calls[0]?.text).toContain('price_observation_with_mdrp')
     expect(calls[0]?.text).toContain('join medicine')
     expect(calls[0]?.values).toEqual([
       'mercury-naga-penafrancia',

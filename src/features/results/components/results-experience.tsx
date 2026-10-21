@@ -6,6 +6,7 @@ import { Alert } from '#/shared/components/ui/alert'
 import { Badge } from '#/shared/components/ui/badge'
 import { Button } from '#/shared/components/ui/button'
 import { Card } from '#/shared/components/ui/card'
+import type { BaseUnit } from '#/shared/domain/medicine-summary'
 
 import { isAbortError, postResults, ResultsRequestError } from '../results.api'
 import { DirectionsRequestError, fetchDirections } from '../directions.api'
@@ -16,7 +17,7 @@ import {
   getSessionStorage,
   readBasket,
   removeBasketLine,
-  setBasketPacks,
+  setBasketQuantity,
   writeBasket,
 } from '../results.basket'
 import {
@@ -40,6 +41,7 @@ import { ResultsMap, type MapPin } from './results-map'
 
 type ResultsExperienceProps = {
   initialAdd: string | undefined
+  initialUnit: BaseUnit | undefined
   onAddHandled: () => void
 }
 
@@ -98,6 +100,7 @@ function detailContextForKey(
 
   const result =
     data.complete.find((entry) => entry.result_key === key) ??
+    data.sold_per_pack_only.find((entry) => entry.result_key === key) ??
     data.incomplete.find((entry) => entry.result_key === key)
   if (result === undefined) {
     return null
@@ -114,6 +117,7 @@ function detailContextForKey(
 /** Run the map-first basket comparison experience. */
 export function ResultsExperience({
   initialAdd,
+  initialUnit,
   onAddHandled,
 }: ResultsExperienceProps): React.JSX.Element {
   const [basketLines, setBasketLines] = useState<BasketLine[]>([])
@@ -151,14 +155,19 @@ export function ResultsExperience({
     let addNotice: string | null = null
 
     if (initialAdd !== undefined) {
-      const outcome = addBasketLine(next, initialAdd)
-      next = outcome.lines
-      added = outcome.added
-      if (!outcome.added) {
+      if (initialUnit === undefined) {
         addNotice =
-          outcome.reason === 'full'
-            ? 'A basket can hold up to 10 medicines. Remove one before adding another.'
-            : 'That medicine is already in your basket.'
+          'That medicine could not be added automatically. Search and add it again.'
+      } else {
+        const outcome = addBasketLine(next, initialAdd, initialUnit)
+        next = outcome.lines
+        added = outcome.added
+        if (!outcome.added) {
+          addNotice =
+            outcome.reason === 'full'
+              ? 'A basket can hold up to 10 medicines. Remove one before adding another.'
+              : 'That medicine is already in your basket.'
+        }
       }
     }
 
@@ -179,7 +188,7 @@ export function ResultsExperience({
     if (initialAdd !== undefined) {
       onAddHandled()
     }
-  }, [initialAdd, onAddHandled])
+  }, [initialAdd, initialUnit, onAddHandled])
 
   useEffect(() => {
     if (!('geolocation' in navigator)) {
@@ -274,7 +283,10 @@ export function ResultsExperience({
           response.meta.sort,
           response.origin.source,
           response.basket.items
-            .map((item) => `${item.medicine_id}:${String(item.packs)}`)
+            .map(
+              (item) =>
+                `${item.medicine_id}:${String(item.quantity)}:${item.unit}`,
+            )
             .join(','),
           localeOriginKey(response.origin),
         ].join('|')
@@ -286,6 +298,7 @@ export function ResultsExperience({
               properties: {
                 item_count: response.basket.item_count,
                 complete_count: response.complete.length,
+                sold_per_pack_only_count: response.sold_per_pack_only.length,
                 incomplete_count: response.incomplete.length,
                 no_price_count: response.no_price_data.length,
                 sort: response.meta.sort,
@@ -358,6 +371,17 @@ export function ResultsExperience({
         variant: result.result_key === cheapestKey ? 'cheapest' : 'complete',
       })
     }
+    for (const result of data.sold_per_pack_only) {
+      next.push({
+        key: result.result_key,
+        pharmacyId: result.pharmacy.pharmacy_id,
+        name: result.pharmacy.name,
+        latitude: result.pharmacy.latitude,
+        longitude: result.pharmacy.longitude,
+        label: formatPesoCompact(result.covering_total_php),
+        variant: 'pack-only',
+      })
+    }
     for (const result of data.incomplete) {
       next.push({
         key: result.result_key,
@@ -389,8 +413,8 @@ export function ResultsExperience({
     setBasketLines(next)
   }
 
-  function handlePacksChange(medicineId: string, packs: number): void {
-    persist(setBasketPacks(basketLines, medicineId, packs))
+  function handleQuantityChange(medicineId: string, quantity: number): void {
+    persist(setBasketQuantity(basketLines, medicineId, quantity))
   }
 
   function handleRemove(medicineId: string): void {
@@ -597,7 +621,7 @@ export function ResultsExperience({
             items={basketLines}
             medicines={medicines}
             onClear={handleClear}
-            onPacksChange={handlePacksChange}
+            onQuantityChange={handleQuantityChange}
             onRemove={handleRemove}
           />
 
@@ -774,7 +798,7 @@ export function ResultsExperience({
               About these prices
             </h2>
             <p className="mt-2">
-              Every amount is a reference shelf price for the pack shown, not a
+              Every amount is a reference shelf price for the form shown, not a
               quote. Seeded demo prices and stock are mocked; pharmacy names and
               locations are real. Confirm the price at the pharmacy.
             </p>

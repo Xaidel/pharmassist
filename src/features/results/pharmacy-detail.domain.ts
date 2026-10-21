@@ -1,14 +1,12 @@
 import type { MedicineSummary } from '#/shared/domain/medicine-summary'
 
 import {
+  buildPharmacyBasket,
   BASKET_MAX_ITEMS,
-  centsToPrice,
-  isStockAvailable,
-  priceToCents,
-  type MissingItem,
-  type MissingReason,
-  type PriceFacts,
-  type StockStatus,
+  type BasketLine,
+  type BasketMedicine,
+  type PharmacyBasketOutcome,
+  type StoredFormOffer,
 } from './results.domain'
 
 /** Most basket medicine IDs one pharmacy-detail request may carry. */
@@ -17,35 +15,11 @@ export const DETAIL_MAX_MEDICINES = BASKET_MAX_ITEMS
 /** The stable character rule for a medicine ID. */
 const MEDICINE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/
 
-/** The price context one detail basket line carries when a record exists. */
-export type DetailBasketPrice = {
-  shelf_price_php: number
-  stock_status: StockStatus
-  stale: boolean
-}
-
-/** One basket medicine as it appears in the pharmacy detail sheet. */
-export type DetailBasketItem = {
-  medicine_id: string
-  packs: number
-  medicine: MedicineSummary
-  price: DetailBasketPrice | null
-}
-
-/** The basket completeness block the pharmacy detail endpoint returns. */
-export type DetailBasket = {
-  items: DetailBasketItem[]
-  complete: boolean
-  total_shelf_price_php: number | null
-  known_total_php: number
-  missing_items: MissingItem[]
-}
-
 /** Inputs the detail basket decision needs, with all I/O already performed. */
 export type BuildDetailBasketInput = {
   medicineIds: readonly string[]
   medicines: readonly MedicineSummary[]
-  prices: readonly PriceFacts[]
+  forms: readonly StoredFormOffer[]
 }
 
 /** Failures the pharmacy-detail query parser can report. */
@@ -62,86 +36,43 @@ export type PharmacyDetailQueryOutcome =
   | { ok: true; value: PharmacyDetailQuery }
   | { ok: false; code: DetailQueryFailureCode; message: string }
 
-function missingItem(
-  medicine: MedicineSummary,
-  reason: MissingReason,
-): MissingItem {
-  return {
+/**
+ * Build the detail basket for one pharmacy.
+ *
+ * The detail endpoint carries medicine IDs only, so each requested medicine is
+ * evaluated at one base unit. Results and the basket flow carry full quantities.
+ */
+export function buildDetailBasket(
+  input: BuildDetailBasketInput,
+): PharmacyBasketOutcome {
+  const medicineById = new Map(
+    input.medicines.map((medicine) => [medicine.medicine_id, medicine]),
+  )
+  const requested = new Set(input.medicineIds)
+  const lines: BasketLine[] = input.medicineIds.map((medicineId) => {
+    const medicine = medicineById.get(medicineId)
+    if (medicine === undefined) {
+      throw new Error(`Missing medicine ${medicineId} after validation`)
+    }
+    return {
+      medicine_id: medicineId,
+      quantity: 1,
+      unit: medicine.base_unit,
+    }
+  })
+  const medicines: BasketMedicine[] = input.medicines.map((medicine) => ({
     medicine_id: medicine.medicine_id,
     brand_name: medicine.brand_name,
     generic_name: medicine.generic_name,
     strength: medicine.strength,
     dosage_form: medicine.dosage_form,
-    reason,
-  }
-}
+  }))
 
-function missingReason(price: PriceFacts): MissingReason {
-  return price.stock_status === 'out_of_stock'
-    ? 'out_of_stock'
-    : 'stock_unknown'
-}
-
-/**
- * Build the basket completeness block for one pharmacy.
- *
- * It mirrors the results ranking rules: available means a price record with
- * `in_stock` or `low_stock`; the total is the sum of shelf prices; malformed
- * input is a programming error, not a user-facing outcome.
- */
-export function buildDetailBasket(input: BuildDetailBasketInput): DetailBasket {
-  const medicineById = new Map(
-    input.medicines.map((medicine) => [medicine.medicine_id, medicine]),
-  )
-  const priceByMedicine = new Map(
-    input.prices.map((price) => [price.medicine_id, price]),
-  )
-
-  const items: DetailBasketItem[] = []
-  const missing: MissingItem[] = []
-  let knownCents = 0
-
-  for (const medicineId of input.medicineIds) {
-    const medicine = medicineById.get(medicineId)
-    if (medicine === undefined) {
-      throw new Error(`Missing medicine ${medicineId} after validation`)
-    }
-    const price = priceByMedicine.get(medicineId)
-    items.push({
-      medicine_id: medicineId,
-      packs: 1,
-      medicine,
-      price:
-        price === undefined
-          ? null
-          : {
-              shelf_price_php: price.shelf_price_php,
-              stock_status: price.stock_status,
-              stale: price.stale,
-            },
-    })
-
-    if (price === undefined) {
-      missing.push(missingItem(medicine, 'no_price'))
-      continue
-    }
-    if (!isStockAvailable(price.stock_status)) {
-      missing.push(missingItem(medicine, missingReason(price)))
-      continue
-    }
-    knownCents += priceToCents(price.shelf_price_php)
-  }
-
-  const knownTotal = centsToPrice(knownCents)
-  const complete = missing.length === 0
-
-  return {
-    items,
-    complete,
-    total_shelf_price_php: complete ? knownTotal : null,
-    known_total_php: knownTotal,
-    missing_items: missing,
-  }
+  return buildPharmacyBasket({
+    basket: lines,
+    medicines,
+    forms: input.forms.filter((form) => requested.has(form.medicine_id)),
+  })
 }
 
 /**

@@ -1,6 +1,9 @@
 import { z } from 'zod'
 
-import { medicineSummarySchema } from '#/shared/domain/medicine-summary'
+import {
+  baseUnitSchema,
+  medicineSummarySchema,
+} from '#/shared/domain/medicine-summary'
 
 import {
   classifySearchMatch,
@@ -24,6 +27,7 @@ const searchMatchSchema = z.strictObject({
 export const searchItemSchema = z.strictObject({
   medicine: medicineSummarySchema,
   match: searchMatchSchema,
+  available_forms: z.array(z.enum(['pack', 'strip', 'loose'])),
   candidate_generic_count: z.number().int().min(0),
 })
 
@@ -48,11 +52,12 @@ export const searchRowSchema = z.strictObject({
   generic_name: z.string(),
   strength: z.string(),
   dosage_form: z.string(),
-  pack_size: z.string().nullable(),
+  base_unit: baseUnitSchema,
   manufacturer: z.string().nullable(),
   rx_otc: z.enum(['Rx', 'OTC']),
   pnf_listed: z.boolean().nullable(),
   konsulta_listed: z.boolean().nullable(),
+  available_forms: z.array(z.enum(['pack', 'strip', 'loose'])),
   candidate_generic_count: z.number().int().min(0),
   brand_matched: z.boolean(),
   generic_matched: z.boolean(),
@@ -105,13 +110,14 @@ export function toSearchItem(row: SearchRow): SearchItem {
       generic_name: row.generic_name,
       strength: row.strength,
       dosage_form: row.dosage_form,
-      pack_size: row.pack_size,
+      base_unit: row.base_unit,
       manufacturer: row.manufacturer,
       rx_otc: row.rx_otc,
       pnf_listed: row.pnf_listed,
       konsulta_listed: row.konsulta_listed,
     },
     match,
+    available_forms: row.available_forms,
     candidate_generic_count: row.candidate_generic_count,
   }
 }

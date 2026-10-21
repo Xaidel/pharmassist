@@ -5,10 +5,10 @@ import {
   clearBasket,
   readBasket,
   removeBasketLine,
-  setBasketPacks,
+  setBasketQuantity,
   writeBasket,
 } from './results.basket'
-import { BASKET_MAX_ITEMS } from './results.domain'
+import { BASKET_MAX_ITEMS, BASKET_MAX_QUANTITY } from './results.domain'
 
 class MemoryStorage implements Storage {
   private readonly values = new Map<string, string>()
@@ -41,9 +41,13 @@ class MemoryStorage implements Storage {
 describe('session basket', () => {
   it('round-trips the validated basket', () => {
     const storage = new MemoryStorage()
-    writeBasket(storage, [{ medicine_id: 'POC-001', packs: 2 }])
+    writeBasket(storage, [
+      { medicine_id: 'POC-001', quantity: 5, unit: 'tablet' },
+    ])
 
-    expect(readBasket(storage)).toEqual([{ medicine_id: 'POC-001', packs: 2 }])
+    expect(readBasket(storage)).toEqual([
+      { medicine_id: 'POC-001', quantity: 5, unit: 'tablet' },
+    ])
   })
 
   it('discards malformed or out-of-contract storage', () => {
@@ -53,52 +57,77 @@ describe('session basket', () => {
 
     storage.setItem(
       'pharmassist.basket',
-      JSON.stringify([{ medicine_id: 'POC-001', packs: 0 }]),
+      JSON.stringify([{ medicine_id: 'POC-001', quantity: 0, unit: 'tablet' }]),
+    )
+    expect(readBasket(storage)).toEqual([])
+
+    storage.setItem(
+      'pharmassist.basket',
+      JSON.stringify([{ medicine_id: 'POC-001', packs: 1 }]),
     )
     expect(readBasket(storage)).toEqual([])
   })
 
   it('adds one medicine once and refuses duplicates and overflow', () => {
-    const first = addBasketLine([], 'POC-001')
+    const first = addBasketLine([], 'POC-001', 'tablet')
     expect(first).toEqual({
-      lines: [{ medicine_id: 'POC-001', packs: 1 }],
+      lines: [{ medicine_id: 'POC-001', quantity: 1, unit: 'tablet' }],
       added: true,
     })
 
-    expect(addBasketLine(first.lines, 'POC-001')).toEqual({
-      lines: [{ medicine_id: 'POC-001', packs: 1 }],
+    expect(addBasketLine(first.lines, 'POC-001', 'tablet')).toEqual({
+      lines: [{ medicine_id: 'POC-001', quantity: 1, unit: 'tablet' }],
       added: false,
       reason: 'duplicate',
     })
 
     const full = Array.from({ length: BASKET_MAX_ITEMS }, (_, index) => ({
       medicine_id: `POC-${String(index + 1)}`,
-      packs: 1,
+      quantity: 1,
+      unit: 'tablet' as const,
     }))
-    expect(addBasketLine(full, 'POC-099')).toEqual({
+    expect(addBasketLine(full, 'POC-099', 'tablet')).toEqual({
       lines: full,
       added: false,
       reason: 'full',
     })
   })
 
-  it('clamps pack changes and removes a line', () => {
-    const lines = [{ medicine_id: 'POC-001', packs: 1 }]
-    expect(setBasketPacks(lines, 'POC-001', 0)).toEqual([
-      { medicine_id: 'POC-001', packs: 1 },
+  it('clamps quantity changes and removes a line', () => {
+    const lines = [
+      { medicine_id: 'POC-001', quantity: 1, unit: 'tablet' as const },
+    ]
+    expect(setBasketQuantity(lines, 'POC-001', 0)).toEqual([
+      { medicine_id: 'POC-001', quantity: 1, unit: 'tablet' },
     ])
-    expect(setBasketPacks(lines, 'POC-001', 99)).toEqual([
-      { medicine_id: 'POC-001', packs: 10 },
+    expect(
+      setBasketQuantity(lines, 'POC-001', BASKET_MAX_QUANTITY + 1),
+    ).toEqual([
+      {
+        medicine_id: 'POC-001',
+        quantity: BASKET_MAX_QUANTITY,
+        unit: 'tablet',
+      },
     ])
-    expect(setBasketPacks(lines, 'POC-001', 3)).toEqual([
-      { medicine_id: 'POC-001', packs: 3 },
+    expect(setBasketQuantity(lines, 'POC-001', 3)).toEqual([
+      { medicine_id: 'POC-001', quantity: 3, unit: 'tablet' },
     ])
     expect(removeBasketLine(lines, 'POC-001')).toEqual([])
   })
 
+  it('preserves typed decimal quantities and rejects non-finite values', () => {
+    const lines = [{ medicine_id: 'POC-020', quantity: 1, unit: 'mL' as const }]
+    expect(setBasketQuantity(lines, 'POC-020', 2.5)).toEqual([
+      { medicine_id: 'POC-020', quantity: 2.5, unit: 'mL' },
+    ])
+    expect(setBasketQuantity(lines, 'POC-020', Number.NaN)).toEqual(lines)
+  })
+
   it('clears the stored basket', () => {
     const storage = new MemoryStorage()
-    writeBasket(storage, [{ medicine_id: 'POC-001', packs: 1 }])
+    writeBasket(storage, [
+      { medicine_id: 'POC-001', quantity: 1, unit: 'tablet' },
+    ])
     clearBasket(storage)
     expect(storage.getItem('pharmassist.basket')).toBeNull()
   })

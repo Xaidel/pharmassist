@@ -1,13 +1,18 @@
 import { Link } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
 
 import { MedicineLine } from '#/shared/components/medicine-line'
 import { Button } from '#/shared/components/ui/button'
 import { Card, CardContent, CardHeader } from '#/shared/components/ui/card'
-import type { MedicineSummary } from '#/shared/domain/medicine-summary'
+import { Input } from '#/shared/components/ui/input'
+import type {
+  BaseUnit,
+  MedicineSummary,
+} from '#/shared/domain/medicine-summary'
 
 import {
-  BASKET_MAX_PACKS,
-  BASKET_MIN_PACKS,
+  BASKET_MAX_QUANTITY,
+  BASKET_MIN_QUANTITY,
   type BasketLine,
 } from '../results.domain'
 
@@ -15,24 +20,121 @@ type BasketPanelProps = {
   items: readonly BasketLine[]
   medicines: readonly MedicineSummary[]
   busy: boolean
-  onPacksChange: (medicineId: string, packs: number) => void
+  onQuantityChange: (medicineId: string, quantity: number) => void
   onRemove: (medicineId: string) => void
   onClear: () => void
 }
 
-/** Render the session basket and its pack controls. */
+function allowsDecimal(unit: BaseUnit): boolean {
+  return unit === 'mL' || unit === 'g'
+}
+
+function sanitizeDraft(value: string, unit: BaseUnit): string {
+  if (!allowsDecimal(unit)) {
+    return value.replace(/\D/g, '')
+  }
+
+  const cleaned = value.replace(/[^0-9.]/g, '')
+  const [whole = '', ...parts] = cleaned.split('.')
+  const fraction = parts.join('').slice(0, 3)
+  return parts.length === 0 ? whole : `${whole}.${fraction}`
+}
+
+function isValidDraft(value: string, unit: BaseUnit): boolean {
+  if (value === '' || value === '.') {
+    return false
+  }
+  return allowsDecimal(unit)
+    ? /^\d*(\.\d{0,3})?$/.test(value)
+    : /^\d+$/.test(value)
+}
+
+type QuantityInputProps = {
+  value: number
+  unit: BaseUnit
+  label: string
+  disabled: boolean
+  onChange: (quantity: number) => void
+}
+
+/** A typable base-unit quantity with the same bounds as the stepper buttons. */
+function QuantityInput({
+  value,
+  unit,
+  label,
+  disabled,
+  onChange,
+}: QuantityInputProps): React.JSX.Element {
+  const [draft, setDraft] = useState(String(value))
+
+  useEffect(() => {
+    setDraft(String(value))
+  }, [value])
+
+  function commit(): void {
+    if (!isValidDraft(draft, unit)) {
+      setDraft(String(value))
+      return
+    }
+
+    const parsed = Number(draft)
+    if (
+      !Number.isFinite(parsed) ||
+      parsed < BASKET_MIN_QUANTITY ||
+      parsed > BASKET_MAX_QUANTITY
+    ) {
+      setDraft(String(value))
+      return
+    }
+
+    const normalized = Math.round(parsed * 1000) / 1000
+    setDraft(String(normalized))
+    if (normalized !== value) {
+      onChange(normalized)
+    }
+  }
+
+  return (
+    <Input
+      aria-label={`Quantity of ${label} in ${unit}`}
+      autoComplete="off"
+      className="w-20 text-center"
+      disabled={disabled}
+      inputMode={allowsDecimal(unit) ? 'decimal' : 'numeric'}
+      onBlur={commit}
+      onChange={(event) => {
+        setDraft(sanitizeDraft(event.target.value, unit))
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault()
+          commit()
+          event.currentTarget.blur()
+          return
+        }
+        if (event.key === 'Escape') {
+          setDraft(String(value))
+          event.currentTarget.blur()
+        }
+      }}
+      pattern={allowsDecimal(unit) ? '[0-9]*[.]?[0-9]{0,3}' : '[0-9]*'}
+      value={draft}
+    />
+  )
+}
+
+/** Render the session basket and its base-unit quantity controls. */
 export function BasketPanel({
   items,
   medicines,
   busy,
-  onPacksChange,
+  onQuantityChange,
   onRemove,
   onClear,
 }: BasketPanelProps): React.JSX.Element {
   const medicineById = new Map(
     medicines.map((medicine) => [medicine.medicine_id, medicine]),
   )
-  const packCount = items.reduce((sum, item) => sum + item.packs, 0)
 
   return (
     <Card aria-busy={busy} className="mt-6">
@@ -41,7 +143,7 @@ export function BasketPanel({
           <h2 className="font-display text-2xl font-semibold">Your basket</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {items.length} {items.length === 1 ? 'medicine' : 'medicines'} ·{' '}
-            {packCount} {packCount === 1 ? 'pack' : 'packs'}
+            {items.length === 1 ? 'one quantity line' : 'quantity lines'}
           </p>
         </div>
         <Button
@@ -75,15 +177,15 @@ export function BasketPanel({
                 )}
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                   <div
-                    aria-label={`Packs of ${label}`}
-                    className="flex items-center gap-2"
+                    aria-label={`Quantity of ${label}`}
+                    className="flex flex-wrap items-center gap-2"
                     role="group"
                   >
                     <Button
-                      aria-label={`Remove one pack of ${label}`}
-                      disabled={busy || item.packs <= BASKET_MIN_PACKS}
+                      aria-label={`Reduce the quantity of ${label}`}
+                      disabled={busy || item.quantity <= BASKET_MIN_QUANTITY}
                       onClick={() => {
-                        onPacksChange(item.medicine_id, item.packs - 1)
+                        onQuantityChange(item.medicine_id, item.quantity - 1)
                       }}
                       size="icon"
                       type="button"
@@ -91,17 +193,23 @@ export function BasketPanel({
                     >
                       −
                     </Button>
-                    <span
-                      aria-live="polite"
-                      className="min-w-8 text-center text-sm font-semibold"
-                    >
-                      {item.packs}
+                    <QuantityInput
+                      disabled={busy}
+                      label={label}
+                      onChange={(quantity) => {
+                        onQuantityChange(item.medicine_id, quantity)
+                      }}
+                      unit={item.unit}
+                      value={item.quantity}
+                    />
+                    <span className="min-w-10 text-sm font-medium text-muted-foreground">
+                      {item.unit}
                     </span>
                     <Button
-                      aria-label={`Add one pack of ${label}`}
-                      disabled={busy || item.packs >= BASKET_MAX_PACKS}
+                      aria-label={`Increase the quantity of ${label}`}
+                      disabled={busy || item.quantity >= BASKET_MAX_QUANTITY}
                       onClick={() => {
-                        onPacksChange(item.medicine_id, item.packs + 1)
+                        onQuantityChange(item.medicine_id, item.quantity + 1)
                       }}
                       size="icon"
                       type="button"
@@ -137,8 +245,9 @@ export function BasketPanel({
         </div>
 
         <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-          Totals multiply each pharmacy&apos;s pack shelf price by the number of
-          packs. Prices are per pack, not per tablet.
+          Quantities are counted in each medicine&apos;s base unit. Type a
+          quantity or use the buttons; pharmacies fulfill it with their observed
+          pack, strip, or loose forms.
         </p>
       </CardContent>
     </Card>

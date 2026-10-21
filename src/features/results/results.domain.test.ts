@@ -3,17 +3,25 @@ import { describe, expect, it } from 'vitest'
 import {
   BASKET_MAX_ITEMS,
   basketResultKey,
+  buildPharmacyBasket,
   buildRankedResults,
   cheapestCompleteResultKey,
+  chooseCoveringPurchase,
   distanceMetres,
+  findCheapestExactCombination,
+  missingReasonFor,
   priceToCents,
   resolveOpenNow,
   type AlternativeFacts,
   type BasketLine,
   type BuildRankingInput,
+  type MdrpInfo,
   type PharmacyRecord,
-  type PriceFacts,
   type ReportFacts,
+  type SaleForm,
+  type SaleState,
+  type StockStatus,
+  type StoredFormOffer,
 } from './results.domain'
 
 const ORIGIN = { latitude: 0, longitude: 0 }
@@ -43,31 +51,48 @@ function pharmacy(
   }
 }
 
-function price(
+function formLabel(saleForm: SaleForm, quantity: number | null): string {
+  switch (saleForm) {
+    case 'pack':
+      return `Box of ${String(quantity ?? 0)} tablets`
+    case 'strip':
+      return `Strip of ${String(quantity ?? 0)} tablets`
+    case 'loose':
+      return 'Loose tablet'
+  }
+}
+
+function offer(
   medicineId: string,
   pharmacyId: string,
-  shelfPrice: number,
-  overrides: Partial<PriceFacts> = {},
-): PriceFacts {
+  saleForm: SaleForm,
+  saleState: SaleState,
+  price: number | null,
+  packQuantity: number | null,
+  stock: StockStatus | null = null,
+  overrides: Partial<StoredFormOffer> = {},
+): StoredFormOffer {
+  const available = saleState === 'available'
   return {
     medicine_id: medicineId,
     pharmacy_id: pharmacyId,
-    shelf_price_php: shelfPrice,
-    pack_size: 'Box of 10 tablets',
-    pack_quantity: 10,
-    pack_unit: 'tablet',
-    unit_price_php: shelfPrice / 10,
-    stock_status: 'in_stock',
-    verified_at: '2026-10-20T00:00:00Z',
-    stale: false,
+    sale_form: saleForm,
+    sale_state: saleState,
+    form_label: available ? formLabel(saleForm, packQuantity) : null,
+    shelf_price_php: available ? price : null,
+    pack_quantity: available ? packQuantity : null,
+    pack_unit: available ? 'tablet' : null,
+    stock_status: available ? (stock ?? 'in_stock') : null,
+    verified_at: available ? '2026-10-20T00:00:00Z' : null,
+    stale: available ? false : null,
     mdrp: null,
     ...overrides,
   }
 }
 
 const basket: BasketLine[] = [
-  { medicine_id: 'P1', packs: 1 },
-  { medicine_id: 'P2', packs: 1 },
+  { medicine_id: 'P1', quantity: 5, unit: 'tablet' },
+  { medicine_id: 'P2', quantity: 10, unit: 'tablet' },
 ]
 
 const medicines = [
@@ -94,7 +119,7 @@ function rankingInput(
     basket,
     medicines,
     pharmacies: [],
-    prices: [],
+    forms: [],
     alternatives: [],
     reports: [],
     origin: ORIGIN,
@@ -169,17 +194,249 @@ describe('basketResultKey', () => {
   })
 })
 
+describe('findCheapestExactCombination', () => {
+  it('uses loose units when a strip would overshoot', () => {
+    const forms = [
+      offer('P1', 'A', 'pack', 'available', 120, 100),
+      offer('P1', 'A', 'strip', 'available', 12, 10),
+      offer('P1', 'A', 'loose', 'available', 1.5, 1),
+    ]
+    const combination = findCheapestExactCombination(5, forms)
+    expect(
+      combination?.map((choice) => [choice.form.sale_form, choice.count]),
+    ).toEqual([['loose', 5]])
+  })
+
+  it('finds the mixed strip and loose combination', () => {
+    const forms = [
+      offer('P1', 'A', 'pack', 'available', 120, 100),
+      offer('P1', 'A', 'strip', 'available', 12, 10),
+      offer('P1', 'A', 'loose', 'available', 1.5, 1),
+    ]
+    const combination = findCheapestExactCombination(12, forms)
+    expect(
+      combination?.map((choice) => [choice.form.sale_form, choice.count]),
+    ).toEqual([
+      ['strip', 1],
+      ['loose', 2],
+    ])
+  })
+
+  it('returns null when no combination is exact', () => {
+    const forms = [offer('P3', 'A', 'pack', 'available', 300, 30)]
+    expect(findCheapestExactCombination(10, forms)).toBeNull()
+  })
+
+  it('combines two forms without a loose offer', () => {
+    const forms = [
+      offer('P4', 'A', 'pack', 'available', 50, 30),
+      offer('P4', 'A', 'strip', 'available', 10, 5),
+    ]
+    const combination = findCheapestExactCombination(30, forms)
+    expect(
+      combination?.map((choice) => [choice.form.sale_form, choice.count]),
+    ).toEqual([['pack', 1]])
+  })
+
+  it('does not treat an overshoot as exact', () => {
+    const forms = [
+      offer('P5', 'A', 'pack', 'available', 450, 200),
+      offer('P5', 'A', 'strip', 'not_applicable', null, null),
+      offer('P5', 'A', 'loose', 'not_applicable', null, null),
+    ]
+    expect(findCheapestExactCombination(30, forms)).toBeNull()
+  })
+})
+
+describe('chooseCoveringPurchase', () => {
+  it('covers a pack-only medicine with one pack', () => {
+    const forms = [
+      offer('P3', 'A', 'pack', 'available', 300, 30),
+      offer('P3', 'A', 'strip', 'pack_only', null, null),
+      offer('P3', 'A', 'loose', 'pack_only', null, null),
+    ]
+    expect(chooseCoveringPurchase(10, forms)).toMatchObject({
+      buyQuantity: 1,
+      coversQuantity: 30,
+      coveringTotalPhp: 300,
+      copy: 'sold_per_pack_only',
+    })
+  })
+
+  it('labels a pack-only inhaler as sold by the pack', () => {
+    const forms = [
+      offer('P5', 'A', 'pack', 'available', 450, 200),
+      offer('P5', 'A', 'strip', 'not_applicable', null, null),
+      offer('P5', 'A', 'loose', 'not_applicable', null, null),
+    ]
+    expect(chooseCoveringPurchase(30, forms)).toMatchObject({
+      buyQuantity: 1,
+      coversQuantity: 200,
+      copy: 'sold_by_the_pack',
+    })
+  })
+
+  it('labels a strip covering purchase', () => {
+    const forms = [
+      offer('P6', 'A', 'pack', 'available', 120, 100, 'out_of_stock'),
+      offer('P6', 'A', 'strip', 'available', 12, 10),
+      offer('P6', 'A', 'loose', 'pack_only', null, null),
+    ]
+    expect(chooseCoveringPurchase(5, forms)).toMatchObject({
+      buyQuantity: 1,
+      coversQuantity: 10,
+      copy: 'sold_by_the_strip',
+    })
+  })
+})
+
+describe('missingReasonFor', () => {
+  it('reports not stocked only when every form is not stocked', () => {
+    expect(
+      missingReasonFor([
+        offer('P1', 'A', 'pack', 'not_stocked', null, null),
+        offer('P1', 'A', 'strip', 'not_stocked', null, null),
+        offer('P1', 'A', 'loose', 'not_stocked', null, null),
+      ]),
+    ).toBe('not_stocked')
+  })
+
+  it('reports out of stock before stock unknown', () => {
+    expect(
+      missingReasonFor([
+        offer('P1', 'A', 'pack', 'available', 120, 100, 'out_of_stock'),
+        offer('P1', 'A', 'strip', 'available', 12, 10, 'unknown'),
+        offer('P1', 'A', 'loose', 'unknown', null, null),
+      ]),
+    ).toBe('out_of_stock')
+    expect(
+      missingReasonFor([
+        offer('P1', 'A', 'pack', 'available', 120, 100, 'unknown'),
+        offer('P1', 'A', 'strip', 'unknown', null, null),
+        offer('P1', 'A', 'loose', 'unknown', null, null),
+      ]),
+    ).toBe('stock_unknown')
+  })
+
+  it('reports no price for unknown-only forms', () => {
+    expect(
+      missingReasonFor([
+        offer('P1', 'A', 'pack', 'unknown', null, null),
+        offer('P1', 'A', 'strip', 'unknown', null, null),
+        offer('P1', 'A', 'loose', 'unknown', null, null),
+      ]),
+    ).toBe('no_price')
+  })
+
+  it('treats pack-only and not-applicable forms as stocked', () => {
+    expect(
+      missingReasonFor([
+        offer('P1', 'A', 'pack', 'available', 120, 100),
+        offer('P1', 'A', 'strip', 'pack_only', null, null),
+        offer('P1', 'A', 'loose', 'not_applicable', null, null),
+      ]),
+    ).toBeNull()
+  })
+})
+
+describe('buildPharmacyBasket', () => {
+  it('shows pack-only as a covering purchase, not as an incomplete item', () => {
+    const outcome = buildPharmacyBasket({
+      basket: [{ medicine_id: 'P1', quantity: 5, unit: 'tablet' }],
+      medicines,
+      forms: [
+        offer('P1', 'A', 'pack', 'available', 300, 30),
+        offer('P1', 'A', 'strip', 'pack_only', null, null),
+        offer('P1', 'A', 'loose', 'pack_only', null, null),
+      ],
+    })
+
+    expect(outcome.status).toBe('sold_per_pack_only')
+    expect(outcome.no_price_data).toBe(false)
+    expect(outcome.missing_items).toEqual([])
+    expect(outcome.total_shelf_price_php).toBeNull()
+    expect(outcome.covering_total_php).toBe(300)
+    expect(outcome.items[0]?.pack_only?.copy).toBe('sold_per_pack_only')
+  })
+
+  it('shows a not-applicable inhaler as sold by the pack', () => {
+    const outcome = buildPharmacyBasket({
+      basket: [{ medicine_id: 'P1', quantity: 30, unit: 'actuation' }],
+      medicines,
+      forms: [
+        offer('P1', 'A', 'pack', 'available', 450, 200),
+        offer('P1', 'A', 'strip', 'not_applicable', null, null),
+        offer('P1', 'A', 'loose', 'not_applicable', null, null),
+      ],
+    })
+
+    expect(outcome.status).toBe('sold_per_pack_only')
+    expect(outcome.items[0]?.pack_only).toMatchObject({
+      copy: 'sold_by_the_pack',
+      covers_quantity: 200,
+    })
+  })
+
+  it('builds an exact mixed-form basket total', () => {
+    const outcome = buildPharmacyBasket({
+      basket: [{ medicine_id: 'P1', quantity: 12, unit: 'tablet' }],
+      medicines,
+      forms: [
+        offer('P1', 'A', 'pack', 'available', 120, 100),
+        offer('P1', 'A', 'strip', 'available', 12, 10),
+        offer('P1', 'A', 'loose', 'available', 1.5, 1),
+      ],
+    })
+
+    expect(outcome.status).toBe('complete')
+    expect(outcome.total_shelf_price_php).toBe(15)
+    expect(
+      outcome.items[0]?.components.map((component) => [
+        component.sale_form,
+        component.count,
+      ]),
+    ).toEqual([
+      ['strip', 1],
+      ['loose', 2],
+    ])
+  })
+
+  it('marks a missing item with its reason and keeps the exact subtotal', () => {
+    const outcome = buildPharmacyBasket({
+      basket: [
+        { medicine_id: 'P1', quantity: 5, unit: 'tablet' },
+        { medicine_id: 'P2', quantity: 10, unit: 'tablet' },
+      ],
+      medicines,
+      forms: [
+        offer('P1', 'A', 'pack', 'not_stocked', null, null),
+        offer('P1', 'A', 'strip', 'not_stocked', null, null),
+        offer('P1', 'A', 'loose', 'not_stocked', null, null),
+        offer('P2', 'A', 'pack', 'available', 50, 100),
+        offer('P2', 'A', 'strip', 'available', 6, 10),
+        offer('P2', 'A', 'loose', 'available', 0.7, 1),
+      ],
+    })
+
+    expect(outcome.status).toBe('incomplete')
+    expect(outcome.missing_items).toEqual([
+      expect.objectContaining({ medicine_id: 'P1', reason: 'not_stocked' }),
+    ])
+    expect(outcome.known_total_php).toBe(6)
+  })
+})
+
 describe('buildRankedResults', () => {
-  const mdrp = {
+  const mdrp: MdrpInfo = {
     entry_id: 'EO104-044',
     order: 'EO 104 s. 2020',
     annex_row: 44,
     ceiling_php: 30.31,
-    ceiling_basis: 'per_unit' as const,
+    ceiling_basis: 'per_unit',
     ceiling_unit: 'tablet',
     vat_exclusive: true,
-    observed_pack_price_php: 350,
-    observed_unit_price_php: 35,
+    observed_rate_php: 1,
+    rate_basis: 'loose_price',
     above: true,
     source_url: 'https://example.test',
     checked_at: '2026-10-21',
@@ -190,7 +447,7 @@ describe('buildRankedResults', () => {
       medicine_id: 'P1',
       brand_name: 'Zeta Generic',
       manufacturer: 'Zeta Labs',
-      pack_size: 'Box of 10',
+      reference_pack_size: 'Box of 10',
       rx_otc: 'Rx',
       fda_registration_no: null,
       note: null,
@@ -200,7 +457,7 @@ describe('buildRankedResults', () => {
       medicine_id: 'P1',
       brand_name: 'Alpha Generic',
       manufacturer: 'Alpha Labs',
-      pack_size: 'Box of 10',
+      reference_pack_size: 'Box of 10',
       rx_otc: 'Rx',
       fda_registration_no: 'DR-1',
       note: 'Candidate alternative.',
@@ -213,7 +470,6 @@ describe('buildRankedResults', () => {
   ]
 
   const input = rankingInput({
-    origin: { latitude: 0, longitude: 0 },
     pharmacies: [
       pharmacy('A', 'Alpha Pharmacy', 0.02, {
         opening_hours: { mon: [{ open: '08:00', close: '18:00' }] },
@@ -223,20 +479,32 @@ describe('buildRankedResults', () => {
       pharmacy('C', 'Gamma Pharmacy', 0.005),
       pharmacy('D', 'Delta Pharmacy', 0.001),
       pharmacy('E', 'Epsilon Pharmacy', 0.003),
-      pharmacy('F', 'Zeta Pharmacy', 0.004),
-      pharmacy('G', 'Eta Pharmacy', 0.006),
     ],
-    prices: [
-      price('P1', 'A', 100),
-      price('P2', 'A', 50, { mdrp }),
-      price('P1', 'B', 120),
-      price('P2', 'B', 60),
-      price('P1', 'C', 90),
-      price('P1', 'E', 95, { stock_status: 'out_of_stock' }),
-      price('P1', 'F', 100),
-      price('P2', 'F', 55, { stock_status: 'unknown' }),
-      price('P1', 'G', 110),
-      price('P2', 'G', 60, { stock_status: 'out_of_stock' }),
+    forms: [
+      offer('P1', 'A', 'pack', 'available', 100, 100),
+      offer('P1', 'A', 'strip', 'available', 10, 10),
+      offer('P1', 'A', 'loose', 'available', 1, 1, 'in_stock', { mdrp }),
+      offer('P2', 'A', 'pack', 'available', 50, 100),
+      offer('P2', 'A', 'strip', 'available', 7, 10),
+      offer('P2', 'A', 'loose', 'available', 0.5, 1),
+      offer('P1', 'B', 'pack', 'available', 120, 100),
+      offer('P1', 'B', 'strip', 'available', 12, 10),
+      offer('P1', 'B', 'loose', 'available', 1.2, 1),
+      offer('P2', 'B', 'pack', 'available', 60, 100),
+      offer('P2', 'B', 'strip', 'available', 6, 10),
+      offer('P2', 'B', 'loose', 'available', 0.7, 1),
+      offer('P1', 'C', 'pack', 'available', 300, 30),
+      offer('P1', 'C', 'strip', 'pack_only', null, null),
+      offer('P1', 'C', 'loose', 'pack_only', null, null),
+      offer('P2', 'C', 'pack', 'available', 50, 100),
+      offer('P2', 'C', 'strip', 'available', 6, 10),
+      offer('P2', 'C', 'loose', 'available', 0.5, 1),
+      offer('P1', 'D', 'pack', 'not_stocked', null, null),
+      offer('P1', 'D', 'strip', 'not_stocked', null, null),
+      offer('P1', 'D', 'loose', 'not_stocked', null, null),
+      offer('P2', 'D', 'pack', 'available', 50, 100),
+      offer('P2', 'D', 'strip', 'available', 6, 10),
+      offer('P2', 'D', 'loose', 'available', 0.5, 1),
     ],
     alternatives,
     reports,
@@ -244,57 +512,60 @@ describe('buildRankedResults', () => {
 
   const result = buildRankedResults(input)
 
-  it('ranks complete baskets by total shelf price, not by MDRP flags', () => {
+  it('ranks complete exact baskets by total shelf price', () => {
     expect(result.complete.map((entry) => entry.result_key)).toEqual([
       'A|P1,P2',
       'B|P1,P2',
     ])
-    expect(result.complete[0]?.total_shelf_price_php).toBe(150)
-    expect(result.complete[0]?.prices.some((line) => line.mdrp?.above)).toBe(
-      true,
-    )
+    expect(result.complete[0]?.total_shelf_price_php).toBe(10)
+    expect(result.complete[0]?.items[0]?.components[0]?.mdrp?.above).toBe(true)
     expect(result.complete[0]?.reported).toBe(true)
     expect(result.complete[0]?.reported_at).toBe('2026-10-21T09:00:00Z')
   })
 
-  it('marks the cheapest complete result independently of the sort', () => {
+  it('keeps the sold-per-pack-only bucket separate from exact results', () => {
+    expect(result.sold_per_pack_only.map((entry) => entry.result_key)).toEqual([
+      'C|P1,P2',
+    ])
+    expect(result.sold_per_pack_only[0]?.covering_total_php).toBe(305)
+    expect(result.sold_per_pack_only[0]?.known_total_php).toBe(5)
+    expect(result.sold_per_pack_only[0]?.items[0]?.outcome).toBe(
+      'sold_per_pack_only',
+    )
+  })
+
+  it('lists incomplete and no-price pharmacies separately', () => {
+    expect(result.incomplete.map((entry) => entry.result_key)).toEqual([
+      'D|P1,P2',
+    ])
+    expect(result.incomplete[0]?.missing_items).toEqual([
+      expect.objectContaining({ medicine_id: 'P1', reason: 'not_stocked' }),
+    ])
+    expect(result.incomplete[0]?.known_total_php).toBe(5)
+    expect(
+      result.no_price_data.map((entry) => entry.pharmacy.pharmacy_id),
+    ).toEqual(['E'])
+  })
+
+  it('sorts the sold bucket by covering total and distance', () => {
     const distanceSorted = buildRankedResults({ ...input, sort: 'distance' })
     expect(distanceSorted.complete.map((entry) => entry.result_key)).toEqual([
       'B|P1,P2',
       'A|P1,P2',
     ])
+    expect(
+      distanceSorted.sold_per_pack_only.map((entry) => entry.result_key),
+    ).toEqual(['C|P1,P2'])
     expect(cheapestCompleteResultKey(distanceSorted.complete)).toBe('A|P1,P2')
-  })
-
-  it('sorts incomplete baskets by missing count, known total, and distance', () => {
-    expect(
-      result.incomplete.map((entry) => ({
-        key: entry.result_key,
-        missing: entry.missing_items.map((item) => item.reason),
-      })),
-    ).toEqual([
-      { key: 'C|P1,P2', missing: ['no_price'] },
-      { key: 'F|P1,P2', missing: ['stock_unknown'] },
-      { key: 'G|P1,P2', missing: ['out_of_stock'] },
-    ])
-    const incomplete = result.incomplete[0]
-    expect(incomplete?.total_shelf_price_php).toBeNull()
-    expect(incomplete?.known_total_php).toBe(90)
-    expect(incomplete?.missing_items[0]?.brand_name).toBe('Beta')
-  })
-
-  it('keeps pharmacies without any available price out of the ranking', () => {
-    expect(
-      result.no_price_data.map((entry) => entry.pharmacy.pharmacy_id),
-    ).toEqual(['D', 'E'])
   })
 
   it('resolves open-now only from verified structured hours', () => {
     const byId = new Map(
-      [...result.complete, ...result.incomplete].map((entry) => [
-        entry.pharmacy.pharmacy_id,
-        entry.pharmacy,
-      ]),
+      [
+        ...result.complete,
+        ...result.sold_per_pack_only,
+        ...result.incomplete,
+      ].map((entry) => [entry.pharmacy.pharmacy_id, entry.pharmacy]),
     )
     expect(byId.get('A')?.open_now).toBe(true)
     expect(byId.get('B')?.open_now).toBe(true)
@@ -309,7 +580,7 @@ describe('buildRankedResults', () => {
           {
             brand_name: 'Alpha Generic',
             manufacturer: 'Alpha Labs',
-            pack_size: 'Box of 10',
+            reference_pack_size: 'Box of 10',
             rx_otc: 'Rx',
             fda_registration_no: 'DR-1',
             note: 'Candidate alternative.',
@@ -317,7 +588,7 @@ describe('buildRankedResults', () => {
           {
             brand_name: 'Zeta Generic',
             manufacturer: 'Zeta Labs',
-            pack_size: 'Box of 10',
+            reference_pack_size: 'Box of 10',
             rx_otc: 'Rx',
             fda_registration_no: null,
             note: 'Candidate generic alternative; not a therapeutic-equivalence claim.',
@@ -327,17 +598,7 @@ describe('buildRankedResults', () => {
     ])
   })
 
-  it('includes every price record in a result, including unavailable stock', () => {
-    const resultF = result.incomplete.find(
-      (entry) => entry.result_key === 'F|P1,P2',
-    )
-    expect(resultF?.prices.map((line) => line.stock_status)).toEqual([
-      'in_stock',
-      'unknown',
-    ])
-  })
-
-  it('exposes basket limits', () => {
+  it('exposes basket limits and centavo rounding', () => {
     expect(BASKET_MAX_ITEMS).toBe(10)
     expect(priceToCents(30.31)).toBe(3031)
   })

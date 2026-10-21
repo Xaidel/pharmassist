@@ -178,7 +178,10 @@ export function SearchExperience(): React.JSX.Element {
     ]).catch(() => undefined)
     void navigate({
       to: '/results',
-      search: { add: item.medicine.medicine_id },
+      search: {
+        add: item.medicine.medicine_id,
+        unit: item.medicine.base_unit,
+      },
     })
   }
 

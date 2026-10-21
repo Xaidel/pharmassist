@@ -36,12 +36,31 @@ scored as (
     m.generic_name,
     m.strength,
     m.dosage_form,
-    m.pack_size,
+    m.base_unit,
     m.manufacturer,
     m.rx_otc,
     m.pnf_listed,
     m.konsulta_listed,
     m.active,
+    coalesce(
+      (
+        select array_agg(forms.sale_form order by forms.form_order)
+        from (
+          select distinct
+            po.sale_form,
+            case po.sale_form
+              when 'pack' then 0
+              when 'strip' then 1
+              else 2
+            end as form_order
+          from price_observation po
+          where po.medicine_id = m.id
+            and po.sale_state = 'available'
+            and po.stock_status in ('in_stock', 'low_stock')
+        ) forms
+      ),
+      '{}'::sale_form[]
+    )::text[] as available_forms,
     (
       select count(*)::int
         from medicine_alternative alternative
@@ -97,11 +116,12 @@ select
   generic_name,
   strength,
   dosage_form,
-  pack_size,
+  base_unit,
   manufacturer,
   rx_otc,
   pnf_listed,
   konsulta_listed,
+  available_forms,
   candidate_generic_count,
   brand_matched,
   generic_matched,

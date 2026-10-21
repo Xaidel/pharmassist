@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 import { MAX_ROUTE_POINTS } from './directions.domain'
-import { originSchema } from './results.domain'
+import { originSchema } from './results.schema'
 
 /** A GeoJSON line string in travel order, as `[longitude, latitude]` pairs. */
 export const routeGeometrySchema = z.strictObject({

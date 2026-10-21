@@ -6,7 +6,6 @@ export type MedicineLineMedicine = {
   generic_name: string
   strength: string
   dosage_form: string
-  pack_size: string | null
   rx_otc: 'Rx' | 'OTC'
 }
 
@@ -35,7 +34,6 @@ export function MedicineLine({
       </div>
       <p className="text-sm text-muted-foreground">
         {medicine.strength} · {medicine.dosage_form}
-        {medicine.pack_size !== null ? ` · ${medicine.pack_size}` : ''}
       </p>
     </div>
   )

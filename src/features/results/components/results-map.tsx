@@ -24,7 +24,7 @@ export type MapPin = {
   latitude: number
   longitude: number
   label: string
-  variant: 'cheapest' | 'complete' | 'incomplete' | 'no-price'
+  variant: 'cheapest' | 'complete' | 'pack-only' | 'incomplete' | 'no-price'
 }
 
 type MapLibreModule = {
@@ -38,6 +38,7 @@ const PIN_BASE =
 const PIN_VARIANTS = {
   cheapest: 'border-primary bg-primary text-primary-foreground',
   complete: 'border-border bg-card text-foreground',
+  'pack-only': 'border-dashed border-primary bg-card text-foreground',
   incomplete: 'border-input bg-muted text-foreground',
   'no-price': 'border-border bg-background text-muted-foreground',
 } as const

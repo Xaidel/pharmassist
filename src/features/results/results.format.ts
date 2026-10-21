@@ -96,14 +96,63 @@ export function formatStockStatus(
 
 /** A short missing-item reason for a result card. */
 export function formatMissingReason(
-  reason: 'no_price' | 'out_of_stock' | 'stock_unknown',
+  reason: 'not_stocked' | 'no_price' | 'out_of_stock' | 'stock_unknown',
 ): string {
   switch (reason) {
+    case 'not_stocked':
+      return 'Not stocked'
     case 'no_price':
       return 'No price listed'
     case 'out_of_stock':
       return 'Out of stock'
     case 'stock_unknown':
       return 'Stock unknown'
+  }
+}
+
+/** Describe a non-sale form state without implying the pharmacy lacks the item. */
+export function formatSaleState(
+  state:
+    'available' | 'pack_only' | 'not_applicable' | 'not_stocked' | 'unknown',
+): string {
+  switch (state) {
+    case 'available':
+      return 'Available'
+    case 'pack_only':
+      return 'Sold per pack only'
+    case 'not_applicable':
+      return 'Not sold in this form'
+    case 'not_stocked':
+      return 'Not stocked'
+    case 'unknown':
+      return 'Not confirmed'
+  }
+}
+
+/** Label an MDRP comparison by the rate basis the API returned. */
+export function formatMdrpRateBasis(
+  basis: 'loose_price' | 'strip_rate' | 'box_rate' | 'pack_price',
+): string {
+  switch (basis) {
+    case 'loose_price':
+      return 'Sold loose'
+    case 'strip_rate':
+      return 'Strip rate'
+    case 'box_rate':
+      return 'Box rate'
+    case 'pack_price':
+      return 'Pack price'
+  }
+}
+
+/** Label a sale form. */
+export function formatSaleForm(form: 'pack' | 'strip' | 'loose'): string {
+  switch (form) {
+    case 'pack':
+      return 'Pack'
+    case 'strip':
+      return 'Strip'
+    case 'loose':
+      return 'Loose'
   }
 }

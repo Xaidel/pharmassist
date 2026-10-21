@@ -135,14 +135,23 @@ test('rejects malformed baskets with the contract error codes', async ({
   request,
 }) => {
   const invalid = await request.post('/api/results', {
-    data: { items: [{ medicine_id: 'POC-001', packs: 0 }] },
+    data: { items: [{ medicine_id: 'POC-001', quantity: 0, unit: 'tablet' }] },
   })
-  expect(invalid.status()).toBe(400)
+  expect(invalid.status()).toBe(422)
   const invalidBody: unknown = await invalid.json()
-  expect(invalidBody).toMatchObject({ error: { code: 'INVALID_REQUEST' } })
+  expect(invalidBody).toMatchObject({ error: { code: 'INVALID_QUANTITY' } })
+
+  const unit = await request.post('/api/results', {
+    data: { items: [{ medicine_id: 'POC-001', quantity: 1, unit: 'capsule' }] },
+  })
+  expect(unit.status()).toBe(422)
+  const unitBody: unknown = await unit.json()
+  expect(unitBody).toMatchObject({ error: { code: 'INVALID_UNIT' } })
 
   const unknown = await request.post('/api/results', {
-    data: { items: [{ medicine_id: 'NOT-A-MEDICINE', packs: 1 }] },
+    data: {
+      items: [{ medicine_id: 'NOT-A-MEDICINE', quantity: 1, unit: 'tablet' }],
+    },
   })
   expect(unknown.status()).toBe(422)
   const unknownBody: unknown = await unknown.json()
@@ -151,8 +160,8 @@ test('rejects malformed baskets with the contract error codes', async ({
   const duplicate = await request.post('/api/results', {
     data: {
       items: [
-        { medicine_id: 'POC-001', packs: 1 },
-        { medicine_id: 'POC-001', packs: 1 },
+        { medicine_id: 'POC-001', quantity: 1, unit: 'tablet' },
+        { medicine_id: 'POC-001', quantity: 1, unit: 'tablet' },
       ],
     },
   })
@@ -166,7 +175,8 @@ test('rejects malformed baskets with the contract error codes', async ({
     data: {
       items: Array.from({ length: 11 }, (_, index) => ({
         medicine_id: `POC-${String(index + 1).padStart(3, '0')}`,
-        packs: 1,
+        quantity: 1,
+        unit: 'tablet',
       })),
     },
   })
@@ -175,12 +185,12 @@ test('rejects malformed baskets with the contract error codes', async ({
   expect(tooLargeBody).toMatchObject({ error: { code: 'BASKET_TOO_LARGE' } })
 
   const basket = await request.post('/api/basket', {
-    data: { items: [{ medicine_id: 'POC-001', packs: 2 }] },
+    data: { items: [{ medicine_id: 'POC-001', quantity: 2, unit: 'tablet' }] },
   })
   expect(basket.status()).toBe(200)
   const basketBody: unknown = await basket.json()
   expect(basketBody).toMatchObject({
-    basket: { item_count: 1, pack_count: 2, currency: 'PHP' },
+    basket: { item_count: 1, currency: 'PHP' },
   })
 })
 

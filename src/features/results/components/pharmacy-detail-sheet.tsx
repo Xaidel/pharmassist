@@ -15,21 +15,19 @@ import {
   PharmacyDetailRequestError,
 } from '../pharmacy-detail.api'
 import type { PharmacyDetailResponse } from '../pharmacy-detail.schema'
-import type { DetailBasket } from '../pharmacy-detail.domain'
 import { postReport, ReportRequestError } from '../report.api'
 import { REPORT_NOTE_MAX, type ReportReason } from '../report.schema'
 import { isAbortError } from '../results.api'
 import type { BasketLine, Origin } from '../results.domain'
 import {
   formatDistance,
-  formatMissingReason,
   formatOpenNow,
   formatPeso,
-  formatStockStatus,
   formatVerified,
 } from '../results.format'
 
 import { PriceLineItem } from './price-line'
+import { ResultItemList } from './result-items'
 
 const REPORT_REASON_OPTIONS: readonly {
   value: ReportReason
@@ -178,12 +176,11 @@ function ReportForm({
 
 function DetailBasketSummary({
   basket,
+  medicines,
 }: {
-  basket: DetailBasket
+  basket: NonNullable<PharmacyDetailResponse['basket']>
+  medicines: PharmacyDetailResponse['medicines']
 }): React.JSX.Element {
-  const missingByMedicine = new Map(
-    basket.missing_items.map((item) => [item.medicine_id, item]),
-  )
   const total =
     basket.complete && basket.total_shelf_price_php !== null
       ? basket.total_shelf_price_php
@@ -201,41 +198,17 @@ function DetailBasketSummary({
         This basket at this pharmacy
       </h3>
       <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-        {basket.complete
-          ? `Complete basket · ${formatPeso(total)}`
-          : `${String(basket.missing_items.length)} ${
-              basket.missing_items.length === 1 ? 'item' : 'items'
-            } missing · ${formatPeso(total)} known`}
+        {basket.status === 'complete'
+          ? `Exact basket · ${formatPeso(total)}`
+          : basket.status === 'sold_per_pack_only'
+            ? `Sold per pack only · ${formatPeso(
+                basket.covering_total_php ?? 0,
+              )} to buy`
+            : `${String(basket.missing_items.length)} ${
+                basket.missing_items.length === 1 ? 'item' : 'items'
+              } missing · ${formatPeso(total)} known`}
       </p>
-      <ul className="mt-3 space-y-3">
-        {basket.items.map((item) => {
-          const missing = missingByMedicine.get(item.medicine_id)
-          return (
-            <li className="rounded-xl bg-muted p-3" key={item.medicine_id}>
-              <MedicineLine medicine={item.medicine} />
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-                {item.price === null ? (
-                  <Badge>
-                    {missing === undefined
-                      ? 'No price listed'
-                      : formatMissingReason(missing.reason)}
-                  </Badge>
-                ) : (
-                  <>
-                    <span className="font-semibold">
-                      {formatPeso(item.price.shelf_price_php)}
-                    </span>
-                    <Badge variant="default">
-                      {formatStockStatus(item.price.stock_status)}
-                    </Badge>
-                    {item.price.stale && <Badge>Possibly outdated</Badge>}
-                  </>
-                )}
-              </div>
-            </li>
-          )
-        })}
-      </ul>
+      <ResultItemList items={basket.items} medicines={medicines} />
     </section>
   )
 }
@@ -422,7 +395,10 @@ export function PharmacyDetailSheet({
           </div>
 
           {detail.basket !== undefined && (
-            <DetailBasketSummary basket={detail.basket} />
+            <DetailBasketSummary
+              basket={detail.basket}
+              medicines={detail.medicines}
+            />
           )}
 
           <section aria-labelledby="detail-stock-heading">
@@ -430,26 +406,45 @@ export function PharmacyDetailSheet({
               className="font-display text-xl font-semibold"
               id="detail-stock-heading"
             >
-              Full stock list ({detail.prices.length})
+              Full stock list (
+              {detail.forms.reduce(
+                (count, group) => count + group.forms.length,
+                0,
+              )}
+              )
             </h3>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              Seeded reference shelf prices for the packs shown. Confirm the
-              price at the pharmacy.
+              Seeded reference shelf prices for each observed sale form. Confirm
+              the price at the pharmacy.
             </p>
-            {detail.prices.length === 0 ? (
+            {detail.forms.length === 0 ? (
               <p className="mt-3 text-sm text-muted-foreground">
                 This pharmacy has no price records in the seeded catalog.
               </p>
             ) : (
-              <ul className="mt-3 space-y-3">
-                {detail.prices.map((price) => (
-                  <PriceLineItem
-                    key={price.medicine_id}
-                    medicine={medicineById.get(price.medicine_id)}
-                    price={price}
-                  />
-                ))}
-              </ul>
+              <div className="mt-3 space-y-4">
+                {detail.forms.map((group) => {
+                  const medicine = medicineById.get(group.medicine_id)
+                  return (
+                    <div key={group.medicine_id}>
+                      {medicine === undefined ? (
+                        <p className="font-semibold">{group.medicine_id}</p>
+                      ) : (
+                        <MedicineLine medicine={medicine} />
+                      )}
+                      <ul className="mt-2 space-y-2">
+                        {group.forms.map((offer) => (
+                          <PriceLineItem
+                            key={offer.sale_form}
+                            medicine={medicine}
+                            offer={offer}
+                          />
+                        ))}
+                      </ul>
+                    </div>
+                  )
+                })}
+              </div>
             )}
           </section>
 
