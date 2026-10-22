@@ -1,34 +1,100 @@
-import { Badge } from '#/shared/components/ui/badge'
+import { getRouteApi } from '@tanstack/react-router'
+import { useCallback, useState } from 'react'
+import type { ReactNode } from 'react'
 
-import { SearchExperience } from '../components/search-experience'
+import { cn } from '#/lib/cn'
+import { InfoButton } from '#/shared/components/info-button'
 
-/** Render the POC's search-first home screen. */
-export function HomePage(): React.JSX.Element {
+import { HomeMap } from '../components/home-map'
+import {
+  SearchExperience,
+  type BasketAccess,
+} from '../components/search-experience'
+
+const routeApi = getRouteApi('/')
+
+function readQuery(search: unknown): string | undefined {
+  if (typeof search !== 'object' || search === null) {
+    return undefined
+  }
+  const value: unknown = Reflect.get(search, 'q')
+  return typeof value === 'string' && value.length > 0 ? value : undefined
+}
+
+type HomePageProps = {
+  /**
+   * Render a floating action over the map, such as the basket. It reports when
+   * it opens a panel over the top half, so the search sheet can make room.
+   */
+  renderBasket?: (onOpenChange: (open: boolean) => void) => ReactNode
+  /** Lets search results add to and remove from the basket without leaving home. */
+  basket?: BasketAccess
+}
+
+/** Render the POC's map-backed, search-first home screen. */
+export function HomePage({
+  renderBasket,
+  basket,
+}: HomePageProps): React.JSX.Element {
+  const [basketOpen, setBasketOpen] = useState(false)
+  const initialQuery = readQuery(routeApi.useSearch())
+  const navigate = routeApi.useNavigate()
+
+  // Keep the search in the URL without a new history entry, so Back skips it.
+  const handleQueryChange = useCallback(
+    (query: string): void => {
+      void navigate({
+        to: '/',
+        search: query === '' ? {} : { q: query },
+        replace: true,
+      })
+    },
+    [navigate],
+  )
+
   return (
-    <main className="mx-auto min-h-screen w-full max-w-3xl px-5 pb-16 pt-8 sm:px-8 sm:pt-12">
-      <header>
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="text-xs font-bold uppercase tracking-eyebrow-wide text-primary">
-            Pharmassist POC
-          </p>
-          <Badge variant="primary">Demo data</Badge>
+    <main className="relative h-dvh overflow-clip bg-muted">
+      {/* z-0 keeps the map and its controls beneath every panel. */}
+      <HomeMap className="absolute inset-0 z-0" />
+
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 mx-auto flex w-full max-w-md items-center gap-2 px-4 pt-safe-top">
+        {/* Same width as the basket button, so the badge sits at true center. */}
+        <div aria-hidden="true" className="size-14 shrink-0" />
+        <div className="flex min-w-0 flex-1 justify-center">
+          <InfoButton
+            badgeText="Demo data"
+            description="Pharmacies are real; prices and stock are sample data. No sign-up, and nothing personal is stored."
+            label="Demo data. Tap for details."
+            title="Demo data"
+          />
         </div>
-        <h1 className="mt-4 max-w-2xl font-display text-4xl font-semibold leading-display tracking-tight sm:text-5xl">
-          Know the shelf price before you leave.
+        <div className="size-14 shrink-0">{renderBasket?.(setBasketOpen)}</div>
+      </div>
+
+      <section
+        aria-label="Find a medicine"
+        className={cn(
+          'absolute inset-x-0 bottom-0 z-10 mx-auto flex w-full max-w-md flex-col overflow-y-auto rounded-t-3xl border border-b-0 border-border bg-card dot-grid px-5 pb-safe pt-6 shadow-sheet sm:bottom-6 sm:rounded-3xl sm:border-b',
+          // With the basket open over the top half, keep to the bottom half.
+          basketOpen ? 'max-h-sheet-peek' : 'max-h-[85dvh]',
+        )}
+      >
+        <h1 className="mx-auto w-64 max-w-full shrink-0">
+          <img
+            alt="PharmAssist — Got a list?"
+            className="h-auto w-full"
+            height={52}
+            src="/brand/pharmassist-logo.png"
+            width={260}
+          />
         </h1>
-        <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">
-          Search medicines and compare seeded prices across 10 real Naga
-          pharmacy locations. Small spelling mistakes still find the product.
-        </p>
-      </header>
 
-      <SearchExperience />
-
-      <footer className="mt-10 border-t border-border pt-6 text-sm leading-relaxed text-muted-foreground">
-        Seeded demo environment. Pharmacy names and locations are real; prices,
-        stock, and verification dates are mocked. No accounts, prescriptions, or
-        patient data are stored by this app.
-      </footer>
+        <SearchExperience
+          {...(basket === undefined ? {} : { basket })}
+          {...(initialQuery === undefined ? {} : { initialQuery })}
+          onQueryChange={handleQueryChange}
+        />
+      </section>
     </main>
   )
 }

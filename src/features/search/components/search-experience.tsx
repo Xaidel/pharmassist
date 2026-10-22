@@ -1,14 +1,13 @@
 import { useNavigate } from '@tanstack/react-router'
-import { useEffect, useId, useRef, useState } from 'react'
-import type { ChangeEvent, KeyboardEvent, SyntheticEvent } from 'react'
+import { ArrowRight } from 'lucide-react'
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
+import type { KeyboardEvent } from 'react'
 
 import { cn } from '#/lib/cn'
 import { sendEvents } from '#/lib/events'
 import { MedicineLine } from '#/shared/components/medicine-line'
 import { Alert } from '#/shared/components/ui/alert'
 import { Button } from '#/shared/components/ui/button'
-import { Card, CardContent, CardHeader } from '#/shared/components/ui/card'
-import { Input } from '#/shared/components/ui/input'
 
 import { fetchSearch, isAbortError, SearchRequestError } from '../search.api'
 import {
@@ -18,21 +17,14 @@ import {
 } from '../search.domain'
 import type { SearchItem } from '../search.schema'
 
-const DEMO_SEARCHES = [
-  'amlodipine',
-  'paracetamol',
-  'janumet',
-  'amoxicilin',
-] as const
+import { SearchBar } from './search-bar'
 
-function matchLabel(match: SearchMatch): string {
-  if (match.type === 'exact') {
-    return 'Exact name match'
-  }
-  if (match.type === 'prefix') {
-    return 'Name starts with your search'
-  }
-  return 'Close spelling match'
+// Exact and prefix matches are what the user typed; only a spelling
+// correction is worth pointing out.
+function matchNote(match: SearchMatch): string | null {
+  return match.type === 'exact' || match.type === 'prefix'
+    ? null
+    : 'Close spelling match'
 }
 
 function candidateLabel(count: number): string {
@@ -41,8 +33,47 @@ function candidateLabel(count: number): string {
   } available`
 }
 
+/** How adding a medicine to the basket went. */
+export type AddToBasketResult = 'added' | 'duplicate' | 'full'
+
+/** Adds to, removes from, and watches the basket; the route supplies it. */
+export type BasketAccess = {
+  add: (
+    medicineId: string,
+    unit: SearchItem['medicine']['base_unit'],
+  ) => AddToBasketResult
+  remove: (medicineId: string) => void
+  /** Calls back when the basket changes; returns an unsubscribe. */
+  subscribe: (onChange: () => void) => () => void
+  /** The basket's medicine IDs, comma-joined, so equal baskets compare equal. */
+  snapshot: () => string
+}
+
+type SearchExperienceProps = {
+  /** When given, results add to the basket and stay here instead of opening prices. */
+  basket?: BasketAccess
+  /** A search to run on arrival, such as one restored by Back. */
+  initialQuery?: string
+  /** Reports each completed search, so the page can remember it. */
+  onQueryChange?: (query: string) => void
+}
+
+const noSubscribe = (): (() => void) => () => undefined
+const emptySnapshot = (): string => ''
+
 /** Search the seeded catalog with typo-tolerant autocomplete. */
-export function SearchExperience(): React.JSX.Element {
+export function SearchExperience({
+  basket,
+  initialQuery,
+  onQueryChange,
+}: SearchExperienceProps): React.JSX.Element {
+  // Read the live basket, so a removal in the basket drawer shows here too.
+  const basketKey = useSyncExternalStore(
+    basket?.subscribe ?? noSubscribe,
+    basket?.snapshot ?? emptySnapshot,
+    emptySnapshot,
+  )
+  const inBasket = new Set(basketKey === '' ? [] : basketKey.split(','))
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<SearchItem[]>([])
   const [results, setResults] = useState<SearchItem[] | null>(null)
@@ -52,6 +83,7 @@ export function SearchExperience(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
+  const [basketFull, setBasketFull] = useState(false)
 
   const inputId = useId()
   const listboxId = useId()
@@ -79,6 +111,10 @@ export function SearchExperience(): React.JSX.Element {
     const controller = new AbortController()
     suggestionController.current = controller
     const timer = window.setTimeout(() => {
+      // A submitted search cancels this lookup without clearing the timer.
+      if (controller.signal.aborted) {
+        return
+      }
       setIsSuggesting(true)
       void fetchSearch({ q: normalized, limit: 6 }, controller.signal)
         .then((response) => {
@@ -111,10 +147,23 @@ export function SearchExperience(): React.JSX.Element {
     }
   }, [query])
 
+  // Re-run a search restored from the URL, such as after Back from results.
+  const restoredRef = useRef(false)
+  useEffect(() => {
+    if (restoredRef.current || initialQuery === undefined) {
+      return
+    }
+    restoredRef.current = true
+    suppressSuggestions.current = true
+    setQuery(initialQuery)
+    void runSearch(initialQuery)
+  })
+
   async function runSearch(rawQuery: string): Promise<void> {
     const normalized = normalizeSearchQuery(rawQuery)
 
     suggestionController.current?.abort()
+    setIsSuggesting(false)
     setOpen(false)
     setActiveIndex(-1)
     setError(null)
@@ -122,6 +171,7 @@ export function SearchExperience(): React.JSX.Element {
     if (normalized === '') {
       setResults(null)
       setSearchedQuery('')
+      onQueryChange?.('')
       return
     }
 
@@ -133,6 +183,7 @@ export function SearchExperience(): React.JSX.Element {
       })
       setResults(response.items)
       setSearchedQuery(response.query)
+      onQueryChange?.(response.query)
       setSuggestions([])
       sendEvents([
         {
@@ -185,14 +236,36 @@ export function SearchExperience(): React.JSX.Element {
     })
   }
 
-  function startDemoSearch(value: string): void {
-    suppressSuggestions.current = true
-    setQuery(value)
-    void runSearch(value)
+  function addItem(item: SearchItem, rank: number): void {
+    if (basket === undefined) {
+      compareItem(item, rank)
+      return
+    }
+    const result = basket.add(
+      item.medicine.medicine_id,
+      item.medicine.base_unit,
+    )
+    setBasketFull(result === 'full')
+    if (result === 'added') {
+      sendEvents([
+        {
+          name: 'search_result_selected',
+          properties: { rank, result_count: results?.length ?? 0 },
+        },
+      ]).catch(() => undefined)
+    }
   }
 
-  function handleSubmit(event: SyntheticEvent<HTMLFormElement>): void {
-    event.preventDefault()
+  function removeItem(item: SearchItem): void {
+    basket?.remove(item.medicine.medicine_id)
+    setBasketFull(false)
+  }
+
+  function seePrices(): void {
+    void navigate({ to: '/results' })
+  }
+
+  function handleSubmit(): void {
     const active =
       open && activeIndex >= 0 ? suggestions[activeIndex] : undefined
     if (active !== undefined) {
@@ -242,140 +315,122 @@ export function SearchExperience(): React.JSX.Element {
         : `${String(results.length)} medicines match “${searchedQuery}”`
 
   return (
-    <Card aria-busy={isSearching} className="mt-8">
-      <CardHeader>
-        <h2 className="font-display text-2xl font-semibold">
-          Search medicines
-        </h2>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          Search by brand or generic name. Small spelling mistakes still find
-          the product.
-        </p>
-      </CardHeader>
-      <CardContent>
-        <form
-          aria-label="Medicine search"
-          className="flex flex-col gap-3"
-          onSubmit={handleSubmit}
-          role="search"
+    <div aria-busy={isSearching} className="mt-5">
+      <SearchBar
+        activeDescendantId={activeDescendantId}
+        busy={isSearching}
+        formLabel="Medicine search"
+        inputId={inputId}
+        label="Medicine name"
+        listboxId={listboxId}
+        onKeyDown={handleKeyDown}
+        onSubmit={handleSubmit}
+        onValueChange={setQuery}
+        open={open}
+        statusId={statusId}
+        value={query}
+      />
+
+      <p
+        aria-live="polite"
+        className="mt-2 min-h-5 text-sm text-muted-foreground empty:min-h-0"
+        id={statusId}
+        role="status"
+      >
+        {statusMessage}
+      </p>
+
+      {open && suggestions.length > 0 && (
+        <ul
+          aria-label="Medicine suggestions"
+          className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card"
+          id={listboxId}
+          role="listbox"
         >
-          <label className="text-sm font-medium" htmlFor={inputId}>
-            Medicine name
-          </label>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Input
-              aria-activedescendant={activeDescendantId}
-              aria-autocomplete="list"
-              aria-controls={open ? listboxId : undefined}
-              aria-describedby={statusId}
-              aria-expanded={open}
-              autoComplete="off"
-              className="sm:flex-1"
-              disabled={isSearching}
-              id={inputId}
-              onChange={(event: ChangeEvent<HTMLInputElement>) => {
-                setQuery(event.target.value)
+          {suggestions.map((item, index) => (
+            <li
+              aria-selected={index === activeIndex}
+              className={cn(
+                'cursor-pointer px-4 py-3 transition-colors hover:bg-muted',
+                index === activeIndex && 'bg-muted',
+              )}
+              id={`${listboxId}-${item.medicine.medicine_id}`}
+              key={item.medicine.medicine_id}
+              onMouseDown={(event) => {
+                event.preventDefault()
+                selectSuggestion(item)
               }}
-              onKeyDown={handleKeyDown}
-              placeholder="Try “amlodipine” or “Biogesic”"
-              role="combobox"
-              type="search"
-              value={query}
-            />
-            <Button className="shrink-0" disabled={isSearching} type="submit">
-              {isSearching ? 'Searching…' : 'Search'}
-            </Button>
-          </div>
-        </form>
+              role="option"
+            >
+              <MedicineLine medicine={item.medicine} />
+              {matchNote(item.match) !== null && (
+                <p className="mt-1 text-sm italic text-muted-foreground">
+                  {matchNote(item.match)}
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
 
-        <p
-          aria-live="polite"
-          className="mt-3 min-h-5 text-sm text-muted-foreground"
-          id={statusId}
-          role="status"
+      {error !== null && <Alert className="mt-5">{error}</Alert>}
+
+      {results !== null && results.length === 0 && (
+        <section
+          aria-labelledby={`${resultsHeadingId}-empty`}
+          className="mt-5 rounded-2xl border border-border bg-background p-5"
         >
-          {statusMessage}
-        </p>
-
-        {open && suggestions.length > 0 && (
-          <ul
-            aria-label="Medicine suggestions"
-            className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card"
-            id={listboxId}
-            role="listbox"
+          <h3
+            className="font-display text-xl font-semibold"
+            id={`${resultsHeadingId}-empty`}
           >
-            {suggestions.map((item, index) => (
+            No medicines found
+          </h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Nothing in the seeded catalog matches “{searchedQuery}”. Try a brand
+            name or a simpler spelling.
+          </p>
+        </section>
+      )}
+
+      {results !== null && results.length > 0 && (
+        <section aria-labelledby={resultsHeadingId} className="mt-5">
+          <h3
+            className="font-display text-xl font-semibold"
+            id={resultsHeadingId}
+          >
+            {resultsHeading}
+          </h3>
+          <p className="mt-1 text-base text-muted-foreground">
+            {basket === undefined
+              ? 'Choose a medicine to compare its price across Naga pharmacies.'
+              : 'Add each medicine on your list, then compare prices for all of them at once.'}
+          </p>
+          {basketFull && (
+            <Alert className="mt-3" variant="info">
+              Your basket is full (10 medicines). Remove one before adding
+              another.
+            </Alert>
+          )}
+          <ul className="mt-3 space-y-3">
+            {results.map((item, index) => (
               <li
-                aria-selected={index === activeIndex}
-                className={cn(
-                  'cursor-pointer px-4 py-3 transition-colors hover:bg-muted',
-                  index === activeIndex && 'bg-muted',
-                )}
-                id={`${listboxId}-${item.medicine.medicine_id}`}
+                className="rounded-2xl border border-border bg-background p-4"
                 key={item.medicine.medicine_id}
-                onMouseDown={(event) => {
-                  event.preventDefault()
-                  selectSuggestion(item)
-                }}
-                role="option"
               >
                 <MedicineLine medicine={item.medicine} />
-                <p className="mt-1 text-xs font-semibold uppercase tracking-eyebrow text-primary">
-                  {matchLabel(item.match)}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {error !== null && <Alert className="mt-5">{error}</Alert>}
-
-        {results !== null && results.length === 0 && (
-          <section
-            aria-labelledby={`${resultsHeadingId}-empty`}
-            className="mt-5 rounded-2xl border border-border bg-background p-5"
-          >
-            <h3
-              className="font-display text-xl font-semibold"
-              id={`${resultsHeadingId}-empty`}
-            >
-              No medicines found
-            </h3>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Nothing in the seeded catalog matches “{searchedQuery}”. Try a
-              brand name or a simpler spelling.
-            </p>
-          </section>
-        )}
-
-        {results !== null && results.length > 0 && (
-          <section aria-labelledby={resultsHeadingId} className="mt-5">
-            <h3
-              className="font-display text-xl font-semibold"
-              id={resultsHeadingId}
-            >
-              {resultsHeading}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Choose a medicine to compare its seeded shelf price across Naga
-              pharmacies. You can add more medicines from the results screen.
-            </p>
-            <ul className="mt-3 space-y-3">
-              {results.map((item, index) => (
-                <li
-                  className="rounded-2xl border border-border bg-background p-4"
-                  key={item.medicine.medicine_id}
-                >
-                  <MedicineLine medicine={item.medicine} />
-                  <p className="mt-2 text-xs font-semibold uppercase tracking-eyebrow text-primary">
-                    {matchLabel(item.match)}
+                {matchNote(item.match) !== null && (
+                  <p className="mt-1 text-sm italic text-muted-foreground">
+                    {matchNote(item.match)}
                   </p>
-                  {item.candidate_generic_count > 0 && (
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {candidateLabel(item.candidate_generic_count)}
-                    </p>
-                  )}
-                  <div className="mt-3">
+                )}
+                {item.candidate_generic_count > 0 && (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {candidateLabel(item.candidate_generic_count)}
+                  </p>
+                )}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {basket === undefined ? (
                     <Button
                       onClick={() => {
                         compareItem(item, index + 1)
@@ -385,42 +440,57 @@ export function SearchExperience(): React.JSX.Element {
                     >
                       Compare prices
                     </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+                  ) : inBasket.has(item.medicine.medicine_id) ? (
+                    <>
+                      {/* Tapping the confirmation undoes the add. */}
+                      <Button
+                        aria-label={`In basket. Tap to remove ${
+                          item.medicine.brand_name ?? item.medicine.generic_name
+                        } ${item.medicine.strength}.`}
+                        aria-pressed
+                        onClick={() => {
+                          removeItem(item)
+                        }}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        <span aria-hidden="true">✓</span> In basket
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      onClick={() => {
+                        addItem(item, index + 1)
+                      }}
+                      size="sm"
+                      type="button"
+                    >
+                      + Add to basket
+                    </Button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
-        {results === null && error === null && (
-          <div className="mt-6">
-            <p className="text-xs font-semibold uppercase tracking-eyebrow text-muted-foreground">
-              Demo searches
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {DEMO_SEARCHES.map((demo) => (
-                <Button
-                  key={demo}
-                  onClick={() => {
-                    startDemoSearch(demo)
-                  }}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  {demo}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
-          Results use seeded demo prices from real Naga pharmacy locations.
-          Search history stays on this device; only the query length and result
-          count are recorded anonymously.
-        </p>
-      </CardContent>
-    </Card>
+      {basket !== undefined && inBasket.size > 0 && (
+        // One basket-level action: prices are always for the whole list.
+        <div className="sticky bottom-0 z-10 -mx-1 mt-4 bg-card px-1 pb-1 pt-3">
+          <Button
+            className="w-full"
+            onClick={seePrices}
+            size="lg"
+            type="button"
+          >
+            See prices for your {inBasket.size}{' '}
+            {inBasket.size === 1 ? 'medicine' : 'medicines'}
+            <ArrowRight aria-hidden="true" className="size-5" />
+          </Button>
+        </div>
+      )}
+    </div>
   )
 }
