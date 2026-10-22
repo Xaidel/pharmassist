@@ -6,6 +6,7 @@ import {
   buildPharmacyBasket,
   buildRankedResults,
   cheapestCompleteResultKey,
+  nearestCompleteResultKey,
   chooseCoveringPurchase,
   distanceMetres,
   findCheapestExactCombination,
@@ -678,5 +679,59 @@ describe('buildRankedResults', () => {
   it('exposes basket limits and centavo rounding', () => {
     expect(BASKET_MAX_ITEMS).toBe(10)
     expect(priceToCents(30.31)).toBe(3031)
+  })
+})
+
+describe('nearestCompleteResultKey', () => {
+  function complete(
+    key: string,
+    distance: number,
+    total: number,
+    aboveCeiling = false,
+  ): {
+    result_key: string
+    total_shelf_price_php: number
+    above_mdrp_ceiling: boolean
+    pharmacy: { name: string; distance_m: number }
+  } {
+    return {
+      result_key: key,
+      total_shelf_price_php: total,
+      above_mdrp_ceiling: aboveCeiling,
+      pharmacy: { name: key, distance_m: distance },
+    }
+  }
+
+  it('marks the closest compliant complete result', () => {
+    expect(
+      nearestCompleteResultKey([
+        complete('far', 900, 10),
+        complete('near', 300, 50),
+      ]),
+    ).toBe('near')
+  })
+
+  it('skips results above the MDRP ceiling', () => {
+    expect(
+      nearestCompleteResultKey([
+        complete('above', 100, 10, true),
+        complete('compliant', 400, 20),
+      ]),
+    ).toBe('compliant')
+  })
+
+  it('breaks distance ties by total, then name', () => {
+    expect(
+      nearestCompleteResultKey([
+        complete('b', 200, 30),
+        complete('c', 200, 20),
+        complete('a', 200, 20),
+      ]),
+    ).toBe('a')
+  })
+
+  it('returns null when no compliant complete result exists', () => {
+    expect(nearestCompleteResultKey([complete('x', 1, 1, true)])).toBeNull()
+    expect(nearestCompleteResultKey([])).toBeNull()
   })
 })
