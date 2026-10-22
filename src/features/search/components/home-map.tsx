@@ -4,6 +4,7 @@ import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import { useEffect, useRef, useState } from 'react'
 
 import { cn } from '#/lib/cn'
+import { addNagaBoundary } from '#/shared/components/naga-boundary'
 import {
   createCalloutPin,
   declutterCallouts,
@@ -100,6 +101,7 @@ export function HomeMap({ className }: HomeMapProps): React.JSX.Element {
           map = created
           created.once('load', () => {
             if (!disposed) {
+              addNagaBoundary(created)
               setIsReady(true)
             }
           })

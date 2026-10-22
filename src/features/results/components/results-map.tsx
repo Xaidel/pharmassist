@@ -10,6 +10,7 @@ import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { cn } from '#/lib/cn'
+import { addNagaBoundary } from '#/shared/components/naga-boundary'
 import {
   createCalloutPin,
   declutterCallouts,
@@ -190,6 +191,13 @@ export function ResultsMap({
           })
           mapRef.current = map
           libRef.current = module
+          const created = map
+          // Under the route layer, which is added later.
+          created.once('load', () => {
+            if (!disposed) {
+              addNagaBoundary(created)
+            }
+          })
           setIsReady(true)
         } catch {
           setMapError(
