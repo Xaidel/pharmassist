@@ -31,7 +31,8 @@ import {
   formatDuration,
   formatPesoCompact,
 } from '../results.format'
-import type { ResultsResponse } from '../results.schema'
+import { quantityPresets, type QuantityPreset } from '../results.quantity'
+import type { ResultsResponse, SaleFormOffer } from '../results.schema'
 
 import { BasketPanel } from './basket-panel'
 import { CandidateGenerics } from './candidate-generics'
@@ -342,6 +343,25 @@ export function ResultsExperience({
     [data],
   )
 
+  const presetsByMedicine = useMemo(() => {
+    const presets = new Map<string, readonly QuantityPreset[]>()
+    if (data === null) {
+      return presets
+    }
+
+    const forms = formsByMedicine(data)
+    for (const item of data.basket.items) {
+      presets.set(
+        item.medicine_id,
+        quantityPresets(
+          item.medicine.base_unit,
+          forms.get(item.medicine_id) ?? [],
+        ),
+      )
+    }
+    return presets
+  }, [data])
+
   const cheapestKey = useMemo(
     () => (data === null ? null : cheapestCompleteResultKey(data.complete)),
     [data],
@@ -623,6 +643,7 @@ export function ResultsExperience({
             onClear={handleClear}
             onQuantityChange={handleQuantityChange}
             onRemove={handleRemove}
+            presetsByMedicine={presetsByMedicine}
           />
 
           {notice !== null && <Alert className="mt-4">{notice}</Alert>}
@@ -813,6 +834,24 @@ export function ResultsExperience({
       )}
     </main>
   )
+}
+
+function formsByMedicine(data: ResultsResponse): Map<string, SaleFormOffer[]> {
+  const forms = new Map<string, SaleFormOffer[]>()
+  for (const group of [
+    data.complete,
+    data.sold_per_pack_only,
+    data.incomplete,
+  ]) {
+    for (const result of group) {
+      for (const item of result.items) {
+        if (!forms.has(item.medicine_id)) {
+          forms.set(item.medicine_id, item.forms)
+        }
+      }
+    }
+  }
+  return forms
 }
 
 function localeOriginKey(origin: ResultsResponse['origin']): string {

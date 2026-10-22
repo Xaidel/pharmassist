@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { Client } from 'pg'
 
-const JANUMET_RESULT_KEY = 'generika-lcc-cbd2|POC-016'
+const JANUMET_RESULT_KEY = 'mercury-naga-penafrancia|POC-016'
 
 function requireDatabaseUrl(): string {
   const url = process.env.DATABASE_URL
@@ -34,7 +34,7 @@ async function openCheapestDetail(page: Page): Promise<void> {
   const dialog = page.getByRole('dialog')
   await expect(dialog).toBeVisible()
   await expect(
-    dialog.getByRole('heading', { name: /Generika Drugstore/ }),
+    dialog.getByRole('heading', { name: /Mercury Drug/ }),
   ).toBeVisible()
 }
 
@@ -74,7 +74,7 @@ test('opens pharmacy detail and renders a native route', async ({ page }) => {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        pharmacy_id: 'generika-lcc-cbd2',
+        pharmacy_id: 'mercury-naga-penafrancia',
         origin: { latitude: 13.6215, longitude: 123.1945 },
         route: {
           type: 'LineString',
@@ -99,22 +99,25 @@ test('opens pharmacy detail and renders a native route', async ({ page }) => {
   await openCheapestDetail(page)
 
   const dialog = page.getByRole('dialog')
-  await expect(dialog.getByText('0917-871-8924 / (054) 472-8080')).toBeVisible()
+  await expect(
+    dialog.getByText('(054) 472-3214 / (054) 811-2228 / (0968) 878-7678'),
+  ).toBeVisible()
   await expect(
     dialog.getByRole('heading', { name: /Full stock list \(/ }),
   ).toBeVisible()
   await expect(
-    dialog.getByText(/MDRP ceiling \(EO 104 s\. 2020/).first(),
+    dialog
+      .locator('section[aria-labelledby="detail-stock-heading"]')
+      .getByText(/MDRP ceiling \(EO 104 s\. 2020/)
+      .first(),
   ).toBeVisible()
-  await expect(
-    dialog.getByText('Complete basket', { exact: false }),
-  ).toBeVisible()
+  await expect(dialog.getByText('Exact basket', { exact: false })).toBeVisible()
 
   await dialog.getByRole('button', { name: 'Show route on map' }).click()
   await expect(dialog).not.toBeVisible()
   await expect(page.getByText('Calculating route…')).toBeVisible()
   await expect(
-    page.getByRole('heading', { name: /Route to Generika Drugstore/ }),
+    page.getByRole('heading', { name: /Route to Mercury Drug/ }),
   ).toBeVisible()
   await expect(page.getByText(/1\.2 km/).first()).toBeVisible()
   await expect(page.getByText(/8 min/).first()).toBeVisible()

@@ -30,6 +30,19 @@ async function addAnotherMedicine(page: Page, query: string): Promise<void> {
   ).toBeVisible()
 }
 
+async function setQuantity(
+  page: Page,
+  medicineName: string,
+  quantity: string,
+): Promise<void> {
+  const input = page.getByRole('textbox', {
+    name: new RegExp(`Quantity of ${medicineName} in`),
+  })
+  await input.fill(quantity)
+  await input.press('Enter')
+  await expect(input).toHaveValue(quantity)
+}
+
 test('shows the single-medicine map results with MDRP, stale, and no-price states', async ({
   page,
 }) => {
@@ -57,7 +70,7 @@ test('shows the single-medicine map results with MDRP, stale, and no-price state
 
   await expect(page.getByText('Janumet').first()).toBeVisible()
   await expect(page.getByText('Cheapest complete').first()).toBeVisible()
-  await expect(page.getByText(/900\.00/).first()).toBeVisible()
+  await expect(page.getByText(/38\.00/).first()).toBeVisible()
   await expect(page.getByText('Above MDRP ceiling').first()).toBeVisible()
   await expect(page.getByText('Price older than 14 days').first()).toBeVisible()
   await expect(
@@ -73,18 +86,15 @@ test('shows the single-medicine map results with MDRP, stale, and no-price state
   expect(workerErrors).toEqual([])
   expect(workerFailures).toEqual([])
   const cheapestPin = page.locator(
-    '[data-pharmacy-pin="generika-lcc-cbd2|POC-016"]',
+    '[data-pharmacy-pin="mercury-naga-penafrancia|POC-016"]',
   )
   await expect(cheapestPin).toHaveCount(1)
-  await expect(cheapestPin).toContainText(/900/)
+  await expect(cheapestPin).toContainText(/38/)
   await expect(
     page.locator('[data-pharmacy-pin="no-price:generika-san-felipe"]'),
   ).toHaveCount(1)
 
-  await page
-    .getByText(/Price breakdown \(1\)/)
-    .first()
-    .click()
+  await page.getByText('Form prices at this pharmacy').first().click()
   await expect(
     page.getByText(/MDRP ceiling \(EO 104 s\. 2020, row 44\)/).first(),
   ).toBeVisible()
@@ -98,7 +108,7 @@ test('ranks a multi-item basket and keeps incomplete and no-price pharmacies sep
 
   await expect(page.getByText('Norvasc').first()).toBeVisible()
   await expect(page.getByText('Biogesic').first()).toBeVisible()
-  await expect(page.getByText(/6 pharmacies/).first()).toBeVisible()
+  await expect(page.getByText(/8 pharmacies/).first()).toBeVisible()
   await expect(
     page.getByRole('heading', { name: 'Closest to complete' }),
   ).toBeVisible()
@@ -106,7 +116,7 @@ test('ranks a multi-item basket and keeps incomplete and no-price pharmacies sep
   await expect(
     page.getByRole('heading', { name: 'No price data' }),
   ).toBeVisible()
-  await expect(page.getByText(/204\.00/).first()).toBeVisible()
+  await expect(page.getByText(/1\.62/).first()).toBeVisible()
   await expect(page.getByText('Cheapest complete').first()).toBeVisible()
 
   await page.reload()
@@ -129,6 +139,59 @@ test('ranks a multi-item basket and keeps incomplete and no-price pharmacies sep
   await expect(page.getByText('Cheapest complete').first()).toBeVisible()
 
   await expect(page.locator('[data-pharmacy-pin]')).toHaveCount(10)
+})
+
+test('offers full-pack quantity presets and a 30-day guardrail on a phone', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await searchAndCompare(page, 'asmalin')
+
+  await page
+    .getByRole('button', { name: 'Set Asmalin quantity to Bottle of 60 mL' })
+    .click()
+  await expect(
+    page.getByRole('textbox', { name: 'Quantity of Asmalin in mL' }),
+  ).toHaveValue('60')
+
+  await setQuantity(page, 'Asmalin', '500')
+  await expect(
+    page.getByText(/More than 450 mL is above a typical 30-day supply/),
+  ).toBeVisible()
+})
+
+test('shows the exact form mix for a quantity basket on a phone', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await searchAndCompare(page, 'janumet')
+  await setQuantity(page, 'Janumet', '12')
+
+  await expect(page.getByText('1 × Strip of 7 tablets').first()).toBeVisible()
+  await expect(page.getByText('5 × Loose tablet').first()).toBeVisible()
+  await expect(
+    page.getByText('Exact total for 1 medicine').first(),
+  ).toBeVisible()
+})
+
+test('renders pack-only and not-applicable forms as sold by the pack', async ({
+  page,
+}) => {
+  await searchAndCompare(page, 'ventolin inhaler')
+  await setQuantity(page, 'Ventolin Inhaler', '30')
+
+  await expect(
+    page.getByRole('heading', { name: 'Sold per pack only' }),
+  ).toBeVisible()
+  await expect(page.getByText('Sold by the pack').first()).toBeVisible()
+  await expect(page.getByText(/^Unavailable$/i)).toHaveCount(0)
+
+  await page.getByText('Form prices at this pharmacy').first().click()
+  await expect(
+    page.getByText(/for 1 inhaler \(200 actuations\)/).first(),
+  ).toBeVisible()
+  await expect(page.getByText(/Strip · Sold by the pack/).first()).toBeVisible()
+  await expect(page.getByText(/Loose · Sold by the pack/).first()).toBeVisible()
 })
 
 test('rejects malformed baskets with the contract error codes', async ({

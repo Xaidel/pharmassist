@@ -121,7 +121,7 @@ export function formatSaleState(
     case 'pack_only':
       return 'Sold per pack only'
     case 'not_applicable':
-      return 'Not sold in this form'
+      return 'Sold by the pack'
     case 'not_stocked':
       return 'Not stocked'
     case 'unknown':
