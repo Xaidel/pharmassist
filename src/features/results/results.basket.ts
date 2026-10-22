@@ -6,6 +6,7 @@ import {
   BASKET_MIN_QUANTITY,
   type BasketLine,
 } from './results.domain'
+import { defaultQuantity } from './results.quantity'
 import { basketLinesSchema } from './results.schema'
 
 const BASKET_STORAGE_KEY = 'pharmassist.basket'
@@ -84,7 +85,10 @@ export function addBasketLine(
     return { lines: [...lines], added: false, reason: 'full' }
   }
   return {
-    lines: [...lines, { medicine_id: medicineId, quantity: 1, unit }],
+    lines: [
+      ...lines,
+      { medicine_id: medicineId, quantity: defaultQuantity(unit), unit },
+    ],
     added: true,
   }
 }

@@ -93,6 +93,12 @@ describe('session basket', () => {
     })
   })
 
+  it('starts a bottle medicine at one usual bottle, not 1 mL', () => {
+    expect(addBasketLine([], 'POC-037', 'mL').lines).toEqual([
+      { medicine_id: 'POC-037', quantity: 60, unit: 'mL' },
+    ])
+  })
+
   it('clamps quantity changes and removes a line', () => {
     const lines = [
       { medicine_id: 'POC-001', quantity: 1, unit: 'tablet' as const },
