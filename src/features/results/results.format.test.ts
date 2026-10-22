@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatDuration, formatSaleState } from './results.format'
+import { formatDuration, formatSaleState, formatUnit } from './results.format'
 
 describe('formatDuration', () => {
   it('rounds short routes to minutes with a one-minute floor', () => {
@@ -22,5 +22,18 @@ describe('formatSaleState', () => {
   it('never describes an unknown form as unavailable', () => {
     expect(formatSaleState('unknown')).toBe('Not confirmed')
     expect(formatSaleState('pack_only')).toBe('Sold per pack only')
+  })
+})
+
+describe('formatUnit', () => {
+  it('pluralises countable units above one', () => {
+    expect(formatUnit(1, 'tablet')).toBe('tablet')
+    expect(formatUnit(30, 'tablet')).toBe('tablets')
+    expect(formatUnit(200, 'actuation')).toBe('actuations')
+  })
+
+  it('keeps mL and g as symbols', () => {
+    expect(formatUnit(60, 'mL')).toBe('mL')
+    expect(formatUnit(5, 'g')).toBe('g')
   })
 })

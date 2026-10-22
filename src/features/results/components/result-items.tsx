@@ -5,7 +5,7 @@ import { Badge } from '#/shared/components/ui/badge'
 import { Button } from '#/shared/components/ui/button'
 import type { MedicineSummary } from '#/shared/domain/medicine-summary'
 
-import { formatMissingReason, formatPeso } from '../results.format'
+import { formatMissingReason, formatPeso, formatUnit } from '../results.format'
 import type { ResultsResponse } from '../results.schema'
 
 import { PriceLineItem } from './price-line'
@@ -57,7 +57,7 @@ export function ResultItemList({
               <MedicineLine medicine={medicine} />
             )}
             <p className="mt-1 text-sm text-muted-foreground">
-              Requested {item.quantity} {item.unit}
+              Requested {item.quantity} {formatUnit(item.quantity, item.unit)}
             </p>
 
             {item.outcome === 'exact' && (
@@ -119,13 +119,9 @@ export function ResultItemList({
                 <summary className="cursor-pointer text-sm font-semibold text-primary">
                   Form prices at this pharmacy
                 </summary>
-                <ul className="mt-2 space-y-2">
+                <ul className="mt-2 divide-y divide-border rounded-2xl border border-border bg-background px-3">
                   {item.forms.map((offer) => (
-                    <PriceLineItem
-                      key={offer.sale_form}
-                      medicine={medicine}
-                      offer={offer}
-                    />
+                    <PriceLineItem key={offer.sale_form} offer={offer} />
                   ))}
                 </ul>
               </details>

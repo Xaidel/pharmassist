@@ -430,13 +430,9 @@ export function PharmacyDetailSheet({
                       ) : (
                         <MedicineLine medicine={medicine} />
                       )}
-                      <ul className="mt-2 space-y-2">
+                      <ul className="mt-2 divide-y divide-border rounded-2xl border border-border bg-background px-3">
                         {group.forms.map((offer) => (
-                          <PriceLineItem
-                            key={offer.sale_form}
-                            medicine={medicine}
-                            offer={offer}
-                          />
+                          <PriceLineItem key={offer.sale_form} offer={offer} />
                         ))}
                       </ul>
                     </div>

@@ -252,7 +252,7 @@ test('renders not-applicable inhaler forms as sold by the pack', async ({
 
   await page.getByText('Form prices at this pharmacy').first().click()
   await expect(
-    page.getByText(/for 1 inhaler \(200 actuations\)/).first(),
+    page.getByText(/Pack · 1 inhaler \(200 actuations\)/).first(),
   ).toBeVisible()
   await expect(page.getByText(/Strip · Sold by the pack/).first()).toBeVisible()
   await expect(page.getByText(/Loose · Sold by the pack/).first()).toBeVisible()

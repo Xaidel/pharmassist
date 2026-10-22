@@ -80,14 +80,21 @@ export function MedicineLine({
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="font-semibold text-foreground">{primaryName}</span>
-        {medicine.brand_name !== null && (
-          <span className="text-sm text-muted-foreground">
-            {medicine.generic_name}
-          </span>
-        )}
-        <Badge variant={medicine.rx_otc === 'Rx' ? 'primary' : 'default'}>
+      {/* The Rx/OTC badge keeps the top-right corner however long the names run. */}
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0">
+          <span className="font-semibold text-foreground">{primaryName}</span>
+          {medicine.brand_name !== null && (
+            <span className="text-sm text-muted-foreground">
+              {' '}
+              {medicine.generic_name}
+            </span>
+          )}
+        </p>
+        <Badge
+          className="shrink-0"
+          variant={medicine.rx_otc === 'Rx' ? 'primary' : 'default'}
+        >
           {medicine.rx_otc}
         </Badge>
       </div>

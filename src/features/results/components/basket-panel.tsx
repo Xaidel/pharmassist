@@ -16,6 +16,7 @@ import {
   BASKET_MIN_QUANTITY,
   type BasketLine,
 } from '../results.domain'
+import { formatUnit } from '../results.format'
 import {
   isPackUnit,
   PACK_COUNT_MAX,
@@ -43,11 +44,6 @@ type BasketPanelProps = {
 
 function allowsDecimal(unit: BaseUnit): boolean {
   return unit === 'mL' || unit === 'g'
-}
-
-// Countable units read as words, so they pluralise; mL and g are symbols and do not.
-function unitLabel(quantity: number, unit: BaseUnit): string {
-  return quantity === 1 || unit === 'mL' || unit === 'g' ? unit : `${unit}s`
 }
 
 function sanitizeDraft(value: string, decimal: boolean): string {
@@ -202,7 +198,7 @@ function BasketLineControls({
           +
         </Button>
         <span className="text-base text-muted-foreground">
-          {unitLabel(item.quantity, item.unit)}
+          {formatUnit(item.quantity, item.unit)}
         </span>
       </div>
     )
@@ -254,7 +250,7 @@ function BasketLineControls({
       <span className="min-w-0 text-base leading-tight">
         × {pack.label}
         <span className="block text-sm text-muted-foreground">
-          {item.quantity} {unitLabel(item.quantity, item.unit)} in total
+          {item.quantity} {formatUnit(item.quantity, item.unit)} in total
         </span>
       </span>
     </div>

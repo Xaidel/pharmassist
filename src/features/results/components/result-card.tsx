@@ -1,3 +1,5 @@
+import { Clock, MapPin } from 'lucide-react'
+
 import { Badge } from '#/shared/components/ui/badge'
 import { Button } from '#/shared/components/ui/button'
 import { Card } from '#/shared/components/ui/card'
@@ -153,15 +155,22 @@ export function ResultCard({
           </Button>
         </div>
 
-        <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-          {result.pharmacy.address}
+        {/* Two separate facts, each with its own icon, so they never read as one. */}
+        <ul className="mt-4 space-y-2 text-sm leading-snug text-muted-foreground">
+          <li className="flex gap-2">
+            <MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+            <span>
+              <span className="sr-only">Address: </span>
+              {result.pharmacy.address}
+            </span>
+          </li>
           {verified !== null && (
-            <>
-              <br />
-              Price checked {formatVerified(verified)}
-            </>
+            <li className="flex gap-2">
+              <Clock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+              <span>Price checked {formatVerified(verified)}</span>
+            </li>
           )}
-        </p>
+        </ul>
 
         <ResultItemList
           items={result.items}
