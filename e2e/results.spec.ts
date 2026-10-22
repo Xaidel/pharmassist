@@ -102,6 +102,47 @@ test('shows the single-medicine map results with MDRP, stale, and no-price state
   await expect(
     page.getByText(/MDRP ceiling \(EO 104 s\. 2020, row 44\)/).first(),
   ).toBeVisible()
+  await expect(page.getByText('Box rate').first()).toBeVisible()
+  await expect(page.getByText('Strip rate').first()).toBeVisible()
+  await expect(page.getByText('Sold loose').first()).toBeVisible()
+})
+
+test('keeps per-form stock mismatches visible on the results screen', async ({
+  page,
+}) => {
+  await searchAndCompare(page, 'amlodipine')
+  await setQuantity(page, 'Norvasc', '5')
+
+  const mercuryCard = page.locator(
+    '[id="result-mercury-naga-penafrancia|POC-001"]',
+  )
+  await expect(mercuryCard).toBeVisible()
+  await expect(mercuryCard.getByText(/5 . Loose tablet/)).toBeVisible()
+
+  await mercuryCard.getByText('Form prices at this pharmacy').click()
+  await expect(mercuryCard.getByText('Out of stock').first()).toBeVisible()
+  await expect(mercuryCard.getByText('In stock').first()).toBeVisible()
+})
+
+test('shows the pack-only covering purchase and its copy', async ({ page }) => {
+  await searchAndCompare(page, 'losartan')
+  await setQuantity(page, 'Cozaar', '10')
+
+  await expect(
+    page.getByRole('heading', { name: 'Sold per pack only' }),
+  ).toBeVisible()
+
+  const mercuryCard = page.locator(
+    '[id="result-mercury-naga-penafrancia|POC-003"]',
+  )
+  await expect(mercuryCard).toBeVisible()
+  await expect(
+    mercuryCard.getByText('Sold per pack only').first(),
+  ).toBeVisible()
+  await expect(
+    mercuryCard.getByText(/Buy 1 . Box of 30 tablets for/),
+  ).toBeVisible()
+  await expect(page.getByText(/^Unavailable$/i)).toHaveCount(0)
 })
 
 test('ranks a multi-item basket and keeps incomplete and no-price pharmacies separate', async ({
@@ -117,6 +158,7 @@ test('ranks a multi-item basket and keeps incomplete and no-price pharmacies sep
     page.getByRole('heading', { name: 'Closest to complete' }),
   ).toBeVisible()
   await expect(page.getByText(/item[s]? missing/).first()).toBeVisible()
+  await expect(page.getByText('Not stocked').first()).toBeVisible()
   await expect(
     page.getByRole('heading', { name: 'No price data' }),
   ).toBeVisible()
