@@ -867,6 +867,7 @@ The seeder runs these checks after writing, before commit. A failure rolls back.
 - Every `not_stocked` row belongs to a pair whose other two forms are also `not_stocked`.
 - `not_applicable` is used only for a form that cannot apply (for example loose/strip on an inhaler, or strip/loose on a bottle).
 - The 431 mocked pack prices from the previous seed remain available pack observations; new loose and strip observations are mocked and labelled.
+- Mocked prices vary the cheapest pharmacy by medicine rather than applying one markup per pharmacy: a chain prices a medicine the same at every branch; Generika is cheapest on local brands and has no edge on multinational originator brands; independents vary more per medicine. One factor scales all forms of a medicine at a pharmacy, so form relationships hold. POC-016 keeps its prices for the MDRP demo.
 - Every active medicine with a known reference pack has at least one available pack observation; POC-041 has only `unknown` rows.
 - Every FK resolves: `medicine_alternative.medicine_id`, `price_observation.medicine_id`, `price_observation.pharmacy_id`, `price_observation.mdrp_entry_id`.
 - `mdrp_ceiling` has 204 rows.

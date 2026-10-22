@@ -174,7 +174,7 @@ test('ranks a multi-item basket and keeps incomplete and no-price pharmacies sep
   await expect(
     page.getByRole('heading', { name: 'No price data' }),
   ).toBeVisible()
-  await expect(page.getByText(/1\.62/).first()).toBeVisible()
+  await expect(page.getByText(/1\.59/).first()).toBeVisible()
   await expect(page.getByText('Cheapest complete').first()).toBeVisible()
 
   await page.reload()
