@@ -249,7 +249,7 @@ export function PharmacyDetailSheet({
     void fetchPharmacyDetail(
       {
         pharmacyId,
-        medicineIds: basketItems.map((item) => item.medicine_id),
+        basket: basketItems,
         origin,
       },
       controller.signal,

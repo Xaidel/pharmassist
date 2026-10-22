@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import type { Origin } from './results.domain'
+import type { BasketLine, Origin } from './results.domain'
 import {
   pharmacyDetailResponseSchema,
   type PharmacyDetailResponse,
@@ -29,14 +29,17 @@ export class PharmacyDetailRequestError extends Error {
 export async function fetchPharmacyDetail(
   input: {
     pharmacyId: string
-    medicineIds: readonly string[]
+    basket: readonly BasketLine[]
     origin: Origin | null
   },
   signal?: AbortSignal,
 ): Promise<PharmacyDetailResponse> {
   const params = new URLSearchParams()
-  if (input.medicineIds.length > 0) {
-    params.set('medicine_ids', input.medicineIds.join(','))
+  for (const line of input.basket) {
+    params.append(
+      'items',
+      `${line.medicine_id}:${String(line.quantity)}:${line.unit}`,
+    )
   }
   if (input.origin !== null) {
     params.set('origin_latitude', String(input.origin.latitude))
