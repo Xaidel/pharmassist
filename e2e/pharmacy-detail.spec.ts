@@ -26,11 +26,9 @@ async function openJanumetResults(page: Page): Promise<void> {
 }
 
 async function openCheapestDetail(page: Page): Promise<void> {
-  await page
-    .locator('section[aria-labelledby="complete-results-heading"] li')
-    .first()
-    .getByRole('button', { name: 'View details' })
-    .click()
+  const card = page.locator(`[id="result-${JANUMET_RESULT_KEY}"]`)
+  await expect(card).toBeVisible()
+  await card.getByRole('button', { name: 'View details' }).click()
   const dialog = page.getByRole('dialog')
   await expect(dialog).toBeVisible()
   await expect(

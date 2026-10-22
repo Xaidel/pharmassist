@@ -129,7 +129,7 @@ The OCR data-flow choice (cloud stateless proxy versus on-device only) is unreso
 ### 6.4 Map and results
 
 - **FR-24:** Map-first results with pharmacy pins labeled with the relevant shelf price.
-- **FR-25:** The cheapest complete option is visually highlighted.
+- **FR-25:** The cheapest MDRP-compliant complete option is visually highlighted. A complete basket with an item above the ceiling is never highlighted as cheapest.
 - **FR-26:** A sorted, swipeable bottom list mirrors the map.
 - **FR-27:** Each result shows distance, open-now status, last-verified date, and stock status.
 - **FR-28:** The pharmacy detail sheet shows name, address, hours, phone, stock list, price breakdown, last verified, and directions.
@@ -146,7 +146,7 @@ The OCR data-flow choice (cloud stateless proxy versus on-device only) is unreso
 - **FR-36:** One-tap **Report wrong price or stock** on every result. Reports gate stale data; the correction workflow has an SLA defined in issue #10.
 - **FR-37:** A visible disclaimer says prices are indicative and must be confirmed at the pharmacy.
 - **FR-38:** No receipt-photo verification in v1.
-- **FR-39:** For MDRP items (EO 104 s. 2020 and EO 155 s. 2021), show the ceiling and the observed shelf price separately, and flag any observed price above the ceiling. Do not mimic the red-strip product label.
+- **FR-39:** For MDRP items (EO 104 s. 2020 and EO 155 s. 2021), show the published ceiling and the observed shelf price separately, compare against the effective ceiling, and flag any observed price above it. A VAT-exclusive ceiling is compared at 1.12 times the published amount for VATable products and directly for VAT-exempt products; an unknown VAT status falls back to the published ceiling and is disclosed. Use neutral "Above MDRP ceiling" copy and do not mimic the red-strip product label.
 - **FR-40:** Never compute or display a "senior/PWD net price." Disclose that the statutory 20% discount applies at the point of sale and may change the amount paid.
 
 ### 6.6 Privacy and clinical boundary
@@ -204,13 +204,16 @@ Data rules:
 
 1. Filter to exact product matches for every basket item.
 2. Keep pharmacies with verified price data for every item (complete basket).
-3. Rank by total shelf price, ascending.
-4. Tie-breakers: distance, then most recent verification.
-5. Show incomplete baskets separately, sorted by fewest missing items, then by known total.
-6. Unverified pharmacies are muted and never ranked.
-7. Flag any MDRP item whose observed price exceeds the ceiling.
-8. Never compute senior/PWD net prices.
-9. No fare modeling and no sponsored placement in the organic ranking.
+3. Split complete baskets into two tiers: baskets with no item above its effective MDRP ceiling, and baskets with at least one. Every compliant basket ranks before every above-ceiling basket.
+4. Rank within each tier by total shelf price, ascending.
+5. Tie-breakers: distance, then most recent verification.
+6. Highlight only the cheapest compliant complete option; if no complete basket is compliant, highlight none.
+7. Show above-ceiling complete baskets in a separate group. Never mark them cheapest.
+8. Show incomplete baskets separately, sorted by fewest missing items, then by known total.
+9. Unverified pharmacies are muted and never ranked.
+10. Flag any MDRP item whose observed price exceeds the effective ceiling.
+11. Never compute senior/PWD net prices.
+12. No fare modeling and no sponsored placement in the organic ranking.
 
 ## 9. Monetization (post-pilot)
 

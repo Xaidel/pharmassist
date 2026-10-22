@@ -348,6 +348,7 @@
     "konsulta_as_of": "2024-03-30",
     "generic_group_id": null,
     "active": true,
+    "vat_exempt": true,
     "data_source": "FDA Verification Portal",
     "base_unit": "tablet"
   },

@@ -235,11 +235,19 @@ For each item, the server chooses the cheapest exact combination of sellable for
 
 ### 4.6 Ranking
 
-Complete exact baskets first, by total shelf price ascending. Tie-breakers, in order:
+Complete exact baskets split into two MDRP tiers:
 
-1. distance ascending;
-2. the oldest chosen-component `verified_at` descending (the basket is as fresh as its stalest component);
-3. pharmacy name ascending (deterministic final tie-break).
+1. **Compliant:** no chosen component in the basket is above its effective MDRP ceiling.
+2. **Above ceiling:** at least one chosen component is above its effective MDRP ceiling.
+
+Every compliant complete basket ranks before every above-ceiling complete basket. Within each tier the order is:
+
+1. total shelf price ascending;
+2. distance ascending;
+3. the oldest chosen-component `verified_at` descending (the basket is as fresh as its stalest component);
+4. pharmacy name ascending (deterministic final tie-break).
+
+The `cheapest_complete` highlight goes only to the first result in the compliant tier. If no complete result is compliant, no result is highlighted. An above-ceiling result is never labelled "cheapest". Above-ceiling complete results stay visible in their own group; they are not excluded.
 
 The sold-per-pack-only bucket is separate and is never ranked against exact options. Within the bucket, order by:
 
@@ -254,11 +262,11 @@ Incomplete baskets separately, by:
 3. distance ascending;
 4. pharmacy name ascending.
 
-`no_price_data` pharmacies are not ranked; they are ordered by distance, then name.
+`no_price_data` pharmacies are not ranked; they are ordered by distance, then name. The sold-per-pack-only and incomplete groups keep their existing order; `above_mdrp_ceiling` is informational for them.
 
 The complete total is `sum(chosen form price × count)` across items. The pack-only covering total is the sum of exact item totals and the covering purchase totals for non-exact items. It is labelled as the amount the patient must buy, not as a comparable exact total. An incomplete basket's known subtotal is the sum of its exact item totals; pack-only item covering totals are shown per item.
 
-`sort=distance` keeps complete baskets first but orders them by distance, then total. Pack-only entries are ordered by distance, then covering total. Incomplete and no-price ordering is unchanged.
+`sort=distance` keeps the MDRP tier first, then orders complete baskets by distance, then total. Pack-only entries are ordered by distance, then covering total. Incomplete and no-price ordering is unchanged.
 
 ### 4.7 MDRP
 
@@ -277,8 +285,9 @@ The complete total is `sum(chosen form price × count)` across items. The pack-o
   - `per_unit` + `strip`: `strip price / strip quantity` (`rate_basis: strip_rate`);
   - `per_unit` + `pack`: `pack price / pack quantity` (`rate_basis: box_rate`);
   - `per_pack` + `pack`: the pack shelf price (`rate_basis: pack_price`).
-- The API exposes the ceiling and the observed rate separately. The client labels the rate from `rate_basis`; it never presents a derived rate as a counter price.
-- `above_mdrp_flag` is a derived view column, not a hand-maintained boolean.
+- The **effective ceiling** normalizes VAT. It is the published MRP, except when `vat_exclusive_mrp` is true and `medicine.vat_exempt` is false (VATable), in which case it is `round(1.12 × MRP, 2)`. When `medicine.vat_exempt` is true the published MRP is used directly. When `medicine.vat_exempt` is null the published MRP is used and the unknown status is exposed.
+- The API exposes the published ceiling, the effective ceiling, the observed rate, the VAT-exclusive basis, and the product VAT-exempt status separately. The client labels the rate from `rate_basis`; it never presents a derived rate as a counter price.
+- `above_mdrp_flag` is a derived view column, not a hand-maintained boolean. It compares the observed rate with the effective ceiling.
 - A form that is not sold has no MDRP block.
 
 POC-016 is the only seeded product with a ceiling. Its per-form comparison looks like this:
@@ -289,9 +298,11 @@ POC-016 is the only seeded product with a ceiling. Its per-form comparison looks
   "order": "EO 104 s. 2020",
   "annex_row": 44,
   "ceiling_php": 30.31,
+  "effective_ceiling_php": 30.31,
   "ceiling_basis": "per_unit",
   "ceiling_unit": "tablet",
   "vat_exclusive": true,
+  "vat_exempt": true,
   "observed_rate_php": 35.0,
   "rate_basis": "box_rate",
   "above": true,
@@ -302,7 +313,7 @@ POC-016 is the only seeded product with a ceiling. Its per-form comparison looks
 
 The same medicine sold loose shows `observed_rate_php: 38.0` with `rate_basis: "loose_price"`; a strip of 7 at PHP 252 shows `36.0` with `rate_basis: "strip_rate"`. The UI labels them `Sold loose`, `Strip rate`, and `Box rate`.
 
-The published MRP for this row is VAT-exclusive; the API exposes that basis rather than silently adjusting the shelf price. The flag is a conservative comparison of the displayed form price against the published ceiling.
+The published MRP for this row is VAT-exclusive, but metformin + sitagliptin is on the FDA/BIR VAT-exempt list, so POC-016 is compared directly at PHP 30.31 and remains above the ceiling. A VATable product with the same asterisked ceiling is compared at PHP 33.95. The API exposes both numbers and the status rather than silently adjusting the shelf price.
 
 ### 4.8 Pharmacy identity and price verification
 
@@ -380,6 +391,7 @@ create table medicine (
   konsulta_as_of date,
   generic_group_id text,
   active boolean not null default true,
+  vat_exempt boolean,
   data_source text not null,
   seed_batch_id text references seed_batch(id) on delete restrict,
   created_at timestamptz not null default now(),
@@ -402,6 +414,8 @@ create index medicine_active_idx on medicine (active);
 ```
 
 `active = false` is the only way a medicine without an FDA registration number can exist. Search, basket validation, and results all filter to `active = true`.
+
+`vat_exempt` is the product-level VAT status used only to normalize a VAT-exclusive MDRP ceiling: `true` means the product is VAT-exempt, `false` means it is VATable, and `null` means the status is unknown. The seeder sets POC-016 to `true`; it does not guess a status for the other catalog rows.
 
 `unique (id, base_unit)` is redundant for identity but is the target of the composite foreign key that keeps `price_observation.pack_unit` equal to the medicine's base unit.
 
@@ -622,39 +636,53 @@ Cross-row invariants enforced by the seeder and the API (not by a single-table c
 ```sql
 create view price_observation_with_mdrp as
 select
-  po.*,
-  mc.order_id as mdrp_order,
-  mc.annex_row as mdrp_annex_row,
-  mc.mrp_php as mdrp_ceiling_php,
-  mc.price_basis as mdrp_ceiling_basis,
-  mc.price_unit as mdrp_ceiling_unit,
-  mc.vat_exclusive_mrp as mdrp_vat_exclusive,
-  mc.source_url as mdrp_source_url,
-  mc.checked_at as mdrp_checked_at,
+  base.*,
   case
-    when mc.id is null then null
-    when mc.price_basis = 'per_pack' then po.shelf_price_php
-    when mc.price_basis = 'per_unit' then
-      po.shelf_price_php / nullif(po.pack_quantity, 0)
-  end as mdrp_observed_rate_php,
-  case
-    when mc.id is null then null
-    when mc.price_basis = 'per_pack' then 'pack_price'
-    when po.sale_form = 'loose' then 'loose_price'
-    when po.sale_form = 'strip' then 'strip_rate'
-    else 'box_rate'
-  end as mdrp_rate_basis,
-  case
-    when mc.id is null then null
-    when mc.price_basis = 'per_pack' then po.shelf_price_php > mc.mrp_php
-    when mc.price_basis = 'per_unit' then
-      po.shelf_price_php / nullif(po.pack_quantity, 0) > mc.mrp_php
+    when base.mdrp_entry_id is null then null
+    when base.mdrp_ceiling_basis = 'per_pack' then
+      base.shelf_price_php > base.mdrp_effective_ceiling_php
+    when base.mdrp_ceiling_basis = 'per_unit' then
+      base.shelf_price_php / nullif(base.pack_quantity, 0) >
+        base.mdrp_effective_ceiling_php
   end as above_mdrp_flag
-from price_observation po
-left join mdrp_ceiling mc on mc.id = po.mdrp_entry_id;
+from (
+  select
+    po.*,
+    m.vat_exempt as mdrp_vat_exempt,
+    mc.order_id as mdrp_order,
+    mc.annex_row as mdrp_annex_row,
+    mc.mrp_php as mdrp_ceiling_php,
+    mc.price_basis as mdrp_ceiling_basis,
+    mc.price_unit as mdrp_ceiling_unit,
+    mc.vat_exclusive_mrp as mdrp_vat_exclusive,
+    mc.source_url as mdrp_source_url,
+    mc.checked_at as mdrp_checked_at,
+    case
+      when mc.id is null then null
+      when mc.vat_exclusive_mrp and m.vat_exempt is false then
+        round(mc.mrp_php * 1.12, 2)
+      else mc.mrp_php
+    end as mdrp_effective_ceiling_php,
+    case
+      when mc.id is null then null
+      when mc.price_basis = 'per_pack' then po.shelf_price_php
+      when mc.price_basis = 'per_unit' then
+        po.shelf_price_php / nullif(po.pack_quantity, 0)
+    end as mdrp_observed_rate_php,
+    case
+      when mc.id is null then null
+      when mc.price_basis = 'per_pack' then 'pack_price'
+      when po.sale_form = 'loose' then 'loose_price'
+      when po.sale_form = 'strip' then 'strip_rate'
+      else 'box_rate'
+    end as mdrp_rate_basis
+  from price_observation po
+  join medicine m on m.id = po.medicine_id
+  left join mdrp_ceiling mc on mc.id = po.mdrp_entry_id
+) base;
 ```
 
-The API reads through this view. `above_mdrp_flag` is null when no ceiling is attached. A non-available row has no price and no MDRP reference, so its comparison columns are null.
+The API reads through this view. `above_mdrp_flag` and `mdrp_effective_ceiling_php` are null when no ceiling is attached. A non-available row has no price and no MDRP reference, so its comparison columns are null.
 
 ### 5.9 `price_report`
 
@@ -843,7 +871,9 @@ The seeder runs these checks after writing, before commit. A failure rolls back.
 - Every FK resolves: `medicine_alternative.medicine_id`, `price_observation.medicine_id`, `price_observation.pharmacy_id`, `price_observation.mdrp_entry_id`.
 - `mdrp_ceiling` has 204 rows.
 - Only POC-016 observations have `mdrp_entry_id`; every such observation references `EO104-044` and is `available`.
+- POC-016 has `medicine.vat_exempt = true`, so its effective ceiling stays at the published PHP 30.31 and all nine seeded prices remain above it.
 - The POC-016 attachment is per form: its available pack, strip, and loose observations all carry `EO104-044`; a `not_applicable` or unconfirmed form carries none.
+- The mixed and VATable MDRP cases are not seed rows. They are covered by synthetic fixtures in the ranking unit tests and the browser/DB acceptance tests, which insert a VATable product with a VAT-exclusive ceiling, then remove it.
 - No component-only MDRP attachment exists.
 - The demo cases in section 6.5 are present.
 - The seed is idempotent: run twice in a test database and compare row counts and natural keys.
@@ -862,7 +892,7 @@ The seed must make these states reachable from known searches and baskets. Exact
 | Not stocked | A pharmacy has all three forms of POC-036 as `not_stocked` | Same basket; inspect `missing_items` reason `not_stocked` |
 | Per-form stock | At one pharmacy, POC-001 pack is in stock, strip is out of stock, loose is in stock | Search `amlodipine`, add 5 tablets; the exact line uses loose |
 | Stale record | A POC-036 loose observation older than 14 days remains sellable and is flagged `stale: true` | Same paracetamol basket; inspect the chosen component |
-| MDRP loose vs pack | POC-016 has an observed loose price, a strip rate, and a box rate, all above PHP 30.31/tablet | Search `janumet` or `metformin sitagliptin`, open results and the price block |
+| MDRP loose vs pack | POC-016 has an observed loose price, a strip rate, and a box rate, all above the VAT-exempt PHP 30.31/tablet ceiling; no result is marked cheapest | Search `janumet` or `metformin sitagliptin`, open results and the price block |
 | No price | POC-041 is active but has no known reference pack; all three forms at all pharmacies are `unknown` | Search `omeprazole`; the medicine is returned with `available_forms: []`, and results show no price data |
 | Muted no-price pharmacy | A pharmacy has no sellable form for either demo basket item | Same POC-001 + POC-036 basket; inspect `no_price_data` |
 | Rx vs OTC | POC-001 is Rx; POC-036 is OTC | Same basket |
@@ -1077,9 +1107,11 @@ interface MdrpInfo {
   order: string;
   annex_row: number;
   ceiling_php: number;
+  effective_ceiling_php: number;
   ceiling_basis: "per_unit" | "per_pack";
   ceiling_unit: string | null;
   vat_exclusive: boolean;
+  vat_exempt: boolean | null;
   observed_rate_php: number;
   rate_basis: "loose_price" | "strip_rate" | "box_rate" | "pack_price";
   above: boolean;
@@ -1295,7 +1327,7 @@ Request:
 
 - `items`: same rules as `/api/basket`. Required.
 - `origin`: optional. Latitude -90..90, longitude -180..180. If omitted or null, the server uses `NAGA_CENTER_LAT` / `NAGA_CENTER_LNG` (default `13.6215`, `123.1945`) and reports `source: "naga_center"`.
-- `sort`: `price` (default) or `distance`. `price` uses the exact-fulfillment ranking. `distance` keeps complete baskets first but orders them by distance, then total; pack-only entries by distance, then covering total; incomplete and no-price ordering is unchanged.
+- `sort`: `price` (default) or `distance`. `price` uses the exact-fulfillment ranking with compliant complete baskets before above-ceiling complete baskets. `distance` keeps the MDRP tier first, then orders complete baskets by distance, then total; pack-only entries by distance, then covering total; incomplete and no-price ordering is unchanged.
 
 Response `200`:
 
@@ -1376,6 +1408,7 @@ Response `200`:
       "known_total_php": 18.0,
       "covering_total_php": null,
       "missing_items": [],
+      "above_mdrp_ceiling": false,
       "reported": false,
       "reported_at": null
     }
@@ -1415,6 +1448,7 @@ Response `200`:
       "known_total_php": 6.0,
       "covering_total_php": 131.0,
       "missing_items": [],
+      "above_mdrp_ceiling": false,
       "reported": false,
       "reported_at": null
     }
@@ -1442,6 +1476,7 @@ Response `200`:
           "reason": "not_stocked"
         }
       ],
+      "above_mdrp_ceiling": false,
       "reported": false,
       "reported_at": null
     }
@@ -1482,6 +1517,7 @@ Result shape details:
 - `items[].components`: the chosen exact components, one per form used. Empty for a non-exact item.
 - `items[].pack_only`: the covering purchase for a non-exact item with a sellable form. Absent otherwise.
 - `items[].forms`: every form offer at the pharmacy for that medicine, including `pack_only`, `not_applicable`, `not_stocked`, and `unknown`, so the UI can explain the state.
+- `above_mdrp_ceiling`: true when at least one chosen component (or the covering purchase, for a pack-only item) has `mdrp.above = true`. For complete results it controls the two-tier ranking and the cheapest highlight; for the other groups it is informational.
 - `total_shelf_price_php`: the exact basket total, or null when the result is not exact.
 - `known_total_php`: the sum of exact item totals; 0 when none. It is present on every result.
 - `covering_total_php`: the amount the patient must buy for the whole basket (exact items plus covering purchases); non-null only when the result has at least one pack-only item, otherwise null.
@@ -2141,7 +2177,17 @@ The POC provider is `MockScanProvider`. The real provider is chosen in #16. The 
 - The deployed acceptance script passes.
 - The POC contract, seed, API, UI, and README agree.
 
-### 10.5 Downstream screens
+### 10.5 MDRP-compliant ranking and VAT normalization (#46)
+
+- Complete results split into compliant and above-ceiling tiers; every compliant result ranks before every above-ceiling result, and the existing tie-breakers apply within each tier.
+- The cheapest highlight goes only to the first compliant complete result; the all-above POC-016 case has no highlight and shows every option in the above-ceiling group.
+- A mixed basket whose above-ceiling result has a lower total is still ranked after the compliant result.
+- The API exposes the published ceiling, the effective ceiling, `vat_exclusive`, and `vat_exempt`; the view derives `above_mdrp_flag` from the effective ceiling.
+- POC-016 is VAT-exempt and stays at PHP 30.31/tablet. A synthetic VATable product with a VAT-exclusive ceiling of PHP 10.00 is compared at PHP 11.20; a PHP 11.00 price is compliant and a PHP 11.30 price is above.
+- The browser acceptance covers the all-above case and a mixed basket with one compliant and one above-ceiling complete result.
+- `bun run typecheck`, `bun run lint`, the unit/route tests, the browser acceptance, and `bun run db:acceptance` pass.
+
+### 10.6 Downstream screens
 
 - Search returns exact products with typo tolerance and empty states, and lists the available sale forms.
 - Results implement the exact-fulfillment ranking, pack-only bucket, stale, MDRP, Rx/OTC, candidate-generic, and no-price states exactly as section 7.7.

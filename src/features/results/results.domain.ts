@@ -121,9 +121,11 @@ export type MdrpInfo = {
   order: string
   annex_row: number
   ceiling_php: number
+  effective_ceiling_php: number
   ceiling_basis: 'per_unit' | 'per_pack'
   ceiling_unit: string | null
   vat_exclusive: boolean
+  vat_exempt: boolean | null
   observed_rate_php: number
   rate_basis: MdrpRateBasis
   above: boolean
@@ -250,6 +252,7 @@ export type CompleteResult = {
   known_total_php: number
   covering_total_php: null
   missing_items: MissingItem[]
+  above_mdrp_ceiling: boolean
   reported: boolean
   reported_at: string | null
 }
@@ -265,6 +268,7 @@ export type SoldPerPackOnlyResult = {
   known_total_php: number
   covering_total_php: number
   missing_items: MissingItem[]
+  above_mdrp_ceiling: boolean
   reported: boolean
   reported_at: string | null
 }
@@ -280,6 +284,7 @@ export type IncompleteResult = {
   known_total_php: number
   covering_total_php: number | null
   missing_items: MissingItem[]
+  above_mdrp_ceiling: boolean
   reported: boolean
   reported_at: string | null
 }
@@ -323,6 +328,7 @@ export type PharmacyBasketOutcome = {
   known_total_php: number
   covering_total_php: number | null
   missing_items: MissingItem[]
+  above_mdrp_ceiling: boolean
   no_price_data: boolean
 }
 
@@ -955,7 +961,11 @@ function buildBasketItem(
   line: BasketLine,
   medicine: BasketMedicine,
   forms: readonly StoredFormOffer[],
-): { item: ResultBasketItem; missing: MissingReason | null } {
+): {
+  item: ResultBasketItem
+  missing: MissingReason | null
+  aboveMdrp: boolean
+} {
   const sorted = sortForms(forms)
   const offers = sorted.map(toSaleFormOffer)
   const missing = missingReasonFor(sorted)
@@ -971,6 +981,7 @@ function buildBasketItem(
         forms: offers,
       },
       missing,
+      aboveMdrp: false,
     }
   }
 
@@ -992,6 +1003,7 @@ function buildBasketItem(
         forms: offers,
       },
       missing: null,
+      aboveMdrp: components.some((component) => component.mdrp?.above === true),
     }
   }
 
@@ -1008,6 +1020,7 @@ function buildBasketItem(
         forms: offers,
       },
       missing: 'no_price',
+      aboveMdrp: false,
     }
   }
 
@@ -1038,6 +1051,7 @@ function buildBasketItem(
       forms: offers,
     },
     missing: null,
+    aboveMdrp: covering.form.mdrp?.above === true,
   }
 }
 
@@ -1069,6 +1083,7 @@ export function buildPharmacyBasket(
   let coveringCents = 0
   let anyPackOnly = false
   let availableCount = 0
+  let aboveMdrp = false
 
   for (const line of input.basket) {
     const medicine = medicineById.get(line.medicine_id)
@@ -1081,6 +1096,7 @@ export function buildPharmacyBasket(
       formsByMedicine.get(line.medicine_id) ?? [],
     )
     items.push(built.item)
+    aboveMdrp = aboveMdrp || built.aboveMdrp
     if (built.missing !== null) {
       missingItems.push(toMissingItem(medicine, built.missing))
       continue
@@ -1121,6 +1137,7 @@ export function buildPharmacyBasket(
       ? centsToPrice(exactCents + coveringCents)
       : null,
     missing_items: missingItems,
+    above_mdrp_ceiling: aboveMdrp,
     no_price_data: noPriceData,
   }
 }
@@ -1137,10 +1154,24 @@ function oldestChosenVerifiedAt(items: readonly ResultBasketItem[]): string {
   return oldest
 }
 
+function compareMdrpTier(
+  left: { above_mdrp_ceiling: boolean },
+  right: { above_mdrp_ceiling: boolean },
+): number {
+  if (left.above_mdrp_ceiling === right.above_mdrp_ceiling) {
+    return 0
+  }
+  return left.above_mdrp_ceiling ? 1 : -1
+}
+
 function compareCompleteByPrice(
   left: CompleteResult,
   right: CompleteResult,
 ): number {
+  const tier = compareMdrpTier(left, right)
+  if (tier !== 0) {
+    return tier
+  }
   const total = left.total_shelf_price_php - right.total_shelf_price_php
   if (total !== 0) {
     return total
@@ -1163,6 +1194,10 @@ function compareCompleteByDistance(
   left: CompleteResult,
   right: CompleteResult,
 ): number {
+  const tier = compareMdrpTier(left, right)
+  if (tier !== 0) {
+    return tier
+  }
   const distance = left.pharmacy.distance_m - right.pharmacy.distance_m
   if (distance !== 0) {
     return distance
@@ -1327,6 +1362,7 @@ export function buildRankedResults(input: BuildRankingInput): RankedResults {
         known_total_php: outcome.known_total_php,
         covering_total_php: null,
         missing_items: [],
+        above_mdrp_ceiling: outcome.above_mdrp_ceiling,
         reported,
         reported_at: reportedAt,
       })
@@ -1344,6 +1380,7 @@ export function buildRankedResults(input: BuildRankingInput): RankedResults {
         known_total_php: outcome.known_total_php,
         covering_total_php: outcome.covering_total_php ?? 0,
         missing_items: [],
+        above_mdrp_ceiling: outcome.above_mdrp_ceiling,
         reported,
         reported_at: reportedAt,
       })
@@ -1360,6 +1397,7 @@ export function buildRankedResults(input: BuildRankingInput): RankedResults {
       known_total_php: outcome.known_total_php,
       covering_total_php: outcome.covering_total_php,
       missing_items: outcome.missing_items,
+      above_mdrp_ceiling: outcome.above_mdrp_ceiling,
       reported,
       reported_at: reportedAt,
     })
@@ -1388,16 +1426,20 @@ export function buildRankedResults(input: BuildRankingInput): RankedResults {
   }
 }
 
-/** The cheapest complete result, independent of the active sort order. */
+/** The cheapest MDRP-compliant complete result, independent of sort order. */
 export function cheapestCompleteResultKey(
   complete: readonly {
     result_key: string
     total_shelf_price_php: number
+    above_mdrp_ceiling: boolean
     pharmacy: { name: string; distance_m: number }
   }[],
 ): string | null {
   let cheapest: (typeof complete)[number] | null = null
   for (const result of complete) {
+    if (result.above_mdrp_ceiling) {
+      continue
+    }
     if (cheapest === null) {
       cheapest = result
       continue

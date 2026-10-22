@@ -83,6 +83,7 @@ export const medicineSeedSchema = z
     konsulta_as_of: isoDate.nullable(),
     generic_group_id: z.string().min(1).nullable(),
     active: z.boolean(),
+    vat_exempt: z.boolean().nullable().default(null),
     data_source: z.string().min(1),
   })
   .strict()
