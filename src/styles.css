@@ -1,11 +1,14 @@
+@import '@fontsource-variable/inter';
 @import 'tailwindcss';
 
 @theme inline {
-  --font-sans: 'Avenir Next', 'Segoe UI', sans-serif;
-  --font-display: 'Iowan Old Style', 'Palatino Linotype', serif;
+  --font-sans: 'Inter Variable', 'Inter', 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Inter Variable', 'Inter', 'Segoe UI', Roboto, sans-serif;
   --tracking-eyebrow: 0.2em;
   --tracking-eyebrow-wide: 0.24em;
   --leading-display: 0.95;
+  --shadow-sheet: 0 -12px 40px -12px
+    color-mix(in oklch, var(--foreground) 28%, transparent);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -18,6 +21,12 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-destructive: var(--destructive);
+  --color-highlight: var(--highlight);
+  --color-kind-pill: var(--kind-pill);
+  --color-kind-liquid: var(--kind-liquid);
+  --color-kind-topical: var(--kind-topical);
+  --color-kind-inhaler: var(--kind-inhaler);
+  --color-kind-other: var(--kind-other);
   --color-destructive-foreground: var(--destructive-foreground);
 }
 
@@ -27,34 +36,22 @@
   --foreground: oklch(0.225 0.024 62);
   --card: oklch(0.992 0.006 82);
   --card-foreground: oklch(0.225 0.024 62);
-  --primary: oklch(0.49 0.102 166);
+  --primary: oklch(0.37 0.13 274);
   --primary-foreground: oklch(0.985 0.009 82);
   --muted: oklch(0.92 0.018 78);
   --muted-foreground: oklch(0.47 0.03 66);
   --border: oklch(0.84 0.026 75);
   --input: oklch(0.78 0.03 75);
-  --ring: oklch(0.58 0.111 166);
+  --ring: oklch(0.5 0.13 274);
   --destructive: oklch(0.53 0.19 28);
+  --highlight: oklch(0.5 0.2 27);
+  /* Medicine kinds: tablets, liquids, creams, inhalers, and sachets or vials. */
+  --kind-pill: oklch(0.46 0.09 195);
+  --kind-liquid: oklch(0.47 0.11 60);
+  --kind-topical: oklch(0.47 0.14 350);
+  --kind-inhaler: oklch(0.46 0.12 245);
+  --kind-other: oklch(0.46 0.1 150);
   --destructive-foreground: oklch(0.985 0.009 82);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --background: oklch(0.19 0.018 62);
-    --foreground: oklch(0.92 0.016 82);
-    --card: oklch(0.23 0.021 62);
-    --card-foreground: oklch(0.92 0.016 82);
-    --primary: oklch(0.72 0.105 166);
-    --primary-foreground: oklch(0.17 0.026 165);
-    --muted: oklch(0.28 0.025 64);
-    --muted-foreground: oklch(0.71 0.025 75);
-    --border: oklch(0.35 0.027 64);
-    --input: oklch(0.42 0.03 64);
-    --ring: oklch(0.72 0.105 166);
-    --destructive: oklch(0.66 0.19 28);
-    --destructive-foreground: oklch(0.98 0.012 82);
-  }
 }
 
 @layer base {
@@ -89,4 +86,57 @@
   ::selection {
     background: color-mix(in oklch, var(--primary) 35%, transparent);
   }
+}
+
+@utility dot-grid {
+  background-image: radial-gradient(
+    color-mix(in oklch, var(--border) 70%, transparent) 1px,
+    transparent 1.5px
+  );
+  background-size: 22px 22px;
+}
+
+@utility pb-safe {
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+}
+
+@utility pt-safe-top {
+  padding-top: max(1rem, env(safe-area-inset-top));
+}
+
+@utility h-sheet-peek {
+  height: 46dvh;
+}
+
+@utility h-sheet-full {
+  height: 88dvh;
+}
+
+@utility transition-sheet {
+  transition: height 300ms ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+@utility h-sheet-drag {
+  height: var(--sheet-drag-height);
+}
+
+/* The basket drawer stops at the middle of the screen, under the top bar. */
+@utility max-h-basket {
+  max-height: calc(52dvh - 4.5rem);
+}
+
+@utility max-h-sheet-peek {
+  max-height: 46dvh;
+}
+
+@utility max-h-basket-tall {
+  max-height: calc(100dvh - 9rem);
+}
+
+@utility h-sheet-closed {
+  height: 3.5rem;
 }
