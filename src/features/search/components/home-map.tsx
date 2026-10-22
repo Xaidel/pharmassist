@@ -25,14 +25,16 @@ type Pharmacy = PharmacyPins['pharmacies'][number]
 
 type PinVariant = 'cheapest' | 'verified' | 'unverified'
 
+// The catalog-wide cheapest pharmacy is not a basket result, so it carries only
+// a star and otherwise competes with other verified pins on equal terms.
 const PIN_TONES = {
-  cheapest: 'highlight',
+  cheapest: 'primary',
   verified: 'primary',
   unverified: 'muted',
 } as const satisfies Record<PinVariant, CalloutTone>
 
-// Placed first wins a collision, so the cheapest label always shows.
-const PIN_PRIORITY = { cheapest: 0, verified: 1, unverified: 2 } as const
+// Placed first wins a collision.
+const PIN_PRIORITY = { cheapest: 0, verified: 0, unverified: 1 } as const
 
 function pinVariant(pharmacy: Pharmacy, cheapestId: string | null): PinVariant {
   if (pharmacy.pharmacy_id === cheapestId) {
@@ -105,14 +107,8 @@ export function HomeMap({ className }: HomeMapProps): React.JSX.Element {
           if (directory === null || directory.pharmacies.length === 0) {
             return
           }
-          // Cheapest last, so its pin draws above its neighbours.
-          const ordered = [...directory.pharmacies].sort(
-            (left, right) =>
-              Number(left.pharmacy_id === directory.cheapest_pharmacy_id) -
-              Number(right.pharmacy_id === directory.cheapest_pharmacy_id),
-          )
           const callouts: { callout: HTMLDivElement; priority: number }[] = []
-          for (const pharmacy of ordered) {
+          for (const pharmacy of directory.pharmacies) {
             const variant = pinVariant(pharmacy, directory.cheapest_pharmacy_id)
             const { root: element, callout } = createCalloutPin({
               tag: 'div',
