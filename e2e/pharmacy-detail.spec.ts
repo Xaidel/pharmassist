@@ -189,7 +189,7 @@ test('persists a report and shows the reported state after reload', async ({
 
 test('serves the detail and report contract errors', async ({ request }) => {
   const detail = await request.get(
-    '/api/pharmacies/mercury-naga-penafrancia?medicine_ids=POC-016&origin_latitude=13.6215&origin_longitude=123.1945',
+    '/api/pharmacies/mercury-naga-penafrancia?items=POC-016:5:tablet&origin_latitude=13.6215&origin_longitude=123.1945',
   )
   expect(detail.status()).toBe(200)
   const detailBody: unknown = await detail.json()
@@ -198,7 +198,10 @@ test('serves the detail and report contract errors', async ({ request }) => {
       pharmacy_id: 'mercury-naga-penafrancia',
       open_24h: true,
     },
-    basket: { complete: true },
+    basket: {
+      complete: true,
+      items: [{ medicine_id: 'POC-016', quantity: 5, unit: 'tablet' }],
+    },
   })
   expect(JSON.stringify(detailBody)).not.toContain('directions_url')
 
@@ -209,11 +212,27 @@ test('serves the detail and report contract errors', async ({ request }) => {
   })
 
   const unknownMedicine = await request.get(
-    '/api/pharmacies/mercury-naga-penafrancia?medicine_ids=NOT-A-MEDICINE',
+    '/api/pharmacies/mercury-naga-penafrancia?items=NOT-A-MEDICINE:1:tablet',
   )
   expect(unknownMedicine.status()).toBe(422)
   expect(await unknownMedicine.json()).toMatchObject({
     error: { code: 'UNKNOWN_MEDICINE' },
+  })
+
+  const badUnit = await request.get(
+    '/api/pharmacies/mercury-naga-penafrancia?items=POC-016:1:capsule',
+  )
+  expect(badUnit.status()).toBe(422)
+  expect(await badUnit.json()).toMatchObject({
+    error: { code: 'INVALID_UNIT' },
+  })
+
+  const badQuantity = await request.get(
+    '/api/pharmacies/mercury-naga-penafrancia?items=POC-016:1.5:tablet',
+  )
+  expect(badQuantity.status()).toBe(422)
+  expect(await badQuantity.json()).toMatchObject({
+    error: { code: 'INVALID_QUANTITY' },
   })
 
   const badOrigin = await request.get(

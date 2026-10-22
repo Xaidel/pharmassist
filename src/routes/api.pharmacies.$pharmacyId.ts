@@ -12,7 +12,7 @@ export const Route = createFileRoute('/api/pharmacies/$pharmacyId')({
         const url = new URL(request.url)
         const query = parsePharmacyDetailQuery(url.searchParams)
         if (!query.ok) {
-          return apiError(400, query.code, query.message)
+          return apiError(query.status, query.code, query.message)
         }
 
         try {

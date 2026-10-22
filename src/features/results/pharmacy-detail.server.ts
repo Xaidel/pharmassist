@@ -27,6 +27,7 @@ export type DetailFailure = {
   code:
     | 'INVALID_REQUEST'
     | 'INVALID_ORIGIN'
+    | 'INVALID_UNIT'
     | 'UNKNOWN_PHARMACY'
     | 'UNKNOWN_MEDICINE'
   message: string
@@ -67,14 +68,13 @@ export async function handlePharmacyDetail(
   }
 
   let requestedMedicines: MedicineSummary[] = []
-  if (query.medicineIds !== null) {
-    requestedMedicines = await repository.readMedicines(query.medicineIds)
+  if (query.basket !== null) {
+    const medicineIds = query.basket.map((line) => line.medicine_id)
+    requestedMedicines = await repository.readMedicines(medicineIds)
     const found = new Set(
       requestedMedicines.map((medicine) => medicine.medicine_id),
     )
-    const unknown = query.medicineIds.filter(
-      (medicineId) => !found.has(medicineId),
-    )
+    const unknown = medicineIds.filter((medicineId) => !found.has(medicineId))
     if (unknown.length > 0) {
       return {
         ok: false,
@@ -86,11 +86,37 @@ export async function handlePharmacyDetail(
         },
       }
     }
+
+    const baseUnits = new Map(
+      requestedMedicines.map((medicine) => [
+        medicine.medicine_id,
+        medicine.base_unit,
+      ]),
+    )
+    const wrongUnit = query.basket.find(
+      (line) => baseUnits.get(line.medicine_id) !== line.unit,
+    )
+    if (wrongUnit !== undefined) {
+      return {
+        ok: false,
+        error: {
+          status: 422,
+          code: 'INVALID_UNIT',
+          message: `The unit must match the medicine's base unit (${String(
+            baseUnits.get(wrongUnit.medicine_id),
+          )}).`,
+          details: {
+            medicine_id: wrongUnit.medicine_id,
+            expected_unit: baseUnits.get(wrongUnit.medicine_id),
+          },
+        },
+      }
+    }
   }
 
   const pharmacyForms = await repository.readPharmacyPrices(pharmacyId)
   let selectedMedicines: MedicineSummary[]
-  if (query.medicineIds !== null) {
+  if (query.basket !== null) {
     selectedMedicines = requestedMedicines
   } else {
     const availableIds = new Set(
@@ -132,10 +158,10 @@ export async function handlePharmacyDetail(
     manilaClock(new Date()),
   )
   const basketOutcome =
-    query.medicineIds === null
+    query.basket === null
       ? undefined
       : buildDetailBasket({
-          medicineIds: query.medicineIds,
+          lines: query.basket,
           medicines: requestedMedicines,
           forms: pharmacyForms,
         })

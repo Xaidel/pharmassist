@@ -12,6 +12,31 @@ export const BASKET_MAX_QUANTITY = 100_000
 /** Days after which a verified price is shown as possibly outdated. */
 export const STALE_AFTER_DAYS = 14
 
+/** True when a base unit is counted in whole units rather than measured. */
+export function isCountableUnit(unit: BaseUnit): boolean {
+  return unit !== 'mL' && unit !== 'g'
+}
+
+function hasAtMostThreeDecimals(value: number): boolean {
+  return Math.abs(value * 1000 - Math.round(value * 1000)) < 1e-6
+}
+
+/** True when a quantity satisfies the basket rules for the given base unit. */
+export function isValidBasketQuantity(
+  quantity: number,
+  unit: BaseUnit,
+): boolean {
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    return false
+  }
+  if (quantity > BASKET_MAX_QUANTITY) {
+    return false
+  }
+  return isCountableUnit(unit)
+    ? Number.isInteger(quantity)
+    : hasAtMostThreeDecimals(quantity)
+}
+
 /** Fallback map center when the device does not share a location. */
 export const NAGA_CENTER = {
   latitude: 13.6215,

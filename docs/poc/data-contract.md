@@ -1505,11 +1505,17 @@ Empty states:
 
 ### 7.8 `GET /api/pharmacies/{pharmacy_id}`
 
+Basket lines are carried as repeatable `items` values, one per line:
+
+```text
+GET /api/pharmacies/mercury-naga-penafrancia?items=POC-001:5:tablet&items=POC-036:10:tablet
+```
+
 Query parameters:
 
 | Name | Required | Rules |
 |---|---|---|
-| `medicine_ids` | No | Comma-separated basket medicine IDs, 1–10 unique IDs. Omit for the full stock list. |
+| `items` | No | Repeatable basket line, `medicine_id:quantity:unit`. 1–10 unique medicines. Omit for the full stock list. |
 | `origin_latitude` | No | With `origin_longitude`; valid coordinates. |
 | `origin_longitude` | No | With `origin_latitude`; valid coordinates. |
 
@@ -1630,8 +1636,8 @@ Response `200`:
 
 - `forms` is the per-medicine form list, with all three states, for the detail sheet's stock list and the pack-only/not-applicable labels.
 - `medicines` carries the `MedicineSummary` for every medicine in `forms`, so the detail sheet can label its stock list without a second catalog request. It is an additive field on this response only.
-- When `medicine_ids` is omitted, `medicines` and `forms` contain every active medicine with at least one `available` form at the pharmacy. When supplied, they contain every requested medicine, including `not_stocked` and `unknown` rows, so the basket explanation is complete.
-- `basket` is present only when `medicine_ids` is supplied. It uses the same exact-fulfillment, pack-only, and completeness rules as results.
+- When `items` is omitted, `medicines` and `forms` contain every active medicine with at least one `available` form at the pharmacy. When supplied, they contain every requested medicine, including `not_stocked` and `unknown` rows, so the basket explanation is complete.
+- `basket` is present only when `items` is supplied. It carries the requested quantities and units and uses the same exact-fulfillment, pack-only, and completeness rules as results, so the detail total matches the results total for the same basket.
 - Directions are requested from `GET /api/directions`; the detail response carries no external maps URL. The client keeps the patient in the embedded map.
 - `open_now` is null when hours are unknown. `hours_text` is the display string; the client must not parse it to decide open/closed.
 - `distance_m` uses the supplied origin or the Naga center fallback.
@@ -1639,7 +1645,9 @@ Response `200`:
 Errors:
 
 - `404 UNKNOWN_PHARMACY` — no such pharmacy.
-- `422 UNKNOWN_MEDICINE` — an inactive or missing ID in `medicine_ids`.
+- `400 INVALID_REQUEST` — an `items` value is not `medicine_id:quantity:unit`.
+- `422 UNKNOWN_MEDICINE` — an inactive or missing ID in `items`.
+- `422 DUPLICATE_MEDICINE` / `INVALID_UNIT` / `INVALID_QUANTITY` / `BASKET_TOO_LARGE` — the same basket rules as `/api/basket`.
 - `400 INVALID_ORIGIN` — one coordinate without the other or out of range.
 
 Empty state: a pharmacy with no sellable form for a requested basket returns `forms` with all `not_stocked`/`unknown` states and an incomplete basket with all items missing. This is the muted no-price pharmacy.

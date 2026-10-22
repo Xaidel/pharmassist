@@ -1,14 +1,13 @@
 import { readServerConfig } from '#/lib/config.server'
 import { queryRows } from '#/lib/db.server'
-import type {
-  BaseUnit,
-  MedicineSummary,
-} from '#/shared/domain/medicine-summary'
+import type { MedicineSummary } from '#/shared/domain/medicine-summary'
 
 import {
   BASKET_MAX_ITEMS,
   BASKET_MAX_QUANTITY,
   buildRankedResults,
+  isCountableUnit,
+  isValidBasketQuantity,
   manilaClock,
   STALE_AFTER_DAYS,
   type BasketLine,
@@ -83,26 +82,6 @@ function fail(
   return { ok: false, error }
 }
 
-function isCountableUnit(unit: BaseUnit): boolean {
-  return unit !== 'mL' && unit !== 'g'
-}
-
-function hasAtMostThreeDecimals(value: number): boolean {
-  return Math.abs(value * 1000 - Math.round(value * 1000)) < 1e-6
-}
-
-function isValidQuantity(value: number, unit: BaseUnit): boolean {
-  if (!Number.isFinite(value) || value <= 0) {
-    return false
-  }
-  if (value > BASKET_MAX_QUANTITY) {
-    return false
-  }
-  return isCountableUnit(unit)
-    ? Number.isInteger(value)
-    : hasAtMostThreeDecimals(value)
-}
-
 async function resolveBasket(
   items: readonly BasketItemInput[],
 ): Promise<
@@ -158,7 +137,7 @@ async function resolveBasket(
         },
       )
     }
-    if (!isValidQuantity(item.quantity, medicine.base_unit)) {
+    if (!isValidBasketQuantity(item.quantity, medicine.base_unit)) {
       return fail(
         422,
         'INVALID_QUANTITY',
