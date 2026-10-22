@@ -22,10 +22,11 @@ type ResultCardProps = {
   id: string
   result: Result
   medicines: readonly MedicineSummary[]
-  cheapest: boolean
+  featured: 'cheapest' | 'nearest' | null
   routeActive: boolean
   onShowRoute: () => void
   onOpenDetail: () => void
+  onUsePack?: (medicineId: string, quantity: number) => void
 }
 
 function oldestVerifiedAt(result: Result): string | null {
@@ -45,10 +46,11 @@ export function ResultCard({
   id,
   result,
   medicines,
-  cheapest,
+  featured,
   routeActive,
   onShowRoute,
   onOpenDetail,
+  onUsePack,
 }: ResultCardProps): React.JSX.Element {
   const aboveMdrp = result.above_mdrp_ceiling
   const stale = result.items.some((item) =>
@@ -66,18 +68,20 @@ export function ResultCard({
       id={id}
     >
       <div className="flex h-full flex-col p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 className="font-display text-xl font-semibold">
-              {result.pharmacy.name}
-            </h3>
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              {result.pharmacy.address}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {cheapest && (
-              <Badge variant="primary-strong">Cheapest complete</Badge>
+        {(featured !== null ||
+          result.status === 'sold_per_pack_only' ||
+          aboveMdrp ||
+          stale ||
+          lowStock ||
+          result.reported) && (
+          <div className="mb-3 flex flex-wrap gap-2">
+            {featured !== null && (
+              <Badge variant="highlight">
+                <span aria-hidden="true">★</span>
+                {featured === 'nearest'
+                  ? 'Nearest complete'
+                  : 'Cheapest complete'}
+              </Badge>
             )}
             {result.status === 'sold_per_pack_only' && (
               <Badge>Sold per pack only</Badge>
@@ -87,27 +91,19 @@ export function ResultCard({
             {lowStock && <Badge>Low stock</Badge>}
             {result.reported && <Badge>Price reported</Badge>}
           </div>
-        </div>
+        )}
 
-        <p className="mt-3 flex flex-wrap gap-x-2 gap-y-1 text-sm text-muted-foreground">
-          <span>{formatDistance(result.pharmacy.distance_m)} away</span>
-          <span aria-hidden="true">·</span>
-          <span>{formatOpenNow(result.pharmacy.open_now)}</span>
-          {verified !== null && (
-            <>
-              <span aria-hidden="true">·</span>
-              <span>Verified {formatVerified(verified)}</span>
-            </>
-          )}
-        </p>
+        <h3 className="font-display text-xl font-semibold leading-snug">
+          {result.pharmacy.name}
+        </h3>
 
-        <div className="mt-4">
+        <div className="mt-2">
           {result.status === 'complete' && (
             <>
               <p className="font-display text-3xl font-semibold">
                 {formatPeso(result.total_shelf_price_php)}
               </p>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="text-base text-muted-foreground">
                 Exact total for {result.items.length}{' '}
                 {result.items.length === 1 ? 'medicine' : 'medicines'}
               </p>
@@ -118,8 +114,8 @@ export function ResultCard({
               <p className="font-display text-2xl font-semibold">
                 {formatPeso(result.covering_total_php)} to buy
               </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                No exact combination; covering purchases are listed per item.
+              <p className="text-base text-muted-foreground">
+                Only sold in whole packs or strips.
               </p>
             </>
           )}
@@ -128,23 +124,28 @@ export function ResultCard({
               <p className="font-display text-2xl font-semibold">
                 {formatPeso(result.known_total_php)} known
               </p>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="text-base text-muted-foreground">
                 {result.missing_items.length}{' '}
                 {result.missing_items.length === 1 ? 'item' : 'items'} missing
-                from this basket
               </p>
             </>
           )}
         </div>
 
+        <p className="mt-3 flex flex-wrap gap-x-2 gap-y-1 text-base">
+          <span>{formatDistance(result.pharmacy.distance_m)} away</span>
+          <span aria-hidden="true">·</span>
+          <span>{formatOpenNow(result.pharmacy.open_now)}</span>
+        </p>
+
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button onClick={onOpenDetail} size="sm" type="button">
+          <Button className="flex-1" onClick={onOpenDetail} type="button">
             View details
           </Button>
           <Button
             aria-pressed={routeActive}
+            className="flex-1"
             onClick={onShowRoute}
-            size="sm"
             type="button"
             variant="outline"
           >
@@ -152,7 +153,21 @@ export function ResultCard({
           </Button>
         </div>
 
-        <ResultItemList items={result.items} medicines={medicines} />
+        <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+          {result.pharmacy.address}
+          {verified !== null && (
+            <>
+              <br />
+              Price checked {formatVerified(verified)}
+            </>
+          )}
+        </p>
+
+        <ResultItemList
+          items={result.items}
+          medicines={medicines}
+          {...(onUsePack === undefined ? {} : { onUsePack })}
+        />
       </div>
     </Card>
   )

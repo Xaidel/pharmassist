@@ -1,5 +1,8 @@
+import { PackageCheck } from 'lucide-react'
+
 import { MedicineLine } from '#/shared/components/medicine-line'
 import { Badge } from '#/shared/components/ui/badge'
+import { Button } from '#/shared/components/ui/button'
 import type { MedicineSummary } from '#/shared/domain/medicine-summary'
 
 import { formatMissingReason, formatPeso } from '../results.format'
@@ -25,12 +28,15 @@ function packOnlyLabel(
 type ResultItemListProps = {
   items: readonly ResultBasketItem[]
   medicines: readonly MedicineSummary[]
+  /** Changes the basket to the whole-pack amount, so the pharmacy becomes an exact match. */
+  onUsePack?: (medicineId: string, quantity: number) => void
 }
 
 /** Render each basket item's exact, covering-purchase, or missing outcome. */
 export function ResultItemList({
   items,
   medicines,
+  onUsePack,
 }: ResultItemListProps): React.JSX.Element {
   const medicineById = new Map(
     medicines.map((medicine) => [medicine.medicine_id, medicine]),
@@ -80,6 +86,24 @@ export function ResultItemList({
                     ({item.pack_only.covers_quantity} {item.pack_only.pack_unit}{' '}
                     covered).
                   </p>
+                  {onUsePack !== undefined && (
+                    <Button
+                      className="mt-2 w-full"
+                      onClick={() => {
+                        if (item.pack_only !== undefined) {
+                          onUsePack(
+                            item.medicine_id,
+                            item.pack_only.covers_quantity,
+                          )
+                        }
+                      }}
+                      type="button"
+                    >
+                      <PackageCheck aria-hidden="true" className="size-5" />
+                      Change to {item.pack_only.buy_quantity} ×{' '}
+                      {item.pack_only.form_label}
+                    </Button>
+                  )}
                 </div>
               )}
 

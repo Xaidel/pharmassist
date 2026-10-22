@@ -15,6 +15,12 @@ import { ResultCard } from './result-card'
 /** The prefix that marks a no-price pharmacy key in the results UI. */
 export const NO_PRICE_KEY_PREFIX = 'no-price:'
 
+/** The complete result starred on the map, and why it was chosen. */
+export type FeaturedResult = {
+  key: string
+  kind: 'cheapest' | 'nearest'
+}
+
 export function noPriceKey(pharmacyId: string): string {
   return `${NO_PRICE_KEY_PREFIX}${pharmacyId}`
 }
@@ -22,20 +28,23 @@ export function noPriceKey(pharmacyId: string): string {
 type ResultsListProps = {
   data: ResultsResponse
   medicines: readonly MedicineSummary[]
-  cheapestKey: string | null
+  featured: FeaturedResult | null
   activePharmacyId: string | null
   onOpenDetail: (key: string) => void
   onShowRoute: (key: string) => void
+  /** Changes a basket line to the whole-pack amount a pharmacy sells. */
+  onUsePack: (medicineId: string, quantity: number) => void
 }
 
 /** Render the ranked list that mirrors the map, grouped by completeness. */
 export function ResultsList({
   data,
   medicines,
-  cheapestKey,
+  featured,
   activePharmacyId,
   onOpenDetail,
   onShowRoute,
+  onUsePack,
 }: ResultsListProps): React.JSX.Element {
   const compliantComplete = data.complete.filter(
     (result) => !result.above_mdrp_ceiling,
@@ -46,18 +55,20 @@ export function ResultsList({
 
   return (
     <>
-      <section aria-labelledby="complete-results-heading" className="mt-8">
+      <section aria-labelledby="complete-results-heading" className="mt-3">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
             <h2
-              className="font-display text-2xl font-semibold"
+              className="font-display text-xl font-semibold"
               id="complete-results-heading"
             >
               Complete baskets
             </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              MDRP-compliant baskets come first, by total shelf price. The
-              cheapest compliant option is marked on the map and in this list.
+            <p className="mt-1 text-base text-muted-foreground">
+              Have all your medicines.{' '}
+              {data.meta.sort === 'distance'
+                ? 'Nearest first.'
+                : 'Cheapest first.'}
             </p>
           </div>
           <Badge>
@@ -68,21 +79,21 @@ export function ResultsList({
 
         {compliantComplete.length === 0 ? (
           <Card className="mt-4">
-            <p className="p-5 text-sm leading-relaxed text-muted-foreground">
+            <p className="p-5 text-base leading-relaxed text-muted-foreground">
               {data.complete.length === 0
-                ? 'No pharmacy has every item in this basket right now. The closest options below show what is missing.'
-                : 'No complete basket is fully at or below the published MDRP ceiling. The above-ceiling options are shown below for reference.'}
+                ? 'No pharmacy has all your medicines right now. See the closest options below.'
+                : 'Every pharmacy with all your medicines has a price above the government limit (MDRP). See them below.'}
             </p>
           </Card>
         ) : (
-          <ul className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 sm:grid sm:grid-cols-2 sm:overflow-visible lg:grid-cols-3">
+          <ul className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2">
             {compliantComplete.map((result) => (
-              <li
-                className="w-72 shrink-0 snap-start sm:w-auto"
-                key={result.result_key}
-              >
+              <li className="w-72 shrink-0 snap-start" key={result.result_key}>
                 <ResultCard
-                  cheapest={result.result_key === cheapestKey}
+                  onUsePack={onUsePack}
+                  featured={
+                    result.result_key === featured?.key ? featured.kind : null
+                  }
                   id={`result-${result.result_key}`}
                   medicines={medicines}
                   onOpenDetail={() => {
@@ -101,20 +112,18 @@ export function ResultsList({
       </section>
 
       {aboveMdrpComplete.length > 0 && (
-        <section aria-labelledby="above-mdrp-heading" className="mt-10">
+        <section aria-labelledby="above-mdrp-heading" className="mt-8">
           <div className="flex flex-wrap items-end justify-between gap-2">
             <div>
               <h2
-                className="font-display text-2xl font-semibold"
+                className="font-display text-xl font-semibold"
                 id="above-mdrp-heading"
               >
                 Above MDRP ceiling
               </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                These complete baskets include at least one chosen item priced
-                above the published MDRP ceiling. They stay visible for
-                reference and are never marked as the cheapest option. Verify
-                the price at the pharmacy.
+              <p className="mt-1 text-base text-muted-foreground">
+                Have all your medicines, but a price is above the government
+                limit (MDRP). Check the price at the pharmacy.
               </p>
             </div>
             <Badge>
@@ -122,14 +131,12 @@ export function ResultsList({
               {aboveMdrpComplete.length === 1 ? 'pharmacy' : 'pharmacies'}
             </Badge>
           </div>
-          <ul className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 sm:grid sm:grid-cols-2 sm:overflow-visible lg:grid-cols-3">
+          <ul className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2">
             {aboveMdrpComplete.map((result) => (
-              <li
-                className="w-72 shrink-0 snap-start sm:w-auto"
-                key={result.result_key}
-              >
+              <li className="w-72 shrink-0 snap-start" key={result.result_key}>
                 <ResultCard
-                  cheapest={false}
+                  onUsePack={onUsePack}
+                  featured={null}
                   id={`result-${result.result_key}`}
                   medicines={medicines}
                   onOpenDetail={() => {
@@ -147,31 +154,25 @@ export function ResultsList({
         </section>
       )}
 
-      <section aria-labelledby="pack-only-heading" className="mt-10">
+      <section aria-labelledby="pack-only-heading" className="mt-8">
         <h2
-          className="font-display text-2xl font-semibold"
+          className="font-display text-xl font-semibold"
           id="pack-only-heading"
         >
           Sold per pack only
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          These pharmacies stock every item but cannot match the requested
-          quantity exactly. The amount to buy covers the basket with whole packs
-          or strips, so it is not a comparable exact total.
+        <p className="mt-1 text-base text-muted-foreground">
+          Have all your medicines, but only in whole packs or strips.
         </p>
         {data.sold_per_pack_only.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">
-            Every pharmacy that stocks the basket can fulfill it exactly.
-          </p>
+          <p className="mt-3 text-sm text-muted-foreground">None.</p>
         ) : (
-          <ul className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 sm:grid sm:grid-cols-2 sm:overflow-visible lg:grid-cols-3">
+          <ul className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2">
             {data.sold_per_pack_only.map((result) => (
-              <li
-                className="w-72 shrink-0 snap-start sm:w-auto"
-                key={result.result_key}
-              >
+              <li className="w-72 shrink-0 snap-start" key={result.result_key}>
                 <ResultCard
-                  cheapest={false}
+                  onUsePack={onUsePack}
+                  featured={null}
                   id={`result-${result.result_key}`}
                   medicines={medicines}
                   onOpenDetail={() => {
@@ -189,30 +190,25 @@ export function ResultsList({
         )}
       </section>
 
-      <section aria-labelledby="incomplete-results-heading" className="mt-10">
+      <section aria-labelledby="incomplete-results-heading" className="mt-8">
         <h2
-          className="font-display text-2xl font-semibold"
+          className="font-display text-xl font-semibold"
           id="incomplete-results-heading"
         >
           Closest to complete
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          These pharmacies can supply part of the basket. Missing items are
-          listed, and none of these totals is a complete basket total.
+        <p className="mt-1 text-base text-muted-foreground">
+          Have some of your medicines. Missing ones are listed.
         </p>
         {data.incomplete.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">
-            Every pharmacy with any price can supply the whole basket.
-          </p>
+          <p className="mt-3 text-sm text-muted-foreground">None.</p>
         ) : (
-          <ul className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 sm:grid sm:grid-cols-2 sm:overflow-visible lg:grid-cols-3">
+          <ul className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2">
             {data.incomplete.map((result) => (
-              <li
-                className="w-72 shrink-0 snap-start sm:w-auto"
-                key={result.result_key}
-              >
+              <li className="w-72 shrink-0 snap-start" key={result.result_key}>
                 <ResultCard
-                  cheapest={false}
+                  onUsePack={onUsePack}
+                  featured={null}
                   id={`result-${result.result_key}`}
                   medicines={medicines}
                   onOpenDetail={() => {
@@ -230,21 +226,18 @@ export function ResultsList({
         )}
       </section>
 
-      <section aria-labelledby="no-price-heading" className="mt-10">
+      <section aria-labelledby="no-price-heading" className="mt-8">
         <h2
-          className="font-display text-2xl font-semibold"
+          className="font-display text-xl font-semibold"
           id="no-price-heading"
         >
           No price data
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          These pharmacies have no usable price for this basket. They are muted
-          here and never shown as unavailable.
+        <p className="mt-1 text-base text-muted-foreground">
+          No prices yet for your medicines. Call or visit to ask.
         </p>
         {data.no_price_data.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">
-            Every pharmacy has at least one usable price for this basket.
-          </p>
+          <p className="mt-3 text-sm text-muted-foreground">None.</p>
         ) : (
           <ul className="mt-4 space-y-3">
             {data.no_price_data.map(({ pharmacy }) => {
@@ -308,13 +301,11 @@ export function ResultsList({
         )}
       </section>
 
-      <p className="mt-8 text-xs leading-relaxed text-muted-foreground">
-        Prices are reference shelf prices for the form shown and must be
-        confirmed at the pharmacy. Seeded demo prices are not live quotes.
-        Statutory senior and PWD discounts apply at the point of sale and are
-        not included in these totals.
+      <p className="mt-8 text-sm leading-relaxed text-muted-foreground">
+        Prices are for reference only. Confirm at the pharmacy. Senior citizen
+        and PWD discounts are given at the counter and are not included here.
       </p>
-      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
         Latest data generated {formatVerified(data.meta.generated_at)} from the
         seeded catalog.
       </p>

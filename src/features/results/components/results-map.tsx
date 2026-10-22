@@ -3,10 +3,19 @@ import type {
   MapOptions,
   Marker,
   MarkerOptions,
+  PaddingOptions,
 } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
+import { cn } from '#/lib/cn'
+import {
+  createCalloutPin,
+  declutterCallouts,
+  type CalloutPin,
+  type CalloutTone,
+} from '#/shared/components/map-callout-pin'
 
 import type { RouteGeometry } from '../directions.schema'
 import { NAGA_CENTER } from '../results.domain'
@@ -26,6 +35,7 @@ export type MapPin = {
   label: string
   variant:
     | 'cheapest'
+    | 'nearest'
     | 'above-mdrp'
     | 'complete'
     | 'pack-only'
@@ -38,44 +48,55 @@ type MapLibreModule = {
   Marker: new (options?: MarkerOptions) => Marker
 }
 
+const PIN_TONES = {
+  cheapest: 'highlight',
+  nearest: 'highlight',
+  'above-mdrp': 'muted',
+  complete: 'primary',
+  'pack-only': 'outline',
+  incomplete: 'muted',
+  'no-price': 'faint',
+} as const satisfies Record<MapPin['variant'], CalloutTone>
+
 const PIN_BASE =
-  'inline-flex flex-col items-center rounded-full border px-3 py-1.5 text-xs font-semibold shadow-md transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
+  'rounded-xl transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none'
 
-const PIN_VARIANTS = {
-  cheapest: 'border-primary bg-primary text-primary-foreground',
-  'above-mdrp': 'border-dashed border-input bg-muted text-foreground',
-  complete: 'border-border bg-card text-foreground',
-  'pack-only': 'border-dashed border-primary bg-card text-foreground',
-  incomplete: 'border-input bg-muted text-foreground',
-  'no-price': 'border-border bg-background text-muted-foreground',
-} as const
+const PIN_SELECTED = 'z-20 scale-110'
 
-const PIN_SELECTED =
-  'scale-110 ring-2 ring-ring ring-offset-2 ring-offset-background'
+function isStarred(variant: MapPin['variant']): boolean {
+  return variant === 'cheapest' || variant === 'nearest'
+}
 
-function createPinElement(pin: MapPin, selected: boolean): HTMLButtonElement {
-  const button = document.createElement('button')
+function createPinElement(
+  pin: MapPin,
+  selected: boolean,
+): CalloutPin<HTMLButtonElement> {
+  const { root: button, callout } = createCalloutPin({
+    tag: 'button',
+    label: pin.label,
+    tone: PIN_TONES[pin.variant],
+    starred: isStarred(pin.variant),
+    rootClassName: cn(
+      PIN_BASE,
+      isStarred(pin.variant) && 'z-10',
+      selected && PIN_SELECTED,
+    ),
+  })
   button.type = 'button'
-  button.className = [
-    PIN_BASE,
-    PIN_VARIANTS[pin.variant],
-    selected ? PIN_SELECTED : '',
-  ]
-    .filter(Boolean)
-    .join(' ')
   button.setAttribute(
     'aria-label',
     `${pin.name}: ${pin.label}${
       pin.variant === 'cheapest'
         ? ', cheapest compliant complete basket'
-        : pin.variant === 'above-mdrp'
-          ? ', above MDRP ceiling'
-          : ''
+        : pin.variant === 'nearest'
+          ? ', nearest compliant complete basket'
+          : pin.variant === 'above-mdrp'
+            ? ', above MDRP ceiling'
+            : ''
     }`,
   )
   button.dataset.pharmacyPin = pin.key
-  button.textContent = pin.label
-  return button
+  return { root: button, callout }
 }
 
 function prefersReducedMotion(): boolean {
@@ -92,6 +113,10 @@ type ResultsMapProps = {
   route: RouteGeometry | null
   routeLoading: boolean
   onSelect: (key: string) => void
+  /** Pixels the floating top bar covers at the top of the map. */
+  coveredTop: number
+  /** Share of the map height the bottom sheet covers. */
+  coveredBottomRatio: number
 }
 
 /** Render the map-first price view over OpenFreeMap tiles. */
@@ -102,8 +127,32 @@ export function ResultsMap({
   route,
   routeLoading,
   onSelect,
+  coveredTop,
+  coveredBottomRatio,
 }: ResultsMapProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const coveredTopRef = useRef(coveredTop)
+  const coveredBottomRatioRef = useRef(coveredBottomRatio)
+
+  useEffect(() => {
+    coveredTopRef.current = coveredTop
+    coveredBottomRatioRef.current = coveredBottomRatio
+  }, [coveredTop, coveredBottomRatio])
+
+  // Frame content in the map area the overlays leave uncovered.
+  const visiblePadding = useCallback(
+    (margin: number): Required<PaddingOptions> => ({
+      top: coveredTopRef.current + margin,
+      right: margin,
+      bottom:
+        Math.round(
+          (containerRef.current?.clientHeight ?? 0) *
+            coveredBottomRatioRef.current,
+        ) + margin,
+      left: margin,
+    }),
+    [],
+  )
   const mapRef = useRef<MapLibreMap | null>(null)
   const libRef = useRef<MapLibreModule | null>(null)
   const markersRef = useRef<Marker[]>([])
@@ -178,12 +227,23 @@ export function ResultsMap({
     }
     markersRef.current = []
 
-    for (const pin of pins) {
-      const element = createPinElement(pin, pin.key === selectedKey)
+    const callouts: { callout: HTMLDivElement; priority: number }[] = []
+    for (const [index, pin] of pins.entries()) {
+      const selected = pin.key === selectedKey
+      const { root: element, callout } = createPinElement(pin, selected)
+      // Selected, then starred, then list order keeps its label when crowded.
+      callouts.push({
+        callout,
+        priority: selected ? -2 : isStarred(pin.variant) ? -1 : index,
+      })
       element.addEventListener('click', () => {
         onSelectRef.current(pin.key)
       })
-      const marker = new lib.Marker({ element, anchor: 'bottom' })
+      const marker = new lib.Marker({
+        element,
+        anchor: 'bottom',
+        offset: [0, 6],
+      })
         .setLngLat([pin.longitude, pin.latitude])
         .addTo(map)
       markersRef.current.push(marker)
@@ -208,7 +268,7 @@ export function ResultsMap({
             [east, north],
           ],
           {
-            padding: 48,
+            padding: visiblePadding(48),
             maxZoom: 14,
             duration: prefersReducedMotion() ? 0 : 600,
           },
@@ -216,7 +276,22 @@ export function ResultsMap({
         fittedRef.current = true
       }
     }
-  }, [isReady, pins, selectedKey])
+
+    const relayout = (): void => {
+      declutterCallouts(
+        [...callouts]
+          .sort((left, right) => left.priority - right.priority)
+          .map(({ callout }) => callout),
+      )
+    }
+    relayout()
+    map.on('move', relayout)
+    map.on('resize', relayout)
+    return () => {
+      map.off('move', relayout)
+      map.off('resize', relayout)
+    }
+  }, [isReady, pins, selectedKey, visiblePadding])
 
   useEffect(() => {
     const map = mapRef.current
@@ -284,7 +359,7 @@ export function ResultsMap({
           [east, north],
         ],
         {
-          padding: 56,
+          padding: visiblePadding(56),
           maxZoom: 15,
           duration: prefersReducedMotion() ? 0 : 600,
         },
@@ -300,7 +375,7 @@ export function ResultsMap({
     return () => {
       map.off('load', apply)
     }
-  }, [isReady, route])
+  }, [isReady, route, visiblePadding])
 
   useEffect(() => {
     const map = mapRef.current
@@ -311,27 +386,30 @@ export function ResultsMap({
     if (pin === undefined) {
       return
     }
+    const covered = visiblePadding(0)
     map.easeTo({
       center: [pin.longitude, pin.latitude],
+      // Centre the pin in the uncovered band between the top bar and sheet.
+      offset: [0, (covered.top - covered.bottom) / 2],
       zoom: Math.max(map.getZoom(), 13.5),
       duration: prefersReducedMotion() ? 0 : 450,
     })
-  }, [pins, selectedKey, route])
+  }, [pins, selectedKey, route, visiblePadding])
 
   return (
     <div
-      className="relative mt-4 overflow-hidden rounded-3xl border border-border bg-muted"
+      className="relative h-full w-full overflow-hidden bg-muted"
       data-route-active={route === null ? 'false' : 'true'}
       id="results-map"
     >
       <div
         aria-label="Map of pharmacy prices"
-        className="h-96 w-full"
+        className="h-full w-full"
         ref={containerRef}
         role="region"
       />
       {routeLoading && isReady && (
-        <div className="pointer-events-none absolute inset-x-0 top-4 z-10 flex justify-center">
+        <div className="pointer-events-none absolute inset-x-0 top-20 z-10 flex justify-center">
           <div
             className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground shadow-md"
             role="status"

@@ -8,7 +8,8 @@ async function searchAndCompare(page: Page, query: string): Promise<void> {
   await expect(
     page.getByRole('heading', { name: /medicines? match/ }),
   ).toBeVisible()
-  await page.getByRole('button', { name: 'Compare prices' }).first().click()
+  await page.getByRole('button', { name: '+ Add to basket' }).first().click()
+  await page.getByRole('button', { name: 'See prices' }).first().click()
   await expect(
     page.getByRole('heading', { name: 'Compare basket prices' }),
   ).toBeVisible()
@@ -18,16 +19,26 @@ async function searchAndCompare(page: Page, query: string): Promise<void> {
 }
 
 async function addAnotherMedicine(page: Page, query: string): Promise<void> {
-  await page.getByRole('link', { name: 'Search medicines' }).click()
+  // Back restores the previous search, so wait for this query's results.
+  await page.getByRole('button', { name: 'Back' }).click()
   await page.getByRole('combobox', { name: 'Medicine name' }).fill(query)
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await expect(
-    page.getByRole('heading', { name: /medicines? match/ }),
+    page.getByRole('heading', { name: new RegExp(`match “${query}”`) }),
   ).toBeVisible()
-  await page.getByRole('button', { name: 'Compare prices' }).first().click()
+  await page.getByRole('button', { name: '+ Add to basket' }).first().click()
+  await page.getByRole('button', { name: 'See prices' }).first().click()
   await expect(
     page.getByRole('heading', { name: 'Compare basket prices' }),
   ).toBeVisible()
+}
+
+// Quantity controls live in the basket drawer, opened from the top bar.
+async function openBasket(page: Page): Promise<void> {
+  const chip = page.getByRole('button', { name: /^Basket, / })
+  if ((await chip.getAttribute('aria-expanded')) !== 'true') {
+    await chip.click()
+  }
 }
 
 async function setQuantity(
@@ -35,6 +46,7 @@ async function setQuantity(
   medicineName: string,
   quantity: string,
 ): Promise<void> {
+  await openBasket(page)
   const input = page.getByRole('textbox', {
     name: new RegExp(`Quantity of ${medicineName} in`),
   })
@@ -187,20 +199,25 @@ test('ranks a multi-item basket and keeps incomplete and no-price pharmacies sep
   await expect(page.locator('[data-pharmacy-pin]')).toHaveCount(10)
 })
 
-test('offers full-pack quantity presets and a 30-day guardrail on a phone', async ({
+test('counts bottles in whole packs with a 30-day guardrail on a phone', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await searchAndCompare(page, 'asmalin')
+  await openBasket(page)
 
-  await page
-    .getByRole('button', { name: 'Set Asmalin quantity to Bottle of 60 mL' })
-    .click()
-  await expect(
-    page.getByRole('textbox', { name: 'Quantity of Asmalin in mL' }),
-  ).toHaveValue('60')
+  // A syrup starts at one real bottle and can only change by whole bottles.
+  const packs = page.getByRole('textbox', {
+    name: 'Number of packs of Asmalin',
+  })
+  await expect(packs).toHaveValue('1')
+  await expect(page.getByText('60 mL in total')).toBeVisible()
+  await page.getByRole('button', { name: 'One more pack of Asmalin' }).click()
+  await expect(packs).toHaveValue('2')
+  await expect(page.getByText('120 mL in total')).toBeVisible()
 
-  await setQuantity(page, 'Asmalin', '500')
+  await packs.fill('9')
+  await packs.press('Enter')
   await expect(
     page.getByText(/More than 450 mL is above a typical 30-day supply/),
   ).toBeVisible()
@@ -220,16 +237,15 @@ test('shows the exact form mix for a quantity basket on a phone', async ({
   ).toBeVisible()
 })
 
-test('renders pack-only and not-applicable forms as sold by the pack', async ({
+test('renders not-applicable inhaler forms as sold by the pack', async ({
   page,
 }) => {
+  // Inhalers are counted in whole packs, so no odd amount can be asked for.
   await searchAndCompare(page, 'ventolin inhaler')
-  await setQuantity(page, 'Ventolin Inhaler', '30')
 
   await expect(
     page.getByRole('heading', { name: 'Sold per pack only' }),
   ).toBeVisible()
-  await expect(page.getByText('Sold by the pack').first()).toBeVisible()
   await expect(page.getByText(/^Unavailable$/i)).toHaveCount(0)
 
   await page.getByText('Form prices at this pharmacy').first().click()
@@ -320,7 +336,8 @@ test('keeps the results usable at a phone viewport while prices load slowly', as
   await expect(
     page.getByRole('heading', { name: /medicines? match/ }),
   ).toBeVisible()
-  await page.getByRole('button', { name: 'Compare prices' }).first().click()
+  await page.getByRole('button', { name: '+ Add to basket' }).first().click()
+  await page.getByRole('button', { name: 'See prices' }).first().click()
 
   await expect(page.getByRole('status')).toContainText('Checking prices')
   await expect(
