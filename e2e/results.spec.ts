@@ -194,7 +194,9 @@ test('ranks a multi-item basket and keeps incomplete and no-price pharmacies sep
       .getByRole('heading', { name: 'New Nazareno Drugstore' })
       .first(),
   ).toBeVisible()
-  await expect(page.getByText('Cheapest complete').first()).toBeVisible()
+  // Under nearest-first the star follows distance, not price.
+  await expect(page.getByText('Nearest complete').first()).toBeVisible()
+  await expect(page.getByText('Cheapest complete')).toHaveCount(0)
 
   await expect(page.locator('[data-pharmacy-pin]')).toHaveCount(10)
 })
