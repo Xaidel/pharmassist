@@ -24,7 +24,13 @@ export type MapPin = {
   latitude: number
   longitude: number
   label: string
-  variant: 'cheapest' | 'complete' | 'pack-only' | 'incomplete' | 'no-price'
+  variant:
+    | 'cheapest'
+    | 'above-mdrp'
+    | 'complete'
+    | 'pack-only'
+    | 'incomplete'
+    | 'no-price'
 }
 
 type MapLibreModule = {
@@ -37,6 +43,7 @@ const PIN_BASE =
 
 const PIN_VARIANTS = {
   cheapest: 'border-primary bg-primary text-primary-foreground',
+  'above-mdrp': 'border-dashed border-input bg-muted text-foreground',
   complete: 'border-border bg-card text-foreground',
   'pack-only': 'border-dashed border-primary bg-card text-foreground',
   incomplete: 'border-input bg-muted text-foreground',
@@ -59,7 +66,11 @@ function createPinElement(pin: MapPin, selected: boolean): HTMLButtonElement {
   button.setAttribute(
     'aria-label',
     `${pin.name}: ${pin.label}${
-      pin.variant === 'cheapest' ? ', cheapest complete basket' : ''
+      pin.variant === 'cheapest'
+        ? ', cheapest compliant complete basket'
+        : pin.variant === 'above-mdrp'
+          ? ', above MDRP ceiling'
+          : ''
     }`,
   )
   button.dataset.pharmacyPin = pin.key

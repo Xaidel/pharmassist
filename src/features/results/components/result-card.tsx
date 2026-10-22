@@ -50,9 +50,7 @@ export function ResultCard({
   onShowRoute,
   onOpenDetail,
 }: ResultCardProps): React.JSX.Element {
-  const aboveMdrp = result.items.some((item) =>
-    item.forms.some((offer) => offer.mdrp?.above === true),
-  )
+  const aboveMdrp = result.above_mdrp_ceiling
   const stale = result.items.some((item) =>
     item.forms.some((offer) => offer.stale === true),
   )
@@ -84,9 +82,7 @@ export function ResultCard({
             {result.status === 'sold_per_pack_only' && (
               <Badge>Sold per pack only</Badge>
             )}
-            {aboveMdrp && (
-              <Badge variant="destructive">Above MDRP ceiling</Badge>
-            )}
+            {aboveMdrp && <Badge>Above MDRP ceiling</Badge>}
             {stale && <Badge>Price older than 14 days</Badge>}
             {lowStock && <Badge>Low stock</Badge>}
             {result.reported && <Badge>Price reported</Badge>}

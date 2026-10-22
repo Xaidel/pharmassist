@@ -16,6 +16,19 @@ type PriceLineItemProps = {
   offer: SaleFormOffer
 }
 
+function vatComparisonCopy(mdrp: NonNullable<SaleFormOffer['mdrp']>): string {
+  if (!mdrp.vat_exclusive) {
+    return 'The ceiling is VAT-inclusive and compared directly.'
+  }
+  if (mdrp.vat_exempt === true) {
+    return `The ceiling is VAT-exclusive, but this product is VAT-exempt, so it is compared at ${formatPeso(mdrp.effective_ceiling_php)}.`
+  }
+  if (mdrp.vat_exempt === false) {
+    return `The ceiling is VAT-exclusive and this product is VATable, so it is compared at ${formatPeso(mdrp.effective_ceiling_php)} including 12% VAT.`
+  }
+  return `The ceiling is VAT-exclusive and the product VAT status is unconfirmed, so it is compared at the published ${formatPeso(mdrp.effective_ceiling_php)}.`
+}
+
 /** Render one observed sale form with its stock, verification, and MDRP context. */
 export function PriceLineItem({
   medicine,
@@ -63,12 +76,12 @@ export function PriceLineItem({
           {offer.mdrp.ceiling_basis === 'per_unit'
             ? `per ${offer.mdrp.ceiling_unit ?? 'unit'}`
             : 'per pack'}
-          {offer.mdrp.vat_exclusive ? ' (VAT-exclusive)' : ''}.{' '}
+          . {vatComparisonCopy(offer.mdrp)}{' '}
           {formatMdrpRateBasis(offer.mdrp.rate_basis)}:{' '}
           {formatPeso(offer.mdrp.observed_rate_php)}.{' '}
           {offer.mdrp.above
-            ? 'Above the published ceiling — verify at the pharmacy.'
-            : 'At or below the published ceiling.'}
+            ? 'Above the applicable ceiling — verify at the pharmacy.'
+            : 'At or below the applicable ceiling.'}
         </p>
       )}
     </li>

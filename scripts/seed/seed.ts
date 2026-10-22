@@ -174,11 +174,11 @@ async function upsertMedicines(
       `insert into medicine (
          id, category, brand_name, generic_name, strength, dosage_form, base_unit, manufacturer,
          rx_otc, fda_registration_no, fda_registration_expiry, pnf_listed, pnf_entry, pnf_page,
-         konsulta_listed, konsulta_entry, konsulta_as_of, generic_group_id, active, data_source,
-         seed_batch_id
+         konsulta_listed, konsulta_entry, konsulta_as_of, generic_group_id, active, vat_exempt,
+         data_source, seed_batch_id
        ) values (
          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
-         $19, $20, $21
+         $19, $20, $21, $22
        )
        on conflict (id) do update set
          category = excluded.category,
@@ -199,6 +199,7 @@ async function upsertMedicines(
          konsulta_as_of = excluded.konsulta_as_of,
          generic_group_id = excluded.generic_group_id,
          active = excluded.active,
+         vat_exempt = excluded.vat_exempt,
          data_source = excluded.data_source,
          seed_batch_id = excluded.seed_batch_id`,
       [
@@ -221,6 +222,7 @@ async function upsertMedicines(
         row.konsulta_as_of,
         row.generic_group_id,
         row.active,
+        row.vat_exempt,
         row.data_source,
         POC_SEED_BATCH_ID,
       ],

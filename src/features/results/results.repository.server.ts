@@ -110,6 +110,8 @@ const FORM_COLUMNS = `
   pr.mdrp_ceiling_basis,
   pr.mdrp_ceiling_unit,
   pr.mdrp_vat_exclusive,
+  pr.mdrp_vat_exempt,
+  pr.mdrp_effective_ceiling_php::float8 as mdrp_effective_ceiling_php,
   pr.mdrp_source_url,
   to_char(pr.mdrp_checked_at, 'YYYY-MM-DD') as mdrp_checked_at,
   pr.mdrp_observed_rate_php::float8 as mdrp_observed_rate_php,

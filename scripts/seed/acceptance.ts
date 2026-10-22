@@ -329,6 +329,123 @@ async function verifyMdrp(databaseUrl: string): Promise<void> {
   }
 }
 
+async function verifyVatNormalization(databaseUrl: string): Promise<void> {
+  const client = await connect(databaseUrl)
+  try {
+    await client.query(
+      `insert into medicine (
+         id, category, brand_name, generic_name, strength, dosage_form, base_unit,
+         manufacturer, rx_otc, fda_registration_no, active, vat_exempt, data_source
+       ) values (
+         'FIX-VAT-001', 'Fixture', 'Fixture Brand', 'Fixturemolecule', '500 mg',
+         'Tablet', 'tablet', 'Fixture Labs', 'Rx', 'DR-FIXTURE-001', true, false,
+         'acceptance-test'
+       )`,
+    )
+    await client.query(
+      `insert into mdrp_ceiling (
+         id, order_id, order_signed, annex_row, category, molecule, molecules,
+         strength, dosage_form, pack_size, strength_and_form_raw, mwp_php,
+         mrp_php, price_basis, price_unit, vat_exclusive_mrp,
+         voluntary_price_reduction, source_url, source_pdf_page, checked_at,
+         notes
+       ) values (
+         'FIX-VAT-900', 'Fixture order', '2026-10-22', 900, 'Fixture',
+         'Fixturemolecule', array['Fixturemolecule'], '500 mg', 'Tablet', null,
+         null, null, 10.00, 'per_unit', 'tablet', true, false,
+         'https://example.test', null, '2026-10-22', 'Acceptance fixture'
+       )`,
+    )
+    await client.query(
+      `insert into price_observation (
+         medicine_id, pharmacy_id, sale_form, sale_state, form_label,
+         shelf_price_php, pack_quantity, pack_unit, stock_status, verified_at,
+         verified_by, source, mdrp_entry_id
+       ) values
+         ('FIX-VAT-001', 'mercury-naga-penafrancia', 'pack', 'available',
+          'Box of 10 tablets', 120.00, 10, 'tablet', 'in_stock', now(),
+          'acceptance-test', 'acceptance-test', 'FIX-VAT-900'),
+         ('FIX-VAT-001', 'mercury-naga-penafrancia', 'loose', 'available',
+          'Loose tablet', 11.00, 1, 'tablet', 'in_stock', now(),
+          'acceptance-test', 'acceptance-test', 'FIX-VAT-900')`,
+    )
+
+    async function readComparison(): Promise<{
+      effective: number
+      vatExempt: boolean | null
+      packAbove: boolean | null
+      looseAbove: boolean | null
+    }> {
+      const result = await client.query<{
+        sale_form: string
+        mdrp_vat_exempt: boolean | null
+        mdrp_effective_ceiling_php: string | null
+        above_mdrp_flag: boolean | null
+      }>(
+        `select sale_form, mdrp_vat_exempt, mdrp_effective_ceiling_php,
+                above_mdrp_flag
+           from price_observation_with_mdrp
+          where medicine_id = 'FIX-VAT-001'`,
+      )
+      const pack = result.rows.find((row) => row.sale_form === 'pack')
+      const loose = result.rows.find((row) => row.sale_form === 'loose')
+      assert(pack !== undefined && loose !== undefined, 'Missing fixture forms')
+      return {
+        effective: Number(pack.mdrp_effective_ceiling_php),
+        vatExempt: pack.mdrp_vat_exempt,
+        packAbove: pack.above_mdrp_flag,
+        looseAbove: loose.above_mdrp_flag,
+      }
+    }
+
+    const vatable = await readComparison()
+    assert(
+      vatable.effective === 11.2,
+      'A VATable product must gross up 10.00 to 11.20',
+    )
+    assert(vatable.vatExempt === false, 'The fixture must be VATable')
+    assert(
+      vatable.packAbove === true,
+      '120.00/10 must be above the 11.20 ceiling',
+    )
+    assert(
+      vatable.looseAbove === false,
+      '11.00 must be at or below the 11.20 ceiling',
+    )
+
+    await client.query(
+      `update medicine set vat_exempt = true where id = 'FIX-VAT-001'`,
+    )
+    const exempt = await readComparison()
+    assert(
+      exempt.effective === 10,
+      'A VAT-exempt product must use 10.00 directly',
+    )
+    assert(exempt.looseAbove === true, '11.00 must be above the 10.00 ceiling')
+
+    await client.query(
+      `update medicine set vat_exempt = null where id = 'FIX-VAT-001'`,
+    )
+    const unknown = await readComparison()
+    assert(
+      unknown.effective === 10,
+      'An unknown VAT status must use the published ceiling',
+    )
+    assert(
+      unknown.vatExempt === null,
+      'An unknown VAT status must be exposed as null',
+    )
+    assert(unknown.looseAbove === true, '11.00 must be above the 10.00 ceiling')
+  } finally {
+    await client.query(
+      `delete from price_observation where medicine_id = 'FIX-VAT-001'`,
+    )
+    await client.query(`delete from medicine where id = 'FIX-VAT-001'`)
+    await client.query(`delete from mdrp_ceiling where id = 'FIX-VAT-900'`)
+    await client.end()
+  }
+}
+
 async function expectToolingError(
   work: () => Promise<unknown>,
   code: string,
@@ -378,8 +495,8 @@ export async function runAcceptance(baseDatabaseUrl: string): Promise<void> {
   try {
     const firstMigration = await runMigrations({ databaseUrl: scratch.url })
     assert(
-      firstMigration.applied.length === 2,
-      'The clean database should apply two migrations',
+      firstMigration.applied.length === 3,
+      'The clean database should apply three migrations',
     )
     const secondMigration = await runMigrations({ databaseUrl: scratch.url })
     assert(
@@ -421,6 +538,7 @@ export async function runAcceptance(baseDatabaseUrl: string): Promise<void> {
       )
     }
     await verifyMdrp(scratch.url)
+    await verifyVatNormalization(scratch.url)
 
     await insertSyntheticNonSeedRows(scratch.url)
     await insertBlockingPrice(scratch.url)

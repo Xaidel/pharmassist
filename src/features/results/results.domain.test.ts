@@ -432,9 +432,11 @@ describe('buildRankedResults', () => {
     order: 'EO 104 s. 2020',
     annex_row: 44,
     ceiling_php: 30.31,
+    effective_ceiling_php: 30.31,
     ceiling_basis: 'per_unit',
     ceiling_unit: 'tablet',
     vat_exclusive: true,
+    vat_exempt: true,
     observed_rate_php: 1,
     rate_basis: 'loose_price',
     above: true,
@@ -512,15 +514,90 @@ describe('buildRankedResults', () => {
 
   const result = buildRankedResults(input)
 
-  it('ranks complete exact baskets by total shelf price', () => {
+  it('ranks a compliant complete basket before a cheaper above-ceiling basket', () => {
     expect(result.complete.map((entry) => entry.result_key)).toEqual([
-      'A|P1,P2',
       'B|P1,P2',
+      'A|P1,P2',
     ])
-    expect(result.complete[0]?.total_shelf_price_php).toBe(10)
-    expect(result.complete[0]?.items[0]?.components[0]?.mdrp?.above).toBe(true)
-    expect(result.complete[0]?.reported).toBe(true)
-    expect(result.complete[0]?.reported_at).toBe('2026-10-21T09:00:00Z')
+    const above = result.complete.find(
+      (entry) => entry.result_key === 'A|P1,P2',
+    )
+    const compliant = result.complete.find(
+      (entry) => entry.result_key === 'B|P1,P2',
+    )
+    expect(above?.total_shelf_price_php).toBe(10)
+    expect(above?.above_mdrp_ceiling).toBe(true)
+    expect(compliant?.total_shelf_price_php).toBe(12)
+    expect(compliant?.above_mdrp_ceiling).toBe(false)
+    expect(above?.items[0]?.components[0]?.mdrp?.above).toBe(true)
+    expect(above?.reported).toBe(true)
+    expect(above?.reported_at).toBe('2026-10-21T09:00:00Z')
+  })
+
+  it('marks only a compliant complete result as cheapest', () => {
+    expect(cheapestCompleteResultKey(result.complete)).toBe('B|P1,P2')
+  })
+
+  it('returns no cheapest key when every complete result is above the ceiling', () => {
+    const allAbove = buildRankedResults({
+      ...input,
+      forms: input.forms.map((form) =>
+        form.medicine_id === 'P1' &&
+        form.pharmacy_id === 'B' &&
+        form.sale_form === 'loose'
+          ? { ...form, mdrp }
+          : form,
+      ),
+    })
+    expect(allAbove.complete.every((entry) => entry.above_mdrp_ceiling)).toBe(
+      true,
+    )
+    expect(cheapestCompleteResultKey(allAbove.complete)).toBeNull()
+  })
+
+  it('uses the MDRP tier for both VAT outcomes', () => {
+    const vatExemptAbove: MdrpInfo = {
+      ...mdrp,
+      effective_ceiling_php: 10,
+      vat_exempt: true,
+      observed_rate_php: 11,
+      above: true,
+    }
+    const vatVableCompliant: MdrpInfo = {
+      ...mdrp,
+      effective_ceiling_php: 11.2,
+      vat_exempt: false,
+      observed_rate_php: 11,
+      above: false,
+    }
+    const firstMedicine = medicines[0]
+    if (firstMedicine === undefined) {
+      throw new Error('The test needs a first medicine')
+    }
+    const vatInput = rankingInput({
+      basket: [{ medicine_id: 'P1', quantity: 1, unit: 'tablet' }],
+      medicines: [firstMedicine],
+      pharmacies: [
+        pharmacy('A', 'Compliant Pharmacy', 0.02),
+        pharmacy('B', 'Above Pharmacy', 0.01),
+      ],
+      forms: [
+        offer('P1', 'A', 'loose', 'available', 11, 1, 'in_stock', {
+          mdrp: vatVableCompliant,
+        }),
+        offer('P1', 'B', 'loose', 'available', 11, 1, 'in_stock', {
+          mdrp: vatExemptAbove,
+        }),
+      ],
+    })
+    const vatResult = buildRankedResults(vatInput)
+    expect(vatResult.complete.map((entry) => entry.result_key)).toEqual([
+      'A|P1',
+      'B|P1',
+    ])
+    expect(vatResult.complete[0]?.above_mdrp_ceiling).toBe(false)
+    expect(vatResult.complete[1]?.above_mdrp_ceiling).toBe(true)
+    expect(cheapestCompleteResultKey(vatResult.complete)).toBe('A|P1')
   })
 
   it('keeps the sold-per-pack-only bucket separate from exact results', () => {
@@ -547,7 +624,7 @@ describe('buildRankedResults', () => {
     ).toEqual(['E'])
   })
 
-  it('sorts the sold bucket by covering total and distance', () => {
+  it('keeps the MDRP tier when sorting by distance', () => {
     const distanceSorted = buildRankedResults({ ...input, sort: 'distance' })
     expect(distanceSorted.complete.map((entry) => entry.result_key)).toEqual([
       'B|P1,P2',
@@ -556,7 +633,7 @@ describe('buildRankedResults', () => {
     expect(
       distanceSorted.sold_per_pack_only.map((entry) => entry.result_key),
     ).toEqual(['C|P1,P2'])
-    expect(cheapestCompleteResultKey(distanceSorted.complete)).toBe('A|P1,P2')
+    expect(cheapestCompleteResultKey(distanceSorted.complete)).toBe('B|P1,P2')
   })
 
   it('resolves open-now only from verified structured hours', () => {

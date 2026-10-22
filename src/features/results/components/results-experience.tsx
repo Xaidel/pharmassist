@@ -388,7 +388,11 @@ export function ResultsExperience({
         latitude: result.pharmacy.latitude,
         longitude: result.pharmacy.longitude,
         label: formatPesoCompact(result.total_shelf_price_php),
-        variant: result.result_key === cheapestKey ? 'cheapest' : 'complete',
+        variant: result.above_mdrp_ceiling
+          ? 'above-mdrp'
+          : result.result_key === cheapestKey
+            ? 'cheapest'
+            : 'complete',
       })
     }
     for (const result of data.sold_per_pack_only) {
@@ -825,9 +829,13 @@ export function ResultsExperience({
             </p>
             <p className="mt-2">
               MDRP ceilings come from EO 104 s. 2020 and EO 155 s. 2021 and are
-              shown separately from the observed price. Statutory senior and PWD
-              discounts are applied at the point of sale and are not computed
-              here.
+              shown separately from the observed price. MDRP-compliant complete
+              baskets rank before baskets with an item above the published
+              ceiling, and only a compliant basket can be marked cheapest. A
+              VAT-exclusive ceiling is compared at 1.12 times the published
+              amount for VATable products, and directly for VAT-exempt products.
+              Statutory senior and PWD discounts are applied at the point of
+              sale and are not computed here.
             </p>
           </section>
         </>

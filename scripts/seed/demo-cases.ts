@@ -225,6 +225,8 @@ export async function assertDemoCases(
       where seed_batch_id = $1
         and medicine_id = 'POC-016'
         and pharmacy_id = 'mercury-naga-penafrancia'
+        and mdrp_vat_exempt is true
+        and mdrp_effective_ceiling_php = 30.31
         and (
           (sale_form = 'pack' and mdrp_rate_basis = 'box_rate' and mdrp_observed_rate_php = 35)
           or (sale_form = 'strip' and mdrp_rate_basis = 'strip_rate' and mdrp_observed_rate_php = 36)
@@ -234,7 +236,7 @@ export async function assertDemoCases(
   )
   assertDemo(
     janumetForms === 3,
-    'POC-016 must expose its pack, strip, and loose MDRP comparison',
+    'POC-016 must expose its VAT-exempt pack, strip, and loose MDRP comparison at PHP 30.31',
   )
 
   const stale = await count(

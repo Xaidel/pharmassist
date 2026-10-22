@@ -69,7 +69,10 @@ test('shows the single-medicine map results with MDRP, stale, and no-price state
   await searchAndCompare(page, 'janumet')
 
   await expect(page.getByText('Janumet').first()).toBeVisible()
-  await expect(page.getByText('Cheapest complete').first()).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'Above MDRP ceiling' }),
+  ).toBeVisible()
+  await expect(page.getByText('Cheapest complete')).toHaveCount(0)
   await expect(page.getByText(/38\.00/).first()).toBeVisible()
   await expect(page.getByText('Above MDRP ceiling').first()).toBeVisible()
   await expect(page.getByText('Price older than 14 days').first()).toBeVisible()
@@ -85,11 +88,12 @@ test('shows the single-medicine map results with MDRP, stale, and no-price state
   await expect(page.locator('canvas.maplibregl-canvas')).toBeVisible()
   expect(workerErrors).toEqual([])
   expect(workerFailures).toEqual([])
-  const cheapestPin = page.locator(
+  const janumetPin = page.locator(
     '[data-pharmacy-pin="mercury-naga-penafrancia|POC-016"]',
   )
-  await expect(cheapestPin).toHaveCount(1)
-  await expect(cheapestPin).toContainText(/38/)
+  await expect(janumetPin).toHaveCount(1)
+  await expect(janumetPin).toContainText(/38/)
+  await expect(janumetPin).toHaveAttribute('aria-label', /above MDRP ceiling/)
   await expect(
     page.locator('[data-pharmacy-pin="no-price:generika-san-felipe"]'),
   ).toHaveCount(1)

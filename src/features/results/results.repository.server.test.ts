@@ -25,6 +25,8 @@ const priceRow = {
   mdrp_ceiling_basis: 'per_unit',
   mdrp_ceiling_unit: 'tablet',
   mdrp_vat_exclusive: true,
+  mdrp_vat_exempt: true,
+  mdrp_effective_ceiling_php: 30.31,
   mdrp_source_url: 'https://example.test',
   mdrp_checked_at: '2026-10-21',
   mdrp_observed_rate_php: 35,

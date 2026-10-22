@@ -37,6 +37,13 @@ export function ResultsList({
   onOpenDetail,
   onShowRoute,
 }: ResultsListProps): React.JSX.Element {
+  const compliantComplete = data.complete.filter(
+    (result) => !result.above_mdrp_ceiling,
+  )
+  const aboveMdrpComplete = data.complete.filter(
+    (result) => result.above_mdrp_ceiling,
+  )
+
   return (
     <>
       <section aria-labelledby="complete-results-heading" className="mt-8">
@@ -49,26 +56,27 @@ export function ResultsList({
               Complete baskets
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Ranked by the cheapest total shelf price. The cheapest complete
-              option is marked on the map and in this list.
+              MDRP-compliant baskets come first, by total shelf price. The
+              cheapest compliant option is marked on the map and in this list.
             </p>
           </div>
           <Badge>
-            {data.complete.length}{' '}
-            {data.complete.length === 1 ? 'pharmacy' : 'pharmacies'}
+            {compliantComplete.length}{' '}
+            {compliantComplete.length === 1 ? 'pharmacy' : 'pharmacies'}
           </Badge>
         </div>
 
-        {data.complete.length === 0 ? (
+        {compliantComplete.length === 0 ? (
           <Card className="mt-4">
             <p className="p-5 text-sm leading-relaxed text-muted-foreground">
-              No pharmacy has every item in this basket right now. The closest
-              options below show what is missing.
+              {data.complete.length === 0
+                ? 'No pharmacy has every item in this basket right now. The closest options below show what is missing.'
+                : 'No complete basket is fully at or below the published MDRP ceiling. The above-ceiling options are shown below for reference.'}
             </p>
           </Card>
         ) : (
           <ul className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 sm:grid sm:grid-cols-2 sm:overflow-visible lg:grid-cols-3">
-            {data.complete.map((result) => (
+            {compliantComplete.map((result) => (
               <li
                 className="w-72 shrink-0 snap-start sm:w-auto"
                 key={result.result_key}
@@ -91,6 +99,53 @@ export function ResultsList({
           </ul>
         )}
       </section>
+
+      {aboveMdrpComplete.length > 0 && (
+        <section aria-labelledby="above-mdrp-heading" className="mt-10">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2
+                className="font-display text-2xl font-semibold"
+                id="above-mdrp-heading"
+              >
+                Above MDRP ceiling
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                These complete baskets include at least one chosen item priced
+                above the published MDRP ceiling. They stay visible for
+                reference and are never marked as the cheapest option. Verify
+                the price at the pharmacy.
+              </p>
+            </div>
+            <Badge>
+              {aboveMdrpComplete.length}{' '}
+              {aboveMdrpComplete.length === 1 ? 'pharmacy' : 'pharmacies'}
+            </Badge>
+          </div>
+          <ul className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 sm:grid sm:grid-cols-2 sm:overflow-visible lg:grid-cols-3">
+            {aboveMdrpComplete.map((result) => (
+              <li
+                className="w-72 shrink-0 snap-start sm:w-auto"
+                key={result.result_key}
+              >
+                <ResultCard
+                  cheapest={false}
+                  id={`result-${result.result_key}`}
+                  medicines={medicines}
+                  onOpenDetail={() => {
+                    onOpenDetail(result.result_key)
+                  }}
+                  onShowRoute={() => {
+                    onShowRoute(result.result_key)
+                  }}
+                  result={result}
+                  routeActive={activePharmacyId === result.pharmacy.pharmacy_id}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section aria-labelledby="pack-only-heading" className="mt-10">
         <h2
