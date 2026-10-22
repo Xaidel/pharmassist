@@ -15,6 +15,7 @@ import {
   BASKET_MIN_QUANTITY,
   type BasketLine,
 } from '../results.domain'
+import { quantityWarning, type QuantityPreset } from '../results.quantity'
 
 type BasketPanelProps = {
   items: readonly BasketLine[]
@@ -23,6 +24,7 @@ type BasketPanelProps = {
   onQuantityChange: (medicineId: string, quantity: number) => void
   onRemove: (medicineId: string) => void
   onClear: () => void
+  presetsByMedicine: ReadonlyMap<string, readonly QuantityPreset[]>
 }
 
 function allowsDecimal(unit: BaseUnit): boolean {
@@ -131,6 +133,7 @@ export function BasketPanel({
   onQuantityChange,
   onRemove,
   onClear,
+  presetsByMedicine,
 }: BasketPanelProps): React.JSX.Element {
   const medicineById = new Map(
     medicines.map((medicine) => [medicine.medicine_id, medicine]),
@@ -164,6 +167,8 @@ export function BasketPanel({
               medicine === undefined
                 ? item.medicine_id
                 : (medicine.brand_name ?? medicine.generic_name)
+            const presets = presetsByMedicine.get(item.medicine_id) ?? []
+            const warning = quantityWarning(item.quantity, item.unit)
 
             return (
               <li
@@ -230,6 +235,38 @@ export function BasketPanel({
                     Remove
                   </Button>
                 </div>
+
+                {presets.length > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-eyebrow text-muted-foreground">
+                      Quick pick
+                    </span>
+                    {presets.map((preset) => (
+                      <Button
+                        aria-label={`Set ${label} quantity to ${preset.label}`}
+                        disabled={busy}
+                        key={`${String(preset.quantity)}:${preset.label}`}
+                        onClick={() => {
+                          onQuantityChange(item.medicine_id, preset.quantity)
+                        }}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        {preset.label}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+
+                {warning !== null && (
+                  <p
+                    className="mt-2 text-xs leading-relaxed text-destructive"
+                    role="status"
+                  >
+                    {warning}
+                  </p>
+                )}
               </li>
             )
           })}
@@ -246,8 +283,10 @@ export function BasketPanel({
 
         <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
           Quantities are counted in each medicine&apos;s base unit. Type a
-          quantity or use the buttons; pharmacies fulfill it with their observed
-          pack, strip, or loose forms.
+          quantity or use the buttons; quick picks enter a full bottle, inhaler,
+          or tube. A soft warning appears above a typical 30-day supply.
+          Pharmacies fulfill the quantity with their observed pack, strip, or
+          loose forms.
         </p>
       </CardContent>
     </Card>

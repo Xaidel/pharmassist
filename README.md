@@ -77,6 +77,12 @@ bun run db:acceptance
 
 `db:acceptance` creates and drops `pharmassist_tooling_*` on the server in `DATABASE_URL`; it never touches the application database.
 
+## Sale forms and quantity baskets
+
+Each active medicine has a pack, strip, and loose observation at every seeded pharmacy, and each observation carries one explicit state: `available`, `pack_only`, `not_applicable`, `not_stocked`, or `unknown`. Only an available form has a shelf price. The results screen ranks complete baskets by the cheapest exact combination of forms, keeps covering purchases in a separate "Sold per pack only" bucket, and shows pack-only or not-applicable forms as "Sold by the pack" — never as unavailable. Derived per-unit rates appear only inside the MDRP comparison, labelled `Box rate`, `Strip rate`, or `Sold loose`.
+
+Basket quantities are entered in each medicine's base unit: tablets, capsules, mL, g, actuations, sachets, or unit-doses. The results screen offers one-tap full-pack presets for bottles, inhalers, and tubes, and shows a soft warning above an estimated 30-day supply. These entry guardrails are client-side only; the API still prices any structurally valid basket and enforces only the contract bounds.
+
 ## Scripts
 
 | Command | Purpose |
