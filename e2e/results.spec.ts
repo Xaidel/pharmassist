@@ -95,6 +95,7 @@ test('shows the single-medicine map results with MDRP, stale, and no-price state
   await expect(
     page.getByText('Distances use the Naga City center.'),
   ).toBeVisible()
+  await expect(page.locator('[data-origin-marker]')).toHaveCount(0)
 
   await expect(page.locator('[data-pharmacy-pin]')).toHaveCount(10)
   await expect(page.locator('canvas.maplibregl-canvas')).toBeVisible()
@@ -117,6 +118,83 @@ test('shows the single-medicine map results with MDRP, stale, and no-price state
   await expect(page.getByText('Box rate').first()).toBeVisible()
   await expect(page.getByText('Strip rate').first()).toBeVisible()
   await expect(page.getByText('Sold loose').first()).toBeVisible()
+})
+
+test('marks the device origin without joining the pharmacy pins', async ({
+  page,
+}) => {
+  await page.context().grantPermissions(['geolocation'])
+  await page.context().setGeolocation({
+    latitude: 13.623234,
+    longitude: 123.185995,
+  })
+
+  await searchAndCompare(page, 'janumet')
+
+  await expect(
+    page.getByText('Distances use your current location.'),
+  ).toBeVisible()
+
+  const marker = page.locator('[data-origin-marker]')
+  await expect(marker).toHaveCount(1)
+  await expect(marker).toHaveAttribute('role', 'img')
+  await expect(marker).toHaveAttribute('aria-label', 'Your current location')
+  await expect(marker).toHaveText('You are here')
+  await expect(marker.locator('[data-pharmacy-pin]')).toHaveCount(0)
+  await expect(
+    page.getByRole('button', { name: 'Your current location' }),
+  ).toHaveCount(0)
+  await expect(page.locator('[data-pharmacy-pin]')).toHaveCount(10)
+
+  const pulse = page.locator('[data-origin-pulse]')
+  await expect(pulse).toBeVisible()
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect
+    .poll(async () =>
+      pulse.evaluate((element) => getComputedStyle(element).animationName),
+    )
+    .toBe('none')
+
+  // The mocked origin is the Mercury pin's own point, so the marker's bottom
+  // should land exactly there.
+  const mercuryPin = page.locator(
+    '[data-pharmacy-pin="mercury-naga-penafrancia|POC-016"]',
+  )
+  const [markerBox, pinBox] = await Promise.all([
+    marker.boundingBox(),
+    mercuryPin.boundingBox(),
+  ])
+  if (markerBox === null || pinBox === null) {
+    throw new Error('The origin marker or the Mercury pin is not visible')
+  }
+  expect(
+    Math.abs(markerBox.x + markerBox.width / 2 - (pinBox.x + pinBox.width / 2)),
+  ).toBeLessThanOrEqual(3)
+  expect(
+    Math.abs(markerBox.y + markerBox.height - (pinBox.y + pinBox.height)),
+  ).toBeLessThanOrEqual(3)
+
+  // The marker itself must not receive taps: at its dot, the browser should
+  // hit a pharmacy pin, and clicking there must open that pharmacy.
+  const hit = await page.evaluate(() => {
+    const element = document.querySelector('[data-origin-marker]')
+    if (element === null) {
+      return null
+    }
+    const rect = element.getBoundingClientRect()
+    const x = rect.left + rect.width / 2
+    const y = rect.bottom - 4
+    const pin =
+      document.elementFromPoint(x, y)?.closest('[data-pharmacy-pin]') ?? null
+    return pin === null
+      ? null
+      : { x, y, key: pin.getAttribute('data-pharmacy-pin') }
+  })
+  if (hit === null) {
+    throw new Error('No pharmacy pin sits under the origin marker')
+  }
+  await page.mouse.click(hit.x, hit.y)
+  await expect(page.getByRole('dialog')).toBeVisible()
 })
 
 test('keeps per-form stock mismatches visible on the results screen', async ({
