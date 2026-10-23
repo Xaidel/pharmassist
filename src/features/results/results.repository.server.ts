@@ -6,6 +6,7 @@ import {
   type MedicineSummary,
 } from '#/shared/domain/medicine-summary'
 
+import type { PharmacyUnitRate } from './pharmacy-directory.domain'
 import { STALE_AFTER_DAYS, type StoredFormOffer } from './results.domain'
 import {
   alternativeRowSchema,
@@ -13,6 +14,7 @@ import {
   pharmacyRowSchema,
   reportRowSchema,
   toStoredFormOffer,
+  unitRateRowSchema,
   type AlternativeRow,
   type PharmacyRow,
   type ReportRow,
@@ -77,6 +79,21 @@ const PHARMACIES_SQL = `
 select ${PHARMACY_COLUMNS}
 from pharmacy
 order by id
+`
+
+const UNIT_RATES_SQL = `
+select
+  po.pharmacy_id,
+  po.medicine_id,
+  min(po.unit_rate_php)::float8 as unit_rate_php
+from price_observation po
+join medicine m on m.id = po.medicine_id
+where m.active
+  and po.sale_state = 'available'
+  and po.unit_rate_php is not null
+  and po.verified_at >= now() - ($1::int * interval '1 day')
+group by po.pharmacy_id, po.medicine_id
+order by po.pharmacy_id, po.medicine_id
 `
 
 const PHARMACY_BY_ID_SQL = `
@@ -233,6 +250,7 @@ export type ResultsRepository = {
   readMedicines(medicineIds: readonly string[]): Promise<MedicineSummary[]>
   readPharmacies(): Promise<PharmacyRow[]>
   readPharmacy(pharmacyId: string): Promise<PharmacyRow | null>
+  readUnitRates(): Promise<PharmacyUnitRate[]>
   readPrices(medicineIds: readonly string[]): Promise<StoredFormOffer[]>
   readPharmacyPrices(pharmacyId: string): Promise<StoredFormOffer[]>
   readAlternatives(medicineIds: readonly string[]): Promise<AlternativeRow[]>
@@ -256,6 +274,13 @@ export function createResultsRepository(query: QueryRunner): ResultsRepository {
     async readPharmacies(): Promise<PharmacyRow[]> {
       const rows = await query<QueryResultRow>(PHARMACIES_SQL)
       return rows.map((row) => pharmacyRowSchema.parse(row))
+    },
+
+    async readUnitRates(): Promise<PharmacyUnitRate[]> {
+      const rows = await query<QueryResultRow>(UNIT_RATES_SQL, [
+        STALE_AFTER_DAYS,
+      ])
+      return rows.map((row) => unitRateRowSchema.parse(row))
     },
 
     async readPharmacy(pharmacyId: string): Promise<PharmacyRow | null> {

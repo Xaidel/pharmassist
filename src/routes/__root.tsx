@@ -20,7 +20,7 @@ export const Route = createRootRoute({
           'Pharmassist POC: medicine price and availability map for Naga City.',
       },
       { name: 'robots', content: 'noindex' },
-      { name: 'theme-color', content: '#1f7a5c' },
+      { name: 'theme-color', content: '#2f3a8f' },
       { title: 'Pharmassist POC' },
     ],
     links: [

@@ -1,6 +1,3 @@
-import { MedicineLine } from '#/shared/components/medicine-line'
-import type { MedicineSummary } from '#/shared/domain/medicine-summary'
-
 import {
   formatMdrpRateBasis,
   formatPeso,
@@ -12,7 +9,6 @@ import {
 import type { SaleFormOffer } from '../results.schema'
 
 type PriceLineItemProps = {
-  medicine: MedicineSummary | undefined
   offer: SaleFormOffer
 }
 
@@ -29,42 +25,52 @@ function vatComparisonCopy(mdrp: NonNullable<SaleFormOffer['mdrp']>): string {
   return `The ceiling is VAT-exclusive and the product VAT status is unconfirmed, so it is compared at the published ${formatPeso(mdrp.effective_ceiling_php)}.`
 }
 
-/** Render one observed sale form with its stock, verification, and MDRP context. */
+/**
+ * Render one observed sale form as a single row: form and size on the left,
+ * price on the right, then stock and check date. The medicine is named once
+ * above the list, so rows never repeat it.
+ */
 export function PriceLineItem({
-  medicine,
   offer,
 }: PriceLineItemProps): React.JSX.Element {
-  const label = medicine === undefined ? undefined : medicine.medicine_id
+  const price = offer.sale_state === 'available' ? offer.shelf_price_php : null
+  const formName = formatSaleForm(offer.sale_form)
+  const detail =
+    offer.sale_state === 'available'
+      ? offer.form_label
+      : formatSaleState(offer.sale_state)
+  // "Strip of 10 tablets" already names the form; skip a leading "Strip ·".
+  const labelNamesForm =
+    offer.sale_state === 'available' &&
+    detail?.toLowerCase().startsWith(formName.toLowerCase()) === true
 
   return (
-    <li className="rounded-2xl bg-muted p-3">
-      {medicine === undefined ? (
-        <p className="font-semibold">{label ?? 'Medicine'}</p>
-      ) : (
-        <MedicineLine medicine={medicine} />
-      )}
-      <p className="mt-2 text-sm">
-        <span className="font-semibold">{formatSaleForm(offer.sale_form)}</span>
-        {offer.sale_state === 'available' &&
-          offer.shelf_price_php !== null &&
-          offer.form_label !== null && (
+    <li className="py-2.5">
+      <div className="flex items-start justify-between gap-3">
+        <p className="min-w-0 text-base">
+          {labelNamesForm ? (
+            <span className="font-semibold">{detail}</span>
+          ) : (
             <>
-              {' · '}
-              <span className="font-semibold">
-                {formatPeso(offer.shelf_price_php)}
-              </span>{' '}
-              for {offer.form_label}
+              <span className="font-semibold">{formName}</span>
+              <span className="text-muted-foreground">
+                {' · '}
+                {detail}
+              </span>
             </>
           )}
-        {offer.sale_state !== 'available' && (
-          <> · {formatSaleState(offer.sale_state)}</>
+        </p>
+        {price !== null && (
+          <span className="shrink-0 text-base font-semibold">
+            {formatPeso(price)}
+          </span>
         )}
-      </p>
+      </div>
       {offer.sale_state === 'available' &&
         offer.stock_status !== null &&
         offer.verified_at !== null && (
-          <p className="mt-1 text-xs text-muted-foreground">
-            {formatStockStatus(offer.stock_status)} · Verified{' '}
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {formatStockStatus(offer.stock_status)} · Checked{' '}
             {formatVerified(offer.verified_at)}
             {offer.stale === true ? ' · Possibly outdated' : ''}
           </p>

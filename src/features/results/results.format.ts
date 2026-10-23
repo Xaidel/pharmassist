@@ -1,3 +1,5 @@
+import type { BaseUnit } from '#/shared/domain/medicine-summary'
+
 const pesoFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
   currency: 'PHP',
@@ -155,4 +157,12 @@ export function formatSaleForm(form: 'pack' | 'strip' | 'loose'): string {
     case 'loose':
       return 'Loose'
   }
+}
+
+/**
+ * Name a base unit for a quantity. Countable units read as words, so they
+ * pluralise ("3 tablets"); mL and g are symbols and do not.
+ */
+export function formatUnit(quantity: number, unit: BaseUnit): string {
+  return quantity === 1 || unit === 'mL' || unit === 'g' ? unit : `${unit}s`
 }

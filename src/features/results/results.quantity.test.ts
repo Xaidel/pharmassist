@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { quantityPresets, quantityWarning } from './results.quantity'
+import {
+  defaultQuantity,
+  fitToPacks,
+  quantityPresets,
+  quantityWarning,
+} from './results.quantity'
 import type { SaleFormOffer } from './results.schema'
 
 function form(
@@ -97,5 +102,61 @@ describe('quantityWarning', () => {
     expect(quantityWarning(30.5, 'g')).toContain('30-day supply')
     expect(quantityWarning(200, 'actuation')).toBeNull()
     expect(quantityWarning(201, 'actuation')).toContain('30-day supply')
+  })
+})
+
+describe('defaultQuantity', () => {
+  it('starts bottles, tubes, and inhalers at one usual pack', () => {
+    expect(defaultQuantity('mL')).toBe(60)
+    expect(defaultQuantity('g')).toBe(5)
+    expect(defaultQuantity('actuation')).toBe(200)
+  })
+
+  it('starts single-unit medicines at one', () => {
+    expect(defaultQuantity('tablet')).toBe(1)
+    expect(defaultQuantity('capsule')).toBe(1)
+    expect(defaultQuantity('sachet')).toBe(1)
+  })
+})
+
+describe('fitToPacks', () => {
+  const bottle = [{ quantity: 60, label: 'Bottle of 60 mL' }]
+  const inhaler = [{ quantity: 60, label: '1 inhaler (60 actuations)' }]
+
+  it('moves a usual-pack guess to the real pack once', () => {
+    const presets = new Map([['SERETIDE', inhaler]])
+    const lines = [
+      { medicine_id: 'SERETIDE', quantity: 200, unit: 'actuation' as const },
+    ]
+
+    expect(fitToPacks(lines, presets, new Set()).lines[0]?.quantity).toBe(60)
+    // Once checked, 200 is a real choice: four inhalers' worth, rounded up.
+    expect(fitToPacks(lines, presets, new Set(['SERETIDE']))).toEqual({
+      lines: [{ medicine_id: 'SERETIDE', quantity: 240, unit: 'actuation' }],
+      roundedIds: ['SERETIDE'],
+    })
+  })
+
+  it('rounds an odd amount up to whole packs', () => {
+    const presets = new Map([['CALPOL', bottle]])
+    const lines = [{ medicine_id: 'CALPOL', quantity: 21, unit: 'mL' as const }]
+
+    expect(fitToPacks(lines, presets, new Set())).toEqual({
+      lines: [{ medicine_id: 'CALPOL', quantity: 60, unit: 'mL' }],
+      roundedIds: ['CALPOL'],
+    })
+  })
+
+  it('keeps whole packs and single-unit medicines as they are', () => {
+    const presets = new Map([['CALPOL', bottle]])
+    const lines = [
+      { medicine_id: 'CALPOL', quantity: 120, unit: 'mL' as const },
+      { medicine_id: 'NORVASC', quantity: 7, unit: 'tablet' as const },
+    ]
+
+    expect(fitToPacks(lines, presets, new Set())).toEqual({
+      lines,
+      roundedIds: [],
+    })
   })
 })

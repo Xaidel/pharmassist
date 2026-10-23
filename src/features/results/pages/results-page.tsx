@@ -3,7 +3,10 @@ import { useCallback } from 'react'
 
 import { baseUnitSchema, type BaseUnit } from '#/shared/domain/medicine-summary'
 
-import { ResultsExperience } from '../components/results-experience'
+import {
+  ResultsExperience,
+  type RenderAddMedicine,
+} from '../components/results-experience'
 
 const routeApi = getRouteApi('/results')
 
@@ -23,8 +26,15 @@ function readUnitParam(search: unknown): BaseUnit | undefined {
   return parsed.success ? parsed.data : undefined
 }
 
+type ResultsPageProps = {
+  /** Renders the in-basket medicine search; the route supplies it. */
+  renderAddMedicine?: RenderAddMedicine
+}
+
 /** Render the basket price comparison screen. */
-export function ResultsPage(): React.JSX.Element {
+export function ResultsPage({
+  renderAddMedicine,
+}: ResultsPageProps): React.JSX.Element {
   const search: unknown = routeApi.useSearch()
   const navigate = routeApi.useNavigate()
   const add = readAddParam(search)
@@ -39,6 +49,7 @@ export function ResultsPage(): React.JSX.Element {
       initialAdd={add}
       initialUnit={unit}
       onAddHandled={handleAddHandled}
+      {...(renderAddMedicine === undefined ? {} : { renderAddMedicine })}
     />
   )
 }

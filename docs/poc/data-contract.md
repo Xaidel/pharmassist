@@ -867,6 +867,7 @@ The seeder runs these checks after writing, before commit. A failure rolls back.
 - Every `not_stocked` row belongs to a pair whose other two forms are also `not_stocked`.
 - `not_applicable` is used only for a form that cannot apply (for example loose/strip on an inhaler, or strip/loose on a bottle).
 - The 431 mocked pack prices from the previous seed remain available pack observations; new loose and strip observations are mocked and labelled.
+- Mocked prices vary the cheapest pharmacy by medicine rather than applying one markup per pharmacy: a chain prices a medicine the same at every branch; Generika is cheapest on local brands and has no edge on multinational originator brands; independents vary more per medicine. One factor scales all forms of a medicine at a pharmacy, so form relationships hold. POC-016 keeps its prices for the MDRP demo.
 - Every active medicine with a known reference pack has at least one available pack observation; POC-041 has only `unknown` rows.
 - Every FK resolves: `medicine_alternative.medicine_id`, `price_observation.medicine_id`, `price_observation.pharmacy_id`, `price_observation.mdrp_entry_id`.
 - `mdrp_ceiling` has 204 rows.
@@ -1044,6 +1045,7 @@ All endpoints are same-origin, behind Caddy basic auth, and return `Cache-Contro
 | `POST` | `/api/basket` | Validate and resolve a basket | No |
 | `POST` | `/api/results` | Rank pharmacies for a basket | No |
 | `GET` | `/api/pharmacies/{pharmacy_id}` | Pharmacy detail and form prices | No |
+| `GET` | `/api/pharmacies` | Pharmacy directory for the home map | No |
 | `GET` | `/api/directions` | Native road route from the device origin to a pharmacy | No |
 | `POST` | `/api/scan` | Mock OCR; returns medicine candidates | No |
 | `POST` | `/api/reports` | Create a wrong-price/stock report | Yes |
@@ -1687,6 +1689,34 @@ Errors:
 - `400 INVALID_ORIGIN` — one coordinate without the other or out of range.
 
 Empty state: a pharmacy with no sellable form for a requested basket returns `forms` with all `not_stocked`/`unknown` states and an incomplete basket with all items missing. This is the muted no-price pharmacy.
+
+#### `GET /api/pharmacies` — pharmacy directory
+
+The home map pins every seeded pharmacy before any basket exists. The directory takes no parameters and carries no prices.
+
+```json
+{
+  "pharmacies": [
+    {
+      "pharmacy_id": "mercury-naga-penafrancia",
+      "name": "Mercury Drug - Penafrancia",
+      "latitude": 13.6262,
+      "longitude": 123.1906,
+      "verification_status": "verified"
+    }
+  ],
+  "cheapest_pharmacy_id": "generika-lcc-cbd2"
+}
+```
+
+`cheapest_pharmacy_id` names the pharmacy whose prices run lowest across the catalog, or is `null` when none qualifies. It is a catalog-wide price index, not a basket ranking, and never replaces §4.6:
+
+1. Take each verified pharmacy's lowest `available`, non-stale `unit_rate_php` per active medicine.
+2. For each medicine priced at two or more of those pharmacies, divide each rate by that medicine's median rate.
+3. A pharmacy's index is the median of its ratios. Pharmacies pricing fewer than half as many medicines as the best-covered pharmacy are skipped.
+4. The lowest index wins; ties resolve by `pharmacy_id`.
+
+Unverified pharmacies are listed but never named cheapest.
 
 ### 7.9 `GET /api/directions`
 

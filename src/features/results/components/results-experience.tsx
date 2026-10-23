@@ -1,11 +1,14 @@
 import { Link } from '@tanstack/react-router'
+import { MapPin as MapPinIcon, Maximize2, Minimize2, Tag } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
+import { cn } from '#/lib/cn'
 import { sendEvents } from '#/lib/events'
+
+import { InfoButton } from '#/shared/components/info-button'
 import { Alert } from '#/shared/components/ui/alert'
-import { Badge } from '#/shared/components/ui/badge'
 import { Button } from '#/shared/components/ui/button'
-import { Card } from '#/shared/components/ui/card'
 import type { BaseUnit } from '#/shared/domain/medicine-summary'
 
 import { isAbortError, postResults, ResultsRequestError } from '../results.api'
@@ -22,6 +25,7 @@ import {
 } from '../results.basket'
 import {
   cheapestCompleteResultKey,
+  nearestCompleteResultKey,
   type BasketLine,
   type Origin,
   type ResultSort,
@@ -31,22 +35,56 @@ import {
   formatDuration,
   formatPesoCompact,
 } from '../results.format'
-import { quantityPresets, type QuantityPreset } from '../results.quantity'
-import type { ResultsResponse, SaleFormOffer } from '../results.schema'
+import {
+  fitToPacks,
+  presetsFromResults,
+  type QuantityPreset,
+} from '../results.quantity'
+import type { ResultsResponse } from '../results.schema'
 
+import { BackButton } from './back-button'
+import { BasketDrawer } from './basket-drawer'
 import { BasketPanel } from './basket-panel'
+import { BasketToggleButton } from './basket-toggle-button'
 import { CandidateGenerics } from './candidate-generics'
 import { PharmacyDetailSheet } from './pharmacy-detail-sheet'
-import { noPriceKey, NO_PRICE_KEY_PREFIX, ResultsList } from './results-list'
+import {
+  noPriceKey,
+  NO_PRICE_KEY_PREFIX,
+  ResultsList,
+  type FeaturedResult,
+} from './results-list'
 import { ResultsMap, type MapPin } from './results-map'
+import { useSheetDrag, type SheetSnap } from './use-sheet-drag'
+
+/** A medicine chosen from an in-place picker. */
+export type AddedMedicine = {
+  medicineId: string
+  unit: BaseUnit
+}
+
+/** Renders a medicine search that adds without leaving the page. */
+export type RenderAddMedicine = (
+  onPick: (medicine: AddedMedicine) => void,
+  excludeIds: readonly string[],
+) => ReactNode
 
 type ResultsExperienceProps = {
   initialAdd: string | undefined
   initialUnit: BaseUnit | undefined
   onAddHandled: () => void
+  renderAddMedicine?: RenderAddMedicine
 }
 
 type LoadStatus = 'idle' | 'loading' | 'updating'
+
+// Share of the screen the peeking sheet covers, and the floating top bar height.
+// Keep in step with the `h-sheet-peek` and `h-sheet-full` utilities in styles.css.
+const SHEET_PEEK_RATIO = 0.46
+const SHEET_FULL_RATIO = 0.88
+// Keep in step with the `h-sheet-closed` utility: just the handle row.
+const SHEET_CLOSED_PX = 56
+const TOP_BAR_CLEARANCE_PX = 80
 type RouteStatus = 'idle' | 'loading' | 'error'
 
 type ActiveRoute = {
@@ -120,6 +158,7 @@ export function ResultsExperience({
   initialAdd,
   initialUnit,
   onAddHandled,
+  renderAddMedicine,
 }: ResultsExperienceProps): React.JSX.Element {
   const [basketLines, setBasketLines] = useState<BasketLine[]>([])
   const [hydrated, setHydrated] = useState(false)
@@ -139,6 +178,38 @@ export function ResultsExperience({
   const [routeError, setRouteError] = useState<string | null>(null)
   const [locationAttempt, setLocationAttempt] = useState(0)
   const [reloadToken, setReloadToken] = useState(0)
+  const [sheet, setSheet] = useState<SheetSnap>('peek')
+  const [basketOpen, setBasketOpen] = useState(false)
+
+  // True only while the sheet is closed because the user started adding a
+  // medicine, so closing the basket reopens it; a sheet the user closed stays closed.
+  const closedForAddingRef = useRef(false)
+
+  function snapSheet(next: SheetSnap): void {
+    closedForAddingRef.current = false
+    // A full sheet needs the whole screen, so the basket gives way.
+    if (next === 'full') {
+      setBasketOpen(false)
+    }
+    setSheet(next)
+  }
+
+  function closeBasket(): void {
+    setBasketOpen(false)
+    if (closedForAddingRef.current) {
+      closedForAddingRef.current = false
+      setSheet('peek')
+    }
+  }
+
+  const sheetDrag = useSheetDrag({
+    snap: sheet,
+    onSnap: snapSheet,
+    closedPx: SHEET_CLOSED_PX,
+    peekRatio: SHEET_PEEK_RATIO,
+    fullRatio: SHEET_FULL_RATIO,
+  })
+  const dragHeight = sheetDrag.dragHeight
 
   const initialAddHandledRef = useRef(false)
   const lastViewedRef = useRef<string | null>(null)
@@ -343,29 +414,63 @@ export function ResultsExperience({
     [data],
   )
 
-  const presetsByMedicine = useMemo(() => {
-    const presets = new Map<string, readonly QuantityPreset[]>()
-    if (data === null) {
-      return presets
-    }
-
-    const forms = formsByMedicine(data)
-    for (const item of data.basket.items) {
-      presets.set(
-        item.medicine_id,
-        quantityPresets(
-          item.medicine.base_unit,
-          forms.get(item.medicine_id) ?? [],
-        ),
-      )
-    }
-    return presets
-  }, [data])
-
-  const cheapestKey = useMemo(
-    () => (data === null ? null : cheapestCompleteResultKey(data.complete)),
+  const presetsByMedicine = useMemo(
+    () =>
+      data === null
+        ? new Map<string, readonly QuantityPreset[]>()
+        : presetsFromResults(data),
     [data],
   )
+
+  // Bottles, tubes, and inhalers are only sold whole. Once prices show the
+  // real pack size, fit the basket to it and say when an amount was rounded.
+  const packCheckedRef = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    if (data === null) {
+      return
+    }
+    const fit = fitToPacks(
+      basketLines,
+      presetsByMedicine,
+      packCheckedRef.current,
+    )
+    for (const line of basketLines) {
+      packCheckedRef.current.add(line.medicine_id)
+    }
+    if (fit.lines.every((line, index) => line === basketLines[index])) {
+      return
+    }
+    writeBasket(getSessionStorage(), fit.lines)
+    setBasketLines(fit.lines)
+    if (fit.roundedIds.length > 0) {
+      const names = fit.roundedIds.map((medicineId) => {
+        const medicine = data.basket.items.find(
+          (item) => item.medicine_id === medicineId,
+        )?.medicine
+        return medicine === undefined
+          ? medicineId
+          : (medicine.brand_name ?? medicine.generic_name)
+      })
+      setNotice(
+        `${names.join(' and ')} ${
+          names.length === 1 ? 'is' : 'are'
+        } only sold as whole packs, so the amount was rounded up to the next full pack.`,
+      )
+    }
+  }, [data, basketLines, presetsByMedicine])
+
+  // The starred result follows the sort the shown results were ranked by.
+  const featured = useMemo<FeaturedResult | null>(() => {
+    if (data === null) {
+      return null
+    }
+    const kind = data.meta.sort === 'distance' ? 'nearest' : 'cheapest'
+    const key =
+      kind === 'nearest'
+        ? nearestCompleteResultKey(data.complete)
+        : cheapestCompleteResultKey(data.complete)
+    return key === null ? null : { key, kind }
+  }, [data])
 
   const detailContext = useMemo(
     () =>
@@ -390,8 +495,8 @@ export function ResultsExperience({
         label: formatPesoCompact(result.total_shelf_price_php),
         variant: result.above_mdrp_ceiling
           ? 'above-mdrp'
-          : result.result_key === cheapestKey
-            ? 'cheapest'
+          : result.result_key === featured?.key
+            ? featured.kind
             : 'complete',
       })
     }
@@ -429,7 +534,7 @@ export function ResultsExperience({
       })
     }
     return next
-  }, [data, cheapestKey])
+  }, [data, featured])
 
   function persist(next: BasketLine[]): void {
     const storage = getSessionStorage()
@@ -439,6 +544,26 @@ export function ResultsExperience({
 
   function handleQuantityChange(medicineId: string, quantity: number): void {
     persist(setBasketQuantity(basketLines, medicineId, quantity))
+  }
+
+  function handleAdd({ medicineId, unit }: AddedMedicine): void {
+    const outcome = addBasketLine(basketLines, medicineId, unit)
+    if (!outcome.added) {
+      setNotice(
+        outcome.reason === 'full'
+          ? 'A basket can hold up to 10 medicines. Remove one before adding another.'
+          : 'That medicine is already in your basket.',
+      )
+      return
+    }
+    setNotice(null)
+    persist(outcome.lines)
+    sendEvents([
+      {
+        name: 'basket_item_added',
+        properties: { source: 'search', item_count: outcome.lines.length },
+      },
+    ]).catch(() => undefined)
   }
 
   function handleRemove(medicineId: string): void {
@@ -490,6 +615,8 @@ export function ResultsExperience({
 
     setSelectedKey(key)
     setDetailKey(null)
+    // Drop the sheet so the route on the map is visible.
+    setSheet('peek')
     routeRequestRef.current?.abort()
     setActiveRoute(null)
     setRouteError(null)
@@ -539,6 +666,16 @@ export function ResultsExperience({
       })
   }
 
+  function toggleBasket(): void {
+    if (basketOpen) {
+      closeBasket()
+      return
+    }
+    // Basket takes the upper half; only a full sheet must shrink to make room.
+    setSheet((current) => (current === 'full' ? 'peek' : current))
+    setBasketOpen(true)
+  }
+
   function handleSort(nextSort: ResultSort): void {
     if (nextSort === sort) {
       return
@@ -552,126 +689,149 @@ export function ResultsExperience({
   const busy = status !== 'idle'
   const empty = hydrated && basketLines.length === 0
 
+  const sheetExpanded = sheet === 'full'
+  const basketCount = basketLines.length
+
   return (
-    <main className="mx-auto min-h-screen w-full max-w-5xl px-5 pb-16 pt-8 sm:px-8 sm:pt-12">
-      <header>
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="text-xs font-bold uppercase tracking-eyebrow-wide text-primary">
-            Pharmassist POC
-          </p>
-          <Badge variant="primary">Demo data</Badge>
+    <main className="relative h-dvh overflow-clip bg-muted">
+      <div
+        className={cn(
+          'absolute inset-0 z-0 transition-opacity motion-reduce:transition-none',
+          busy && data !== null && 'opacity-70',
+        )}
+      >
+        <ResultsMap
+          coveredBottomRatio={SHEET_PEEK_RATIO}
+          coveredTop={TOP_BAR_CLEARANCE_PX}
+          onSelect={(key) => {
+            setSelectedKey(key)
+            setDetailKey(key)
+          }}
+          origin={origin}
+          pins={pins}
+          route={activeRoute?.response.route ?? null}
+          routeLoading={routeStatus === 'loading'}
+          selectedKey={selectedKey}
+        />
+      </div>
+
+      <header className="pointer-events-none absolute inset-x-0 top-0 z-20 mx-auto flex w-full max-w-xl items-center gap-2 px-4 pt-safe-top">
+        <BackButton />
+        <div className="ml-auto">
+          <BasketToggleButton
+            count={basketCount}
+            onToggle={toggleBasket}
+            open={basketOpen}
+          />
         </div>
-        <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="font-display text-4xl font-semibold leading-display tracking-tight sm:text-5xl">
-              Compare basket prices
-            </h1>
-            <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
-              Seeded shelf prices across 10 real Naga pharmacy locations.
-              Distances, completeness, and price freshness are shown for every
-              result.
-            </p>
-          </div>
-          <Link
-            className="text-sm font-semibold text-primary underline-offset-2 hover:underline"
-            to="/"
+
+        {basketOpen && (
+          <BasketDrawer
+            className={cn(
+              'pointer-events-auto absolute inset-x-4 top-full mt-2',
+              // With the sheet closed for adding, the basket may use more height.
+              sheet === 'closed' && 'max-h-basket-tall',
+            )}
+            onClose={closeBasket}
           >
-            Search medicines
-          </Link>
-        </div>
+            <BasketPanel
+              addMedicine={renderAddMedicine?.(
+                handleAdd,
+                basketLines.map((line) => line.medicine_id),
+              )}
+              busy={busy}
+              items={basketLines}
+              medicines={medicines}
+              onClear={handleClear}
+              onClose={closeBasket}
+              onQuantityChange={handleQuantityChange}
+              onRemove={handleRemove}
+              presetsByMedicine={presetsByMedicine}
+              onStartAdding={() => {
+                if (sheet !== 'closed') {
+                  closedForAddingRef.current = true
+                }
+                setSheet('closed')
+              }}
+            />
+          </BasketDrawer>
+        )}
       </header>
 
-      {!hydrated && (
-        <Card aria-busy="true" className="mt-6">
-          <p className="p-6 text-sm text-muted-foreground" role="status">
-            Loading your basket…
-          </p>
-        </Card>
-      )}
+      <section
+        aria-labelledby="results-sheet-heading"
+        className={cn(
+          'absolute inset-x-0 bottom-0 z-10 mx-auto flex w-full max-w-xl flex-col rounded-t-3xl border border-b-0 border-border bg-card shadow-sheet sm:bottom-4 sm:rounded-3xl sm:border-b',
+          dragHeight !== null
+            ? 'h-sheet-drag'
+            : cn(
+                'transition-sheet',
+                sheet === 'full'
+                  ? 'h-sheet-full'
+                  : sheet === 'closed'
+                    ? 'h-sheet-closed'
+                    : 'h-sheet-peek',
+              ),
+        )}
+        style={
+          dragHeight === null
+            ? undefined
+            : ({
+                '--sheet-drag-height': `${String(dragHeight)}px`,
+              } as CSSProperties)
+        }
+      >
+        <div className="relative shrink-0">
+          <button
+            aria-controls="results-sheet-body"
+            aria-expanded={sheet !== 'closed'}
+            className="flex h-14 w-full cursor-grab touch-none select-none items-center justify-center rounded-t-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring active:cursor-grabbing"
+            type="button"
+            {...sheetDrag.handleProps}
+          >
+            <span
+              aria-hidden="true"
+              className="h-1.5 w-16 rounded-full bg-primary/20"
+            />
+            <span className="sr-only">
+              {sheet === 'closed'
+                ? 'Show results'
+                : sheetExpanded
+                  ? 'Show more of the map'
+                  : 'Show all results'}
+            </span>
+          </button>
+          {/* A tap target for people who cannot or do not swipe. */}
+          <Button
+            aria-label={sheetExpanded ? 'Show the map' : 'Show the full list'}
+            className="absolute right-3 top-2"
+            onClick={() => {
+              snapSheet(sheetExpanded ? 'peek' : 'full')
+            }}
+            size="icon"
+            type="button"
+            variant="ghost"
+          >
+            {sheetExpanded ? (
+              <Minimize2 aria-hidden="true" className="size-5" />
+            ) : (
+              <Maximize2 aria-hidden="true" className="size-5" />
+            )}
+          </Button>
+        </div>
 
-      {empty && (
-        <Card className="mt-6">
-          <div className="p-6">
-            <h2 className="font-display text-2xl font-semibold">
-              Your basket is empty
-            </h2>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-              Search for a medicine and choose Compare prices to rank the seeded
-              pharmacies for your basket.
-            </p>
-            <Link
-              className="mt-4 inline-flex text-sm font-semibold text-primary underline-offset-2 hover:underline"
-              to="/"
-            >
-              Search for a medicine
-            </Link>
-          </div>
-        </Card>
-      )}
-
-      {!empty && hydrated && isInitialLoading(data, status) && (
-        <Card aria-busy="true" className="mt-6">
-          <p className="p-6 text-sm text-muted-foreground" role="status">
-            Checking prices and stock at the seeded pharmacies…
-          </p>
-        </Card>
-      )}
-
-      {!empty && hydrated && error !== null && data === null && (
-        <Card className="mt-6">
-          <div className="p-6">
-            <Alert>{error}</Alert>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Button
-                onClick={() => {
-                  setReloadToken((token) => token + 1)
-                }}
-                type="button"
-              >
-                Try again
-              </Button>
-              <Button onClick={handleClear} type="button" variant="outline">
-                Clear basket
-              </Button>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {!empty && data !== null && (
-        <>
-          <BasketPanel
-            busy={busy}
-            items={basketLines}
-            medicines={medicines}
-            onClear={handleClear}
-            onQuantityChange={handleQuantityChange}
-            onRemove={handleRemove}
-            presetsByMedicine={presetsByMedicine}
-          />
-
-          {notice !== null && <Alert className="mt-4">{notice}</Alert>}
-          {error !== null && (
-            <div className="mt-4">
-              <Alert>
-                {error}{' '}
-                <button
-                  className="font-semibold underline underline-offset-2"
-                  onClick={() => {
-                    setReloadToken((token) => token + 1)
-                  }}
-                  type="button"
-                >
-                  Try again
-                </button>
-              </Alert>
-            </div>
-          )}
-
-          <div className="mt-6 flex flex-wrap items-end justify-between gap-3">
+        <div
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-safe"
+          id="results-sheet-body"
+        >
+          {/* The map, top bar, and cards already say what this is; the title stays for screen readers. */}
+          <h1 className="sr-only" id="results-sheet-heading">
+            Compare basket prices
+          </h1>
+          {data !== null && (
             <div
               aria-label="Sort results"
-              className="flex flex-wrap gap-2"
+              className="mb-3 grid grid-cols-2 gap-1 rounded-full border border-border bg-background p-1"
               role="group"
             >
               <Button
@@ -679,10 +839,10 @@ export function ResultsExperience({
                 onClick={() => {
                   handleSort('price')
                 }}
-                size="sm"
                 type="button"
-                variant={sort === 'price' ? 'default' : 'outline'}
+                variant={sort === 'price' ? 'default' : 'ghost'}
               >
+                <Tag aria-hidden="true" className="size-4" />
                 Cheapest first
               </Button>
               <Button
@@ -690,176 +850,249 @@ export function ResultsExperience({
                 onClick={() => {
                   handleSort('distance')
                 }}
-                size="sm"
                 type="button"
-                variant={sort === 'distance' ? 'default' : 'outline'}
+                variant={sort === 'distance' ? 'default' : 'ghost'}
               >
+                <MapPinIcon aria-hidden="true" className="size-4" />
                 Nearest first
               </Button>
-              {busy && (
-                <span
-                  className="self-center text-sm text-muted-foreground"
-                  role="status"
-                >
-                  Updating prices…
-                </span>
-              )}
             </div>
-            <p className="text-sm text-muted-foreground">
-              {locationState === 'device'
-                ? locationLabel('device')
-                : locationState === 'locating'
-                  ? 'Using Naga City center while we check your location.'
-                  : locationLabel('naga_center')}
-            </p>
-          </div>
-
-          {routeStatus === 'error' && (
-            <div className="mt-4">
-              <Alert>
-                {routeError}
-                {origin === null && (
-                  <div className="mt-3">
+          )}
+          {data !== null && (
+            <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
+              <span>
+                {locationState === 'device'
+                  ? locationLabel('device')
+                  : locationState === 'locating'
+                    ? 'Using Naga City center while we check your location.'
+                    : locationLabel('naga_center')}
+              </span>
+              <InfoButton
+                description={
+                  locationState === 'device'
+                    ? 'Distances are measured in a straight line from where you are now. The road trip can be longer; tap Show route on a pharmacy to see it.'
+                    : 'Your location is off, so distances are measured in a straight line from Naga City center, not from you. Turn on location to see how far each pharmacy is from where you are.'
+                }
+                label="About distances"
+                title="How distances work"
+              >
+                {(close) =>
+                  locationState === 'fallback' ? (
                     <Button
-                      onClick={requestLocation}
-                      size="sm"
+                      onClick={() => {
+                        requestLocation()
+                        close()
+                      }}
                       type="button"
-                      variant="outline"
                     >
                       Use my location
                     </Button>
-                  </div>
-                )}
-              </Alert>
+                  ) : null
+                }
+              </InfoButton>
+              {busy && <span role="status">Updating prices…</span>}
+            </p>
+          )}
+
+          {!hydrated && (
+            <p
+              aria-busy="true"
+              className="mt-4 text-sm text-muted-foreground"
+              role="status"
+            >
+              Loading your basket…
+            </p>
+          )}
+
+          {empty && (
+            <div className="mt-4">
+              <h2 className="font-display text-lg font-semibold">
+                Your basket is empty
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Search for a medicine and tap Add to basket to rank the seeded
+                pharmacies for your basket.
+              </p>
+              <Link
+                className="mt-4 inline-flex text-sm font-semibold text-primary underline-offset-2 hover:underline"
+                to="/"
+              >
+                Search for a medicine
+              </Link>
             </div>
           )}
 
-          {activeRoute !== null && (
-            <section
-              aria-labelledby="active-route-heading"
-              className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4"
+          {!empty && hydrated && isInitialLoading(data, status) && (
+            <p
+              aria-busy="true"
+              className="mt-4 text-sm text-muted-foreground"
+              role="status"
             >
-              <div>
-                <h2
-                  className="font-display text-lg font-semibold"
-                  id="active-route-heading"
+              Checking prices and stock at the seeded pharmacies…
+            </p>
+          )}
+
+          {!empty && hydrated && error !== null && data === null && (
+            <div className="mt-4">
+              <Alert>{error}</Alert>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Button
+                  onClick={() => {
+                    setReloadToken((token) => token + 1)
+                  }}
+                  type="button"
                 >
-                  Route to {activeRoute.pharmacyName}
-                </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {formatDistance(activeRoute.response.distance_m)} · about{' '}
-                  {formatDuration(activeRoute.response.duration_s)} · Route
-                  preview, not turn-by-turn navigation.
-                </p>
+                  Try again
+                </Button>
+                <Button onClick={handleClear} type="button" variant="outline">
+                  Clear basket
+                </Button>
               </div>
-              <Button
-                onClick={clearRoute}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                Clear route
-              </Button>
-            </section>
+            </div>
           )}
 
-          <div className={busy ? 'opacity-60' : undefined}>
-            <ResultsMap
-              onSelect={(key) => {
-                setSelectedKey(key)
-                setDetailKey(key)
-              }}
-              origin={origin}
-              pins={pins}
-              route={activeRoute?.response.route ?? null}
-              routeLoading={routeStatus === 'loading'}
-              selectedKey={selectedKey}
-            />
-          </div>
+          {!empty && data !== null && (
+            <>
+              {notice !== null && (
+                <Alert className="mt-4" variant="info">
+                  {notice}
+                </Alert>
+              )}
+              {error !== null && (
+                <div className="mt-4">
+                  <Alert>
+                    {error}{' '}
+                    <button
+                      className="font-semibold underline underline-offset-2"
+                      onClick={() => {
+                        setReloadToken((token) => token + 1)
+                      }}
+                      type="button"
+                    >
+                      Try again
+                    </button>
+                  </Alert>
+                </div>
+              )}
 
-          <div className={busy ? 'opacity-60' : undefined}>
-            <ResultsList
-              activePharmacyId={activeRoute?.response.pharmacy_id ?? null}
-              cheapestKey={cheapestKey}
-              data={data}
-              medicines={medicines}
-              onOpenDetail={setDetailKey}
-              onShowRoute={handleShowRoute}
-            />
-          </div>
+              {routeStatus === 'error' && (
+                <div className="mt-4">
+                  <Alert variant={origin === null ? 'info' : 'destructive'}>
+                    {routeError}
+                    {origin === null && (
+                      <div className="mt-3">
+                        <Button
+                          onClick={requestLocation}
+                          size="sm"
+                          type="button"
+                          variant="outline"
+                        >
+                          Use my location
+                        </Button>
+                      </div>
+                    )}
+                  </Alert>
+                </div>
+              )}
 
-          <CandidateGenerics
-            groups={data.candidate_generics}
-            medicines={medicines}
-          />
+              {activeRoute !== null && (
+                <section
+                  aria-labelledby="active-route-heading"
+                  className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-background p-4"
+                >
+                  <div>
+                    <h2
+                      className="font-display text-lg font-semibold"
+                      id="active-route-heading"
+                    >
+                      Route to {activeRoute.pharmacyName}
+                    </h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {formatDistance(activeRoute.response.distance_m)} · about{' '}
+                      {formatDuration(activeRoute.response.duration_s)} · Route
+                      preview, not turn-by-turn navigation.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={clearRoute}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    Clear route
+                  </Button>
+                </section>
+              )}
 
-          {detailContext !== null && (
-            <PharmacyDetailSheet
-              basketItems={basketLines}
-              onOpenChange={(open) => {
-                if (!open) {
-                  setDetailKey(null)
-                }
-              }}
-              onReported={() => {
-                setReloadToken((token) => token + 1)
-              }}
-              onShowRoute={() => {
-                if (detailKey !== null) {
-                  handleShowRoute(detailKey)
-                }
-              }}
-              open={detailKey !== null}
-              origin={origin}
-              pharmacyId={detailContext.pharmacyId}
-              reported={detailContext.reported}
-              reportedAt={detailContext.reportedAt}
-              resultKey={detailContext.resultKey}
-            />
+              <div className={busy ? 'opacity-60' : undefined}>
+                <ResultsList
+                  activePharmacyId={activeRoute?.response.pharmacy_id ?? null}
+                  data={data}
+                  featured={featured}
+                  medicines={medicines}
+                  onOpenDetail={setDetailKey}
+                  onShowRoute={handleShowRoute}
+                  onUsePack={handleQuantityChange}
+                />
+              </div>
+
+              <CandidateGenerics
+                groups={data.candidate_generics}
+                medicines={medicines}
+              />
+
+              {detailContext !== null && (
+                <PharmacyDetailSheet
+                  basketItems={basketLines}
+                  onOpenChange={(open) => {
+                    if (!open) {
+                      setDetailKey(null)
+                    }
+                  }}
+                  onReported={() => {
+                    setReloadToken((token) => token + 1)
+                  }}
+                  onShowRoute={() => {
+                    if (detailKey !== null) {
+                      handleShowRoute(detailKey)
+                    }
+                  }}
+                  open={detailKey !== null}
+                  origin={origin}
+                  pharmacyId={detailContext.pharmacyId}
+                  reported={detailContext.reported}
+                  reportedAt={detailContext.reportedAt}
+                  resultKey={detailContext.resultKey}
+                />
+              )}
+
+              <section className="mt-8 rounded-3xl border border-border bg-background p-5 text-sm leading-relaxed text-muted-foreground">
+                <h2 className="font-display text-xl font-semibold text-foreground">
+                  About these prices
+                </h2>
+                <p className="mt-2">
+                  Every amount is a reference shelf price for the form shown,
+                  not a quote. Seeded demo prices and stock are mocked; pharmacy
+                  names and locations are real. Confirm the price at the
+                  pharmacy.
+                </p>
+                <p className="mt-2">
+                  MDRP ceilings come from EO 104 s. 2020 and EO 155 s. 2021 and
+                  are shown separately from the observed price. MDRP-compliant
+                  complete baskets rank before baskets with an item above the
+                  published ceiling, and only a compliant basket can be marked
+                  cheapest. A VAT-exclusive ceiling is compared at 1.12 times
+                  the published amount for VATable products, and directly for
+                  VAT-exempt products. Statutory senior and PWD discounts are
+                  applied at the point of sale and are not computed here.
+                </p>
+              </section>
+            </>
           )}
-
-          <section className="mt-10 rounded-3xl border border-border bg-card p-5 text-sm leading-relaxed text-muted-foreground">
-            <h2 className="font-display text-xl font-semibold text-foreground">
-              About these prices
-            </h2>
-            <p className="mt-2">
-              Every amount is a reference shelf price for the form shown, not a
-              quote. Seeded demo prices and stock are mocked; pharmacy names and
-              locations are real. Confirm the price at the pharmacy.
-            </p>
-            <p className="mt-2">
-              MDRP ceilings come from EO 104 s. 2020 and EO 155 s. 2021 and are
-              shown separately from the observed price. MDRP-compliant complete
-              baskets rank before baskets with an item above the published
-              ceiling, and only a compliant basket can be marked cheapest. A
-              VAT-exclusive ceiling is compared at 1.12 times the published
-              amount for VATable products, and directly for VAT-exempt products.
-              Statutory senior and PWD discounts are applied at the point of
-              sale and are not computed here.
-            </p>
-          </section>
-        </>
-      )}
+        </div>
+      </section>
     </main>
   )
-}
-
-function formsByMedicine(data: ResultsResponse): Map<string, SaleFormOffer[]> {
-  const forms = new Map<string, SaleFormOffer[]>()
-  for (const group of [
-    data.complete,
-    data.sold_per_pack_only,
-    data.incomplete,
-  ]) {
-    for (const result of group) {
-      for (const item of result.items) {
-        if (!forms.has(item.medicine_id)) {
-          forms.set(item.medicine_id, item.forms)
-        }
-      }
-    }
-  }
-  return forms
 }
 
 function localeOriginKey(origin: ResultsResponse['origin']): string {

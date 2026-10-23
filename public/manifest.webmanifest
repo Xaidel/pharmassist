@@ -10,7 +10,7 @@
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#f6f1e7",
-  "theme_color": "#1f7a5c",
+  "theme_color": "#2f3a8f",
   "categories": ["health", "shopping"],
   "icons": [
     {

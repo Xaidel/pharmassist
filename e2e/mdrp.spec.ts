@@ -3,8 +3,10 @@ import { Client } from 'pg'
 
 const FIXTURE_MEDICINE_ID = 'FIX-MDRP-001'
 const FIXTURE_CEILING_ID = 'FIX-EO104-900'
-const COMPLIANT_PHARMACY_ID = 'mercury-naga-concepcion-grande'
-const ABOVE_PHARMACY_ID = 'generika-lcc-cbd2'
+const COMPLIANT_PHARMACY_ID = 'watsons-sm-city-naga'
+// Sells POC-001 loose for less than the compliant pharmacy, so its basket is
+// cheaper overall even with the above-ceiling fixture price.
+const ABOVE_PHARMACY_ID = 'south-star-naga-3'
 
 function requireDatabaseUrl(): string {
   const url = process.env.DATABASE_URL
@@ -20,8 +22,8 @@ type FixturePrice = {
 }
 
 const FIXTURE_PRICES: readonly FixturePrice[] = [
-  { pharmacyId: COMPLIANT_PHARMACY_ID, loosePrice: 11 },
-  { pharmacyId: ABOVE_PHARMACY_ID, loosePrice: 11.3 },
+  { pharmacyId: COMPLIANT_PHARMACY_ID, loosePrice: 11.15 },
+  { pharmacyId: ABOVE_PHARMACY_ID, loosePrice: 11.21 },
 ]
 
 async function insertFixture(client: Client): Promise<void> {
@@ -115,14 +117,14 @@ test('ranks a compliant basket before a cheaper VATable above-ceiling basket', a
     ).toBeVisible()
 
     const compliantCard = page.locator(
-      '[id="result-mercury-naga-concepcion-grande|FIX-MDRP-001,POC-001"]',
+      `[id="result-${COMPLIANT_PHARMACY_ID}|FIX-MDRP-001,POC-001"]`,
     )
     await expect(compliantCard).toBeVisible()
     await expect(compliantCard.getByText('Cheapest complete')).toBeVisible()
     await expect(compliantCard).not.toContainText('Above MDRP ceiling')
 
     const aboveCard = page.locator(
-      '[id="result-generika-lcc-cbd2|FIX-MDRP-001,POC-001"]',
+      `[id="result-${ABOVE_PHARMACY_ID}|FIX-MDRP-001,POC-001"]`,
     )
     await expect(aboveCard).toBeVisible()
     await expect(aboveCard.getByText('Above MDRP ceiling')).toBeVisible()

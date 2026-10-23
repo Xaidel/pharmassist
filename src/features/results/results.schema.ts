@@ -90,6 +90,13 @@ export const pharmacyRowSchema = z.strictObject({
 /** One pharmacy row before distance and open-now are resolved. */
 export type PharmacyRow = z.infer<typeof pharmacyRowSchema>
 
+/** One pharmacy's lowest available unit rate for one medicine. */
+export const unitRateRowSchema = z.strictObject({
+  pharmacy_id: z.string(),
+  medicine_id: z.string(),
+  unit_rate_php: z.number().nonnegative(),
+})
+
 /** The MDRP comparison exposed alongside an observed form price. */
 export const mdrpInfoSchema = z.strictObject({
   entry_id: z.string(),

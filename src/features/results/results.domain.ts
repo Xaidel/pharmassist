@@ -1460,3 +1460,35 @@ export function cheapestCompleteResultKey(
   }
   return cheapest?.result_key ?? null
 }
+
+/** The nearest MDRP-compliant complete result, independent of sort order. */
+export function nearestCompleteResultKey(
+  complete: readonly {
+    result_key: string
+    total_shelf_price_php: number
+    above_mdrp_ceiling: boolean
+    pharmacy: { name: string; distance_m: number }
+  }[],
+): string | null {
+  let nearest: (typeof complete)[number] | null = null
+  for (const result of complete) {
+    if (result.above_mdrp_ceiling) {
+      continue
+    }
+    if (nearest === null) {
+      nearest = result
+      continue
+    }
+    const distance = result.pharmacy.distance_m - nearest.pharmacy.distance_m
+    if (
+      distance < 0 ||
+      (distance === 0 &&
+        (result.total_shelf_price_php < nearest.total_shelf_price_php ||
+          (result.total_shelf_price_php === nearest.total_shelf_price_php &&
+            compareNames(result.pharmacy.name, nearest.pharmacy.name) < 0)))
+    ) {
+      nearest = result
+    }
+  }
+  return nearest?.result_key ?? null
+}

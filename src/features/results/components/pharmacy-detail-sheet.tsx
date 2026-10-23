@@ -111,9 +111,9 @@ function ReportForm({
       <h3 className="font-display text-xl font-semibold">
         Report wrong price or stock
       </h3>
-      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-        Reports go to the data operator. The pharmacy is not notified, and the
-        reported state is shown on this result after you send it.
+      <p className="mt-1 text-base leading-relaxed text-muted-foreground">
+        Tell us if a price or stock looks wrong. We check every report. The
+        pharmacy is not told who sent it.
       </p>
 
       <div
@@ -122,7 +122,7 @@ function ReportForm({
         role="group"
       >
         <p
-          className="w-full text-sm font-semibold text-foreground"
+          className="w-full text-base font-semibold text-foreground"
           id={reasonLabelId}
         >
           Reason
@@ -154,11 +154,11 @@ function ReportForm({
           onChange={(event) => {
             setNote(event.target.value)
           }}
-          placeholder="What looks wrong? Do not include names, contact details, or other personal information."
+          placeholder="What looks wrong?"
           value={note}
         />
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-          Do not include names or contact details. {note.length}/
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          Please do not write names or phone numbers. {note.length}/
           {REPORT_NOTE_MAX} characters.
         </p>
       </div>
@@ -166,7 +166,7 @@ function ReportForm({
       {error !== null && <Alert className="mt-4">{error}</Alert>}
 
       <div className="mt-4">
-        <Button disabled={submitting} size="sm" type="submit">
+        <Button disabled={submitting} type="submit">
           {submitting ? 'Sending…' : 'Send report'}
         </Button>
       </div>
@@ -195,9 +195,9 @@ function DetailBasketSummary({
         className="font-display text-xl font-semibold"
         id="detail-basket-heading"
       >
-        This basket at this pharmacy
+        Your medicines here
       </h3>
-      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+      <p className="mt-1 text-base leading-relaxed text-muted-foreground">
         {basket.status === 'complete'
           ? `Exact basket · ${formatPeso(total)}`
           : basket.status === 'sold_per_pack_only'
@@ -323,7 +323,7 @@ export function PharmacyDetailSheet({
       title={title}
     >
       {status === 'loading' && (
-        <p className="text-sm text-muted-foreground" role="status">
+        <p className="text-base text-muted-foreground" role="status">
           Loading pharmacy details…
         </p>
       )}
@@ -346,9 +346,13 @@ export function PharmacyDetailSheet({
 
       {ready && (
         <div className="space-y-6">
+          <Button className="w-full" onClick={onShowRoute} type="button">
+            Show route on map
+          </Button>
+
           <section
             aria-label="Pharmacy information"
-            className="grid gap-4 text-sm sm:grid-cols-2"
+            className="grid gap-4 text-base sm:grid-cols-2"
           >
             <div>
               <p className="font-semibold text-foreground">Distance</p>
@@ -379,20 +383,14 @@ export function PharmacyDetailSheet({
               )}
             </div>
             <div>
-              <p className="font-semibold text-foreground">Record</p>
+              <p className="font-semibold text-foreground">Pharmacy check</p>
               <p className="text-muted-foreground">
                 {detail.pharmacy.verification_status === 'verified'
-                  ? 'Verified pharmacy identity'
-                  : 'Identity not verified'}
+                  ? 'Verified pharmacy'
+                  : 'Not yet verified'}
               </p>
             </div>
           </section>
-
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={onShowRoute} type="button">
-              Show route on map
-            </Button>
-          </div>
 
           {detail.basket !== undefined && (
             <DetailBasketSummary
@@ -413,13 +411,13 @@ export function PharmacyDetailSheet({
               )}
               )
             </h3>
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              Seeded reference shelf prices for each observed sale form. Confirm
-              the price at the pharmacy.
+            <p className="mt-1 text-base leading-relaxed text-muted-foreground">
+              Prices for each way a medicine is sold: box, strip, or loose.
+              Confirm the price at the pharmacy.
             </p>
             {detail.forms.length === 0 ? (
-              <p className="mt-3 text-sm text-muted-foreground">
-                This pharmacy has no price records in the seeded catalog.
+              <p className="mt-3 text-base text-muted-foreground">
+                No prices from this pharmacy yet.
               </p>
             ) : (
               <div className="mt-3 space-y-4">
@@ -432,13 +430,9 @@ export function PharmacyDetailSheet({
                       ) : (
                         <MedicineLine medicine={medicine} />
                       )}
-                      <ul className="mt-2 space-y-2">
+                      <ul className="mt-2 divide-y divide-border rounded-2xl border border-border bg-background px-3">
                         {group.forms.map((offer) => (
-                          <PriceLineItem
-                            key={offer.sale_form}
-                            medicine={medicine}
-                            offer={offer}
-                          />
+                          <PriceLineItem key={offer.sale_form} offer={offer} />
                         ))}
                       </ul>
                     </div>
@@ -455,12 +449,12 @@ export function PharmacyDetailSheet({
                 className="rounded-2xl border border-border p-4"
               >
                 <Badge variant="primary">Price reported</Badge>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                <p className="mt-2 text-base leading-relaxed text-muted-foreground">
                   Reported{' '}
                   {reportedAt === null
                     ? 'just now'
                     : `on ${formatVerified(reportedAt)}`}
-                  . The data operator will review it.
+                  . We will check it.
                 </p>
               </section>
             ) : (
@@ -474,9 +468,9 @@ export function PharmacyDetailSheet({
               />
             )
           ) : (
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              Reporting is available on priced results. This pharmacy has no
-              usable price for the basket.
+            <p className="text-base leading-relaxed text-muted-foreground">
+              You can report a price once this pharmacy has prices for your
+              medicines.
             </p>
           )}
         </div>

@@ -1,8 +1,11 @@
+import { PackageCheck } from 'lucide-react'
+
 import { MedicineLine } from '#/shared/components/medicine-line'
 import { Badge } from '#/shared/components/ui/badge'
+import { Button } from '#/shared/components/ui/button'
 import type { MedicineSummary } from '#/shared/domain/medicine-summary'
 
-import { formatMissingReason, formatPeso } from '../results.format'
+import { formatMissingReason, formatPeso, formatUnit } from '../results.format'
 import type { ResultsResponse } from '../results.schema'
 
 import { PriceLineItem } from './price-line'
@@ -25,12 +28,15 @@ function packOnlyLabel(
 type ResultItemListProps = {
   items: readonly ResultBasketItem[]
   medicines: readonly MedicineSummary[]
+  /** Changes the basket to the whole-pack amount, so the pharmacy becomes an exact match. */
+  onUsePack?: (medicineId: string, quantity: number) => void
 }
 
 /** Render each basket item's exact, covering-purchase, or missing outcome. */
 export function ResultItemList({
   items,
   medicines,
+  onUsePack,
 }: ResultItemListProps): React.JSX.Element {
   const medicineById = new Map(
     medicines.map((medicine) => [medicine.medicine_id, medicine]),
@@ -51,7 +57,7 @@ export function ResultItemList({
               <MedicineLine medicine={medicine} />
             )}
             <p className="mt-1 text-sm text-muted-foreground">
-              Requested {item.quantity} {item.unit}
+              Requested {item.quantity} {formatUnit(item.quantity, item.unit)}
             </p>
 
             {item.outcome === 'exact' && (
@@ -80,6 +86,24 @@ export function ResultItemList({
                     ({item.pack_only.covers_quantity} {item.pack_only.pack_unit}{' '}
                     covered).
                   </p>
+                  {onUsePack !== undefined && (
+                    <Button
+                      className="mt-2 w-full"
+                      onClick={() => {
+                        if (item.pack_only !== undefined) {
+                          onUsePack(
+                            item.medicine_id,
+                            item.pack_only.covers_quantity,
+                          )
+                        }
+                      }}
+                      type="button"
+                    >
+                      <PackageCheck aria-hidden="true" className="size-5" />
+                      Change to {item.pack_only.buy_quantity} ×{' '}
+                      {item.pack_only.form_label}
+                    </Button>
+                  )}
                 </div>
               )}
 
@@ -95,13 +119,9 @@ export function ResultItemList({
                 <summary className="cursor-pointer text-sm font-semibold text-primary">
                   Form prices at this pharmacy
                 </summary>
-                <ul className="mt-2 space-y-2">
+                <ul className="mt-2 divide-y divide-border rounded-2xl border border-border bg-background px-3">
                   {item.forms.map((offer) => (
-                    <PriceLineItem
-                      key={offer.sale_form}
-                      medicine={medicine}
-                      offer={offer}
-                    />
+                    <PriceLineItem key={offer.sale_form} offer={offer} />
                   ))}
                 </ul>
               </details>

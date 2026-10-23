@@ -19,7 +19,8 @@ async function openJanumetResults(page: Page): Promise<void> {
   await expect(
     page.getByRole('heading', { name: /medicines? match/ }),
   ).toBeVisible()
-  await page.getByRole('button', { name: 'Compare prices' }).first().click()
+  await page.getByRole('button', { name: '+ Add to basket' }).first().click()
+  await page.getByRole('button', { name: 'See prices' }).first().click()
   await expect(
     page.getByRole('heading', { name: 'Complete baskets' }),
   ).toBeVisible()
