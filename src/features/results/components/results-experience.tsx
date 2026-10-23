@@ -174,6 +174,9 @@ export function ResultsExperience({
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [detailKey, setDetailKey] = useState<string | null>(null)
   const [activeRoute, setActiveRoute] = useState<ActiveRoute | null>(null)
+  const [trackedPharmacyId, setTrackedPharmacyId] = useState<string | null>(
+    null,
+  )
   const [routeStatus, setRouteStatus] = useState<RouteStatus>('idle')
   const [routeError, setRouteError] = useState<string | null>(null)
   const [locationAttempt, setLocationAttempt] = useState(0)
@@ -298,6 +301,7 @@ export function ResultsExperience({
   useEffect(() => {
     routeRequestRef.current?.abort()
     setActiveRoute(null)
+    setTrackedPharmacyId(null)
     setRouteStatus('idle')
     setRouteError(null)
   }, [origin])
@@ -595,6 +599,7 @@ export function ResultsExperience({
   function clearRoute(): void {
     routeRequestRef.current?.abort()
     setActiveRoute(null)
+    setTrackedPharmacyId(null)
     setRouteStatus('idle')
     setRouteError(null)
   }
@@ -615,6 +620,7 @@ export function ResultsExperience({
 
     setSelectedKey(key)
     setDetailKey(null)
+    setTrackedPharmacyId(context.pharmacyId)
     // Drop the sheet so the route on the map is visible.
     setSheet('peek')
     routeRequestRef.current?.abort()
@@ -666,6 +672,15 @@ export function ResultsExperience({
       })
   }
 
+  function handlePinSelect(key: string, focused: boolean): void {
+    if (routeFocus && !focused) {
+      setSelectedKey(key)
+      return
+    }
+    setSelectedKey(key)
+    setDetailKey(key)
+  }
+
   function toggleBasket(): void {
     if (basketOpen) {
       closeBasket()
@@ -686,6 +701,7 @@ export function ResultsExperience({
     ]).catch(() => undefined)
   }
 
+  const routeFocus = routeStatus === 'loading' || activeRoute !== null
   const busy = status !== 'idle'
   const empty = hydrated && basketLines.length === 0
 
@@ -703,15 +719,14 @@ export function ResultsExperience({
         <ResultsMap
           coveredBottomRatio={SHEET_PEEK_RATIO}
           coveredTop={TOP_BAR_CLEARANCE_PX}
-          onSelect={(key) => {
-            setSelectedKey(key)
-            setDetailKey(key)
-          }}
+          focusMode={routeFocus}
+          onSelect={handlePinSelect}
           origin={origin}
           pins={pins}
           route={activeRoute?.response.route ?? null}
           routeLoading={routeStatus === 'loading'}
           selectedKey={selectedKey}
+          trackedPharmacyId={trackedPharmacyId}
         />
       </div>
 

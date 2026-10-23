@@ -199,7 +199,7 @@ test('marks the device origin without joining the pharmacy pins', async ({
   // MapLibre positions. Scaling the marker itself drags its dot off the
   // projected point, and the offset changes again on every zoom.
   const selectedPin = page.locator(`[data-pharmacy-pin="${hit.key}"]`)
-  await expect(selectedPin).toHaveClass(/z-20/)
+  await expect(selectedPin).toHaveClass(/z-30/)
   const [selectedBox, selectedTransform] = await Promise.all([
     selectedPin.boundingBox(),
     selectedPin.evaluate((element) => element.style.transform),
@@ -219,6 +219,101 @@ test('marks the device origin without joining the pharmacy pins', async ({
   expect(
     Math.abs(selectedBox.y + selectedBox.height - Number(projected[2])),
   ).toBeLessThanOrEqual(1)
+})
+
+test('focuses the tracked pharmacy and promotes a tapped price', async ({
+  page,
+}) => {
+  await page.context().grantPermissions(['geolocation'])
+  await page.context().setGeolocation({
+    latitude: 13.6215,
+    longitude: 123.1945,
+  })
+  await page.route('**/api/directions**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        pharmacy_id: 'mercury-naga-penafrancia',
+        origin: { latitude: 13.6215, longitude: 123.1945 },
+        route: {
+          type: 'LineString',
+          coordinates: [
+            [123.1945, 13.6215],
+            [123.1912, 13.6204],
+            [123.189712, 13.619626],
+          ],
+        },
+        distance_m: 1234,
+        duration_s: 456,
+        provider: 'osrm',
+        generated_at: '2026-10-21T10:00:00Z',
+      }),
+    })
+  })
+
+  await searchAndCompare(page, 'janumet')
+
+  const trackedKey = 'mercury-naga-penafrancia|POC-016'
+  const otherKey = 'new-nazareno-drugstore|POC-016'
+  const trackedPin = page.locator(`[data-pharmacy-pin="${trackedKey}"]`)
+  const otherPin = page.locator(`[data-pharmacy-pin="${otherKey}"]`)
+
+  await page
+    .locator(`[id="result-${trackedKey}"]`)
+    .getByRole('button', { name: 'Show route' })
+    .click()
+  await expect(
+    page.getByRole('heading', { name: /Route to Mercury Drug/ }),
+  ).toBeVisible()
+  await expect(page.locator('#results-map')).toHaveAttribute(
+    'data-route-active',
+    'true',
+  )
+
+  const readPinStyle = async (pin: typeof trackedPin) =>
+    pin.evaluate((element) => {
+      const body = element.querySelector('[data-pin-body]')
+      return {
+        opacity: body === null ? 1 : Number(getComputedStyle(body).opacity),
+        zIndex: Number(getComputedStyle(element).zIndex) || 0,
+      }
+    })
+
+  await expect(trackedPin.locator('[data-pin-callout]')).toBeVisible()
+  await expect(otherPin.locator('[data-pin-callout]')).toBeVisible()
+  const trackedStyle = await readPinStyle(trackedPin)
+  const mutedStyle = await readPinStyle(otherPin)
+  expect(mutedStyle.opacity).toBeLessThan(trackedStyle.opacity)
+  expect(mutedStyle.zIndex).toBeLessThan(trackedStyle.zIndex)
+
+  // A muted price is promoted without changing the route or opening the
+  // modal. Tapping the promoted pin again opens its details.
+  await otherPin.click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(
+    page.getByRole('heading', { name: /Route to Mercury Drug/ }),
+  ).toBeVisible()
+  const promotedStyle = await readPinStyle(otherPin)
+  expect(promotedStyle.opacity).toBe(trackedStyle.opacity)
+  const pinZIndexes = await page
+    .locator('[data-pharmacy-pin]')
+    .evaluateAll((pins) =>
+      pins.map((pin) => Number(getComputedStyle(pin).zIndex) || 0),
+    )
+  expect(promotedStyle.zIndex).toBe(Math.max(...pinZIndexes))
+
+  await otherPin.click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Close dialog' }).click()
+  await page.getByRole('button', { name: 'Clear route' }).click()
+  await expect(page.locator('#results-map')).toHaveAttribute(
+    'data-route-active',
+    'false',
+  )
+  await expect(page.locator('[data-pin-body="muted"]')).toHaveCount(0)
+  await expect(otherPin.locator('[data-pin-callout]')).toBeVisible()
 })
 
 test('keeps per-form stock mismatches visible on the results screen', async ({
