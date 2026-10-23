@@ -16,11 +16,15 @@ const coordinateSchema = z.object({
   longitude: z.number().min(-180).max(180),
 })
 
+const scanProviderSchema = z.enum(['mock', 'cloud-vision'])
+
 const serverConfigSchema = z.object({
   databaseUrl: databaseUrlSchema,
   appEnv: appEnvSchema,
   nagaCenter: coordinateSchema,
   routingBaseUrl: z.url(),
+  scanProvider: scanProviderSchema,
+  scanCloudVisionEnabled: z.boolean().default(false),
 })
 
 /** Runtime environments the application recognizes. */
@@ -41,5 +45,7 @@ export function readServerConfig(
       longitude: Number(env.NAGA_CENTER_LNG ?? '123.1945'),
     },
     routingBaseUrl: env.ROUTING_BASE_URL ?? 'https://router.project-osrm.org',
+    scanProvider: (env.SCAN_PROVIDER ?? 'mock') as 'mock' | 'cloud-vision',
+    scanCloudVisionEnabled: env.SCAN_CLOUD_VISION_ENABLED === 'true',
   })
 }

@@ -17,6 +17,7 @@ test-results/
 .env
 .env.*
 !.env.example
+pharmassist-512515-a51d26300072.json
 
 # Logs
 *.log

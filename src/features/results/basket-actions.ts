@@ -3,17 +3,49 @@ import type { BaseUnit } from '#/shared/domain/medicine-summary'
 
 import {
   addBasketLine,
+  addBasketLines,
   getSessionStorage,
   readBasket,
   removeBasketLine,
   writeBasket,
 } from './results.basket'
+import type { BasketLine } from './results.domain'
 
 /** Fired on `window` when the basket changes outside the results screen. */
 export const BASKET_CHANGED_EVENT = 'pharmassist:basket-changed'
 
 /** How adding a medicine to the basket from another screen went. */
 export type AddToBasketResult = 'added' | 'duplicate' | 'full'
+
+/** The result of merging confirmed scan lines into the session basket. */
+export type AddLinesToBasketResult = {
+  added: number
+  duplicateCount: number
+  full: boolean
+}
+
+/** Merge confirmed scan lines into the session basket and announce the change. */
+export function addLinesToSessionBasket(
+  additions: readonly BasketLine[],
+): AddLinesToBasketResult {
+  const storage = getSessionStorage()
+  const outcome = addBasketLines(readBasket(storage), additions)
+  writeBasket(storage, outcome.lines)
+  window.dispatchEvent(new Event(BASKET_CHANGED_EVENT))
+  if (outcome.added > 0) {
+    sendEvents([
+      {
+        name: 'basket_item_added',
+        properties: { source: 'scan', item_count: outcome.lines.length },
+      },
+    ]).catch(() => undefined)
+  }
+  return {
+    added: outcome.added,
+    duplicateCount: outcome.duplicateIds.length,
+    full: outcome.full,
+  }
+}
 
 /** Add a medicine to the session basket from another screen, such as home search. */
 export function addToSessionBasket(
@@ -79,6 +111,7 @@ export function announceBasketChange(): void {
 /** Everything another screen needs to add to, remove from, and watch the basket. */
 export const sessionBasket = {
   add: addToSessionBasket,
+  addLines: addLinesToSessionBasket,
   remove: removeFromSessionBasket,
   subscribe: subscribeToBasket,
   snapshot: basketIdsSnapshot,

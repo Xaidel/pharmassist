@@ -1,9 +1,11 @@
 import { getRouteApi } from '@tanstack/react-router'
+import { ScanLine } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import { cn } from '#/lib/cn'
 import { InfoButton } from '#/shared/components/info-button'
+import { Button } from '#/shared/components/ui/button'
 
 import { HomeMap } from '../components/home-map'
 import {
@@ -52,6 +54,10 @@ export function HomePage({
     [navigate],
   )
 
+  const handleScan = useCallback((): void => {
+    void navigate({ to: '/scan' })
+  }, [navigate])
+
   return (
     <main className="relative h-dvh overflow-clip bg-muted">
       {/* z-0 keeps the map and its controls beneath every panel. */}
@@ -94,6 +100,17 @@ export function HomePage({
           {...(initialQuery === undefined ? {} : { initialQuery })}
           onQueryChange={handleQueryChange}
         />
+
+        <Button
+          className="mt-3 w-full"
+          onClick={handleScan}
+          size="lg"
+          type="button"
+          variant="outline"
+        >
+          <ScanLine aria-hidden="true" className="size-5" />
+          Scan a prescription
+        </Button>
       </section>
     </main>
   )

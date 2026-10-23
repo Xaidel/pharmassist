@@ -4,7 +4,7 @@
 **Decision:** [16 - Pack vs per-piece (tingi) pricing](https://github.com/Xaidel/pharmassist/issues/36)
 **Parent map:** [Map: Pharmassist POC — seeded-data working demo](https://github.com/Xaidel/pharmassist/issues/17)
 **Status:** Contract for implementation. This revision replaces the pack-only medicine identity, pack basket, and pack-based ranking in #21. Schema and seed migration are ticket #42; quantity basket and exact-fulfillment ranking are #44; results UI is #43; end-to-end acceptance is #45. Native directions are governed by the [native pharmacy directions ADR](../adr/proposed/architecture/2026-10-21-native-pharmacy-directions.md).
-**Last updated:** 2026-10-22
+**Last updated:** 2026-10-23
 
 ---
 
@@ -2140,7 +2140,7 @@ interface ScanProvider {
 }
 ```
 
-The POC provider is `MockScanProvider`. The real provider is chosen in #16. The route, consent checks, size/type validation, response envelope, and no-retention guarantees stay the same.
+The POC provider is `MockScanProvider`. The pilot provider is Cloud Vision behind the same port, and it is governed by the [`scan-provider-port`](../adr/accepted/architecture/2026-10-23-scan-provider-port.md) and [`cloud-ocr-legal-gate`](../adr/accepted/security/2026-10-23-cloud-ocr-legal-gate.md) ADRs; the accuracy gate is [14b - OCR accuracy gate for v1](https://github.com/Xaidel/pharmassist/issues/63). The route, consent checks, size/type validation, response envelope, and no-retention guarantees stay the same when the mock is replaced.
 
 ### 9.2 Rules for the real provider
 
@@ -2151,6 +2151,7 @@ The POC provider is `MockScanProvider`. The real provider is chosen in #16. The 
 - Keep the `image_retained: false` guarantee.
 - Preserve the response shape; the client's confirm/edit UI must not change.
 - If the pilot chooses on-device OCR, the client can satisfy the same `ScanProvider` shape locally; the server contract remains the cloud-route fallback.
+- Real prescription images must not reach Cloud Vision until the DPIA, written processor terms, and counsel sign-off in the [`cloud-ocr-legal-gate`](../adr/accepted/security/2026-10-23-cloud-ocr-legal-gate.md) ADR are complete; the adapter stays behind the [`scan-provider-port`](../adr/accepted/architecture/2026-10-23-scan-provider-port.md) port either way.
 
 ### 9.3 What the client must not depend on
 
