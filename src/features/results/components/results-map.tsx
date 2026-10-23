@@ -100,6 +100,37 @@ function createPinElement(
   return { root: button, callout }
 }
 
+function createOriginMarkerElement(): HTMLDivElement {
+  const root = document.createElement('div')
+  root.className = 'pointer-events-none flex flex-col items-center'
+  root.dataset.originMarker = ''
+  root.setAttribute('role', 'img')
+  root.setAttribute('aria-label', 'Your current location')
+
+  const label = document.createElement('div')
+  label.className =
+    'rounded-full border border-primary/40 bg-card px-2.5 py-1 text-xs font-semibold text-primary shadow-sm'
+  label.textContent = 'You are here'
+
+  const dot = document.createElement('div')
+  dot.className = 'relative mt-1 flex size-5 items-center justify-center'
+
+  const pulse = document.createElement('span')
+  pulse.className =
+    'absolute inline-flex size-5 animate-ping rounded-full bg-primary/30 motion-reduce:animate-none'
+  pulse.dataset.originPulse = ''
+  pulse.setAttribute('aria-hidden', 'true')
+
+  const core = document.createElement('span')
+  core.className =
+    'relative size-3.5 rounded-full border-2 border-card bg-primary shadow-sm'
+  core.setAttribute('aria-hidden', 'true')
+
+  dot.append(pulse, core)
+  root.append(label, dot)
+  return root
+}
+
 function prefersReducedMotion(): boolean {
   return (
     typeof window !== 'undefined' &&
@@ -235,6 +266,19 @@ export function ResultsMap({
     }
     markersRef.current = []
 
+    // Add the origin first so pharmacy pins paint above it. It is
+    // pointer-events-none, so a pin at the same spot keeps its tap target.
+    if (origin !== null) {
+      const originMarker = new lib.Marker({
+        element: createOriginMarkerElement(),
+        anchor: 'bottom',
+        offset: [0, 6],
+      })
+        .setLngLat([origin.longitude, origin.latitude])
+        .addTo(map)
+      markersRef.current.push(originMarker)
+    }
+
     const callouts: { callout: HTMLDivElement; priority: number }[] = []
     for (const [index, pin] of pins.entries()) {
       const selected = pin.key === selectedKey
@@ -299,7 +343,7 @@ export function ResultsMap({
       map.off('move', relayout)
       map.off('resize', relayout)
     }
-  }, [isReady, pins, selectedKey, visiblePadding])
+  }, [isReady, origin, pins, selectedKey, visiblePadding])
 
   useEffect(() => {
     const map = mapRef.current
