@@ -59,10 +59,12 @@ const PIN_TONES = {
   'no-price': 'faint',
 } as const satisfies Record<MapPin['variant'], CalloutTone>
 
-const PIN_BASE =
-  'rounded-xl transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none'
+// Stacking and focus belong to the element MapLibre positions; the scale
+// belongs to its inner body, or it would drag the pin off its coordinate.
+const PIN_ROOT =
+  'rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
 
-const PIN_SELECTED = 'z-20 scale-110'
+const PIN_SELECTED = 'scale-110'
 
 function isStarred(variant: MapPin['variant']): boolean {
   return variant === 'cheapest' || variant === 'nearest'
@@ -71,17 +73,18 @@ function isStarred(variant: MapPin['variant']): boolean {
 function createPinElement(
   pin: MapPin,
   selected: boolean,
-): CalloutPin<HTMLButtonElement> {
+): Pick<CalloutPin<HTMLButtonElement>, 'root' | 'callout'> {
   const { root: button, callout } = createCalloutPin({
     tag: 'button',
     label: pin.label,
     tone: PIN_TONES[pin.variant],
     starred: isStarred(pin.variant),
     rootClassName: cn(
-      PIN_BASE,
+      PIN_ROOT,
       isStarred(pin.variant) && 'z-10',
-      selected && PIN_SELECTED,
+      selected && 'z-20',
     ),
+    bodyClassName: cn(selected && PIN_SELECTED),
   })
   button.type = 'button'
   button.setAttribute(
