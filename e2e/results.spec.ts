@@ -186,15 +186,39 @@ test('marks the device origin without joining the pharmacy pins', async ({
     const y = rect.bottom - 4
     const pin =
       document.elementFromPoint(x, y)?.closest('[data-pharmacy-pin]') ?? null
-    return pin === null
-      ? null
-      : { x, y, key: pin.getAttribute('data-pharmacy-pin') }
+    const key = pin?.getAttribute('data-pharmacy-pin') ?? null
+    return pin === null || key === null ? null : { x, y, key }
   })
   if (hit === null) {
     throw new Error('No pharmacy pin sits under the origin marker')
   }
   await page.mouse.click(hit.x, hit.y)
   await expect(page.getByRole('dialog')).toBeVisible()
+
+  // Selecting scales the pin's visual body, never the marker element
+  // MapLibre positions. Scaling the marker itself drags its dot off the
+  // projected point, and the offset changes again on every zoom.
+  const selectedPin = page.locator(`[data-pharmacy-pin="${hit.key}"]`)
+  await expect(selectedPin).toHaveClass(/z-20/)
+  const [selectedBox, selectedTransform] = await Promise.all([
+    selectedPin.boundingBox(),
+    selectedPin.evaluate((element) => element.style.transform),
+  ])
+  if (selectedBox === null) {
+    throw new Error('The selected pharmacy pin is not visible')
+  }
+  const projected = /translate\((-?[\d.]+)px, (-?[\d.]+)px\)/.exec(
+    selectedTransform,
+  )
+  if (projected === null) {
+    throw new Error('The selected pharmacy pin has no projected position')
+  }
+  expect(
+    Math.abs(selectedBox.x + selectedBox.width / 2 - Number(projected[1])),
+  ).toBeLessThanOrEqual(1)
+  expect(
+    Math.abs(selectedBox.y + selectedBox.height - Number(projected[2])),
+  ).toBeLessThanOrEqual(1)
 })
 
 test('keeps per-form stock mismatches visible on the results screen', async ({

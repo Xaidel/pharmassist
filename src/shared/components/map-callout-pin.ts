@@ -42,7 +42,10 @@ const TONES = {
 
 /** The pieces of a callout pin a map marker positions and declutters. */
 export type CalloutPin<Root extends HTMLElement> = {
+  /** The marker element MapLibre positions; never put a CSS transform here. */
   root: Root
+  /** The visual wrapper inside the marker; scale or animate this instead. */
+  body: HTMLDivElement
   callout: HTMLDivElement
 }
 
@@ -51,7 +54,10 @@ type CalloutPinOptions<Tag extends 'button' | 'div'> = {
   label: string
   tone: CalloutTone
   starred?: boolean
+  /** Classes for the marker element; must not include transforms. */
   rootClassName?: string
+  /** Classes for the visual wrapper; selection scale and motion belong here. */
+  bodyClassName?: string
 }
 
 /**
@@ -64,10 +70,16 @@ export function createCalloutPin<Tag extends 'button' | 'div'>({
   tone,
   starred = false,
   rootClassName,
+  bodyClassName,
 }: CalloutPinOptions<Tag>): CalloutPin<HTMLElementTagNameMap[Tag]> {
   const style = TONES[tone]
   const root = document.createElement(tag)
-  root.className = cn('flex flex-col items-center', rootClassName)
+  root.className = cn(rootClassName)
+
+  // MapLibre writes its positioning transform to the marker element itself, so
+  // a scale must sit on this inner wrapper or it drags the marker off its point.
+  const body = document.createElement('div')
+  body.className = cn('flex flex-col items-center', bodyClassName)
 
   const box = document.createElement('div')
   box.className = cn('rounded-xl border p-0.5 shadow-md', style.box)
@@ -97,8 +109,9 @@ export function createCalloutPin<Tag extends 'button' | 'div'>({
   const dot = document.createElement('div')
   dot.className = cn('mt-1.5 size-3 rounded-full ring-2 ring-card', style.dot)
 
-  root.append(callout, dot)
-  return { root, callout }
+  body.append(callout, dot)
+  root.append(body)
+  return { root, body, callout }
 }
 
 const LABEL_GAP_PX = 4
