@@ -42,7 +42,7 @@ import {
 } from '../results.quantity'
 import type { ResultsResponse } from '../results.schema'
 
-import { BackButton } from './back-button'
+import { BackButton } from '#/shared/components/back-button'
 import { BasketDrawer } from './basket-drawer'
 import { BasketPanel } from './basket-panel'
 import { BasketToggleButton } from './basket-toggle-button'

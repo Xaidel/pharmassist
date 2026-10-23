@@ -93,6 +93,52 @@ export function addBasketLine(
   }
 }
 
+/** The outcome of merging confirmed scan lines into the session basket. */
+export type AddBasketLinesOutcome = {
+  lines: BasketLine[]
+  added: number
+  duplicateIds: string[]
+  full: boolean
+}
+
+/**
+ * Merge confirmed scan lines into the session basket.
+ *
+ * A line whose medicine is already present is skipped and reported as a
+ * duplicate. Additions stop at the basket's item limit and report `full`.
+ */
+export function addBasketLines(
+  lines: readonly BasketLine[],
+  additions: readonly BasketLine[],
+): AddBasketLinesOutcome {
+  const present = new Set(lines.map((line) => line.medicine_id))
+  const duplicateIds: string[] = []
+  const appended: BasketLine[] = []
+
+  for (const addition of additions) {
+    if (present.has(addition.medicine_id)) {
+      duplicateIds.push(addition.medicine_id)
+      continue
+    }
+    if (lines.length + appended.length >= BASKET_MAX_ITEMS) {
+      break
+    }
+    present.add(addition.medicine_id)
+    appended.push({
+      medicine_id: addition.medicine_id,
+      quantity: addition.quantity,
+      unit: addition.unit,
+    })
+  }
+
+  return {
+    lines: [...lines, ...appended],
+    added: appended.length,
+    duplicateIds,
+    full: appended.length + duplicateIds.length < additions.length,
+  }
+}
+
 /** Change one basket line's quantity within the contract limits. */
 export function setBasketQuantity(
   lines: readonly BasketLine[],

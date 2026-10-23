@@ -120,4 +120,4 @@ Material that governs derived applications belongs in `template_docs/`. Material
 
 ## Status
 
-The scaffold, PWA, Compose stack, Postgres schema, seed/wipe tooling, typo-tolerant medicine search with anonymous search events, map-first results with basket ranking, and pharmacy detail, directions, and report flows are in place. Mocked prescription scan and VPS deployment remain as subsequent slices in [the POC map](https://github.com/Xaidel/pharmassist/issues/17).
+The scaffold, PWA, Compose stack, Postgres schema, seed/wipe tooling, typo-tolerant medicine search with anonymous search events, map-first results with basket ranking, pharmacy detail, directions, report flows, and the mocked prescription scan are in place. VPS deployment remains as the final slice in [the POC map](https://github.com/Xaidel/pharmassist/issues/17).
