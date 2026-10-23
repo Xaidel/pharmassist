@@ -73,18 +73,26 @@ function isStarred(variant: MapPin['variant']): boolean {
 function createPinElement(
   pin: MapPin,
   selected: boolean,
+  tracked: boolean,
+  muted: boolean,
 ): Pick<CalloutPin<HTMLButtonElement>, 'root' | 'callout'> {
-  const { root: button, callout } = createCalloutPin({
+  const {
+    root: button,
+    body,
+    callout,
+  } = createCalloutPin({
     tag: 'button',
     label: pin.label,
     tone: PIN_TONES[pin.variant],
     starred: isStarred(pin.variant),
     rootClassName: cn(
       PIN_ROOT,
-      isStarred(pin.variant) && 'z-10',
-      selected && 'z-20',
+      selected && 'z-30',
+      !selected && tracked && 'z-20',
+      !selected && !tracked && isStarred(pin.variant) && 'z-10',
+      !selected && !tracked && !isStarred(pin.variant) && 'z-0',
     ),
-    bodyClassName: cn(selected && PIN_SELECTED),
+    bodyClassName: cn(selected && PIN_SELECTED, muted && 'opacity-60'),
   })
   button.type = 'button'
   button.setAttribute(
@@ -100,6 +108,9 @@ function createPinElement(
     }`,
   )
   button.dataset.pharmacyPin = pin.key
+  button.dataset.pinCalloutState = muted ? 'muted' : 'shown'
+  body.dataset.pinBody = muted ? 'muted' : 'focused'
+  callout.dataset.pinCallout = ''
   return { root: button, callout }
 }
 
@@ -144,10 +155,14 @@ function prefersReducedMotion(): boolean {
 type ResultsMapProps = {
   pins: readonly MapPin[]
   selectedKey: string | null
+  /** The pharmacy whose route is loading or shown. */
+  trackedPharmacyId: string | null
+  /** True while a route request is running or a route is shown. */
+  focusMode: boolean
   origin: { latitude: number; longitude: number } | null
   route: RouteGeometry | null
   routeLoading: boolean
-  onSelect: (key: string) => void
+  onSelect: (key: string, focused: boolean) => void
   /** Pixels the floating top bar covers at the top of the map. */
   coveredTop: number
   /** Share of the map height the bottom sheet covers. */
@@ -158,6 +173,8 @@ type ResultsMapProps = {
 export function ResultsMap({
   pins,
   selectedKey,
+  trackedPharmacyId,
+  focusMode,
   origin,
   route,
   routeLoading,
@@ -285,14 +302,28 @@ export function ResultsMap({
     const callouts: { callout: HTMLDivElement; priority: number }[] = []
     for (const [index, pin] of pins.entries()) {
       const selected = pin.key === selectedKey
-      const { root: element, callout } = createPinElement(pin, selected)
-      // Selected, then starred, then list order keeps its label when crowded.
+      const tracked = focusMode && pin.pharmacyId === trackedPharmacyId
+      const muted = focusMode && !selected && !tracked
+      const { root: element, callout } = createPinElement(
+        pin,
+        selected,
+        tracked,
+        muted,
+      )
+      // Selected, then tracked, then starred, then list order keeps its label
+      // when crowded.
       callouts.push({
         callout,
-        priority: selected ? -2 : isStarred(pin.variant) ? -1 : index,
+        priority: selected
+          ? -3
+          : tracked
+            ? -2
+            : isStarred(pin.variant)
+              ? -1
+              : index,
       })
       element.addEventListener('click', () => {
-        onSelectRef.current(pin.key)
+        onSelectRef.current(pin.key, selected || tracked)
       })
       const marker = new lib.Marker({
         element,
@@ -346,7 +377,15 @@ export function ResultsMap({
       map.off('move', relayout)
       map.off('resize', relayout)
     }
-  }, [isReady, origin, pins, selectedKey, visiblePadding])
+  }, [
+    isReady,
+    origin,
+    pins,
+    selectedKey,
+    trackedPharmacyId,
+    focusMode,
+    visiblePadding,
+  ])
 
   useEffect(() => {
     const map = mapRef.current
