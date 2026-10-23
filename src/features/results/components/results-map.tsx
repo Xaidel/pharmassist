@@ -109,7 +109,7 @@ function createOriginMarkerElement(): HTMLDivElement {
 
   const label = document.createElement('div')
   label.className =
-    'rounded-full border border-primary/40 bg-card px-2.5 py-1 text-xs font-semibold text-primary shadow-sm'
+    'rounded-full border border-highlight bg-card px-2.5 py-1 text-xs font-semibold text-highlight shadow-sm'
   label.textContent = 'You are here'
 
   const dot = document.createElement('div')
@@ -117,13 +117,13 @@ function createOriginMarkerElement(): HTMLDivElement {
 
   const pulse = document.createElement('span')
   pulse.className =
-    'absolute inline-flex size-5 animate-ping rounded-full bg-primary/30 motion-reduce:animate-none'
+    'absolute inline-flex size-5 animate-ping rounded-full bg-highlight/30 motion-reduce:animate-none'
   pulse.dataset.originPulse = ''
   pulse.setAttribute('aria-hidden', 'true')
 
   const core = document.createElement('span')
   core.className =
-    'relative size-3.5 rounded-full border-2 border-card bg-primary shadow-sm'
+    'relative size-3.5 rounded-full border-2 border-card bg-highlight shadow-sm'
   core.setAttribute('aria-hidden', 'true')
 
   dot.append(pulse, core)
