@@ -8,13 +8,13 @@ async function searchAndCompare(page: Page, query: string): Promise<void> {
   await expect(
     page.getByRole('heading', { name: /medicines? match/ }),
   ).toBeVisible()
-  await page.getByRole('button', { name: '+ Add to basket' }).first().click()
+  await page.getByRole('button', { name: '+ Add to your list' }).first().click()
   await page.getByRole('button', { name: 'See prices' }).first().click()
   await expect(
-    page.getByRole('heading', { name: 'Compare basket prices' }),
+    page.getByRole('heading', { name: 'Compare your list prices' }),
   ).toBeVisible()
   await expect(
-    page.getByRole('heading', { name: 'Complete baskets' }),
+    page.getByRole('heading', { name: 'Complete lists' }),
   ).toBeVisible()
 }
 
@@ -26,16 +26,16 @@ async function addAnotherMedicine(page: Page, query: string): Promise<void> {
   await expect(
     page.getByRole('heading', { name: new RegExp(`match “${query}”`) }),
   ).toBeVisible()
-  await page.getByRole('button', { name: '+ Add to basket' }).first().click()
+  await page.getByRole('button', { name: '+ Add to your list' }).first().click()
   await page.getByRole('button', { name: 'See prices' }).first().click()
   await expect(
-    page.getByRole('heading', { name: 'Compare basket prices' }),
+    page.getByRole('heading', { name: 'Compare your list prices' }),
   ).toBeVisible()
 }
 
 // Quantity controls live in the basket drawer, opened from the top bar.
 async function openBasket(page: Page): Promise<void> {
-  const chip = page.getByRole('button', { name: /^Basket, / })
+  const chip = page.getByRole('button', { name: /^Your list, / })
   if ((await chip.getAttribute('aria-expanded')) !== 'true') {
     await chip.click()
   }
@@ -535,12 +535,12 @@ test('keeps the results usable at a phone viewport while prices load slowly', as
   await expect(
     page.getByRole('heading', { name: /medicines? match/ }),
   ).toBeVisible()
-  await page.getByRole('button', { name: '+ Add to basket' }).first().click()
+  await page.getByRole('button', { name: '+ Add to your list' }).first().click()
   await page.getByRole('button', { name: 'See prices' }).first().click()
 
   await expect(page.getByRole('status')).toContainText('Checking prices')
   await expect(
-    page.getByRole('heading', { name: 'Complete baskets' }),
+    page.getByRole('heading', { name: 'Complete lists' }),
   ).toBeVisible()
   await expect(
     page.getByRole('heading', { name: 'Closest to complete' }),

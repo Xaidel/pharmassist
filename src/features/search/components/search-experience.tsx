@@ -408,7 +408,7 @@ export function SearchExperience({
           </p>
           {basketFull && (
             <Alert className="mt-3" variant="info">
-              Your basket is full (10 medicines). Remove one before adding
+              Your list is full (10 medicines). Remove one before adding
               another.
             </Alert>
           )}
@@ -444,7 +444,7 @@ export function SearchExperience({
                     <>
                       {/* Tapping the confirmation undoes the add. */}
                       <Button
-                        aria-label={`In basket. Tap to remove ${
+                        aria-label={`In your list. Tap to remove ${
                           item.medicine.brand_name ?? item.medicine.generic_name
                         } ${item.medicine.strength}.`}
                         aria-pressed
@@ -455,7 +455,7 @@ export function SearchExperience({
                         type="button"
                         variant="outline"
                       >
-                        <span aria-hidden="true">✓</span> In basket
+                        <span aria-hidden="true">✓</span> In your list
                       </Button>
                     </>
                   ) : (
@@ -466,7 +466,7 @@ export function SearchExperience({
                       size="sm"
                       type="button"
                     >
-                      + Add to basket
+                      + Add to your list
                     </Button>
                   )}
                 </div>

@@ -3,7 +3,7 @@
 **Ticket:** [Xaidel/pharmassist#41](https://github.com/Xaidel/pharmassist/issues/41), revising [Xaidel/pharmassist#21](https://github.com/Xaidel/pharmassist/issues/21)
 **Decision:** [16 - Pack vs per-piece (tingi) pricing](https://github.com/Xaidel/pharmassist/issues/36)
 **Parent map:** [Map: Pharmassist POC — seeded-data working demo](https://github.com/Xaidel/pharmassist/issues/17)
-**Status:** Contract for implementation. This revision replaces the pack-only medicine identity, pack basket, and pack-based ranking in #21. Schema and seed migration are ticket #42; quantity basket and exact-fulfillment ranking are #44; results UI is #43; end-to-end acceptance is #45. Native directions are governed by the [native pharmacy directions ADR](../adr/proposed/architecture/2026-10-21-native-pharmacy-directions.md).
+**Status:** Contract for implementation. This revision replaces the pack-only medicine identity, pack list, and pack-based ranking in #21. Schema and seed migration are ticket #42; quantity list and exact-fulfillment ranking are #44; results UI is #43; end-to-end acceptance is #45. Native directions are governed by the [native pharmacy directions ADR](../adr/proposed/architecture/2026-10-21-native-pharmacy-directions.md).
 **Last updated:** 2026-10-23
 
 ---
@@ -14,14 +14,16 @@ This document fixes the POC data layer before the sale-form schema, seed, API, a
 
 - the Postgres schema mapped from PRD section 7 — Medicine, Pharmacy, PriceObservation, Basket (session-only), and Report — plus seed batches, MDRP ceilings, candidate generics, and anonymous events;
 - medicine identity without a pack, and pack, strip, and loose as per-pharmacy sale forms;
-- a quantity basket in each medicine's base dispensing unit, with explicit non-sale form states;
+- a quantity list in each medicine's base dispensing unit, with explicit non-sale form states;
 - strict exact-fulfillment ranking and the sold-per-pack-only bucket;
 - `poc-seed` tagging and a wipe that cannot touch non-seed rows;
-- the HTTP contract for search, basket validation, results/ranking, pharmacy detail, native directions, scan, report, and events;
-- session-only basket semantics, with no accounts, no patient identifiers, and no image retention;
+- the HTTP contract for search, list validation, results/ranking, pharmacy detail, native directions, scan, report, and events;
+- session-only list semantics, with no accounts, no patient identifiers, and no image retention;
 - the scan endpoint as the stable swap point for the real OCR route chosen in [OCR data-flow and legal-risk decision](https://github.com/Xaidel/pharmassist/issues/16).
 
 The contract is deliberately vendor-neutral. The POC seed and the mock OCR provider are replaceable without changing the UI or the API shapes.
+
+The product term is **List**: the set of medicines a patient wants to compare prices for. Technical identifiers are unchanged and keep the word "basket" — the `Basket`/`BasketItem` DTOs, the `basket` response field, `POST /api/basket`, the `BASKET_TOO_LARGE` error code, and the `basket_item_added`/`basket_item_removed` events. In prose, "list" and "basket" are the same object.
 
 ### Source data
 
@@ -39,8 +41,8 @@ The implementation copies these fixtures into the app's seed bundle; the researc
 
 ## 2. Decisions at a glance
 
-1. **The basket is not a database table.** It is a client-side value object, held in page memory (optionally `sessionStorage`) and sent to the server only inside request bodies. This satisfies PRD FR-13/FR-42: prescription contents are never stored server-side. The server is stateless for baskets.
-2. **The basket counts base dispensing units, not packs.** Each line is `medicine_id`, `quantity`, and `unit`; the unit must equal the medicine's `base_unit`. Pack, strip, and loose are offers the server uses to fulfill the quantity.
+1. **The list is not a database table.** It is a client-side value object, held in page memory (optionally `sessionStorage`) and sent to the server only inside request bodies. This satisfies PRD FR-13/FR-42: prescription contents are never stored server-side. The server is stateless for lists.
+2. **The list counts base dispensing units, not packs.** Each line is `medicine_id`, `quantity`, and `unit`; the unit must equal the medicine's `base_unit`. Pack, strip, and loose are offers the server uses to fulfill the quantity.
 3. **Medicine identity excludes the pack.** A medicine is brand or generic name plus strength and dosage form. Pack, strip, and loose are sale forms observed per pharmacy; they are not separate medicine rows.
 4. **One current observation per medicine, pharmacy, and sale form.** The POC holds the current record only; re-verification updates it. Price history is a pilot concern.
 5. **Forms that are not sold are explicit.** Every active medicine at every seeded pharmacy has a `pack`, `strip`, and `loose` row with one of `available`, `pack_only`, `not_applicable`, `not_stocked`, or `unknown`. Only `available` carries a price.
@@ -50,7 +52,7 @@ The implementation copies these fixtures into the app's seed bundle; the researc
 9. **Reports are immutable snapshots.** `price_report` stores pharmacy and medicine labels, with no foreign keys to seeded rows, so a report survives a seed wipe and remains readable.
 10. **Seed tagging is a batch reference.** Every seeded row carries `seed_batch_id = 'poc-seed'`. The wipe is scoped to that batch and refuses to run if a non-seed row depends on seeded data.
 11. **MDRP ceilings are a separate reference table.** `mdrp_ceiling` holds the published ceilings; `price_observation` references an `mdrp_entry_id` only when the product and form match exactly.
-12. **Candidate generic alternatives are separate from exact products.** They live in `medicine_alternative`, never enter search ranking or basket ranking, and are returned as a separate `candidate_generics` block.
+12. **Candidate generic alternatives are separate from exact products.** They live in `medicine_alternative`, never enter search ranking or list ranking, and are returned as a separate `candidate_generics` block.
 13. **A medicine without an FDA registration number is not listable.** It stays in the catalog with `active = false`. In the current seed that is POC-028 only.
 14. **The scan endpoint is the OCR seam.** `POST /api/scan` validates consent, never stores the image or recognized text, and returns only medicine candidates. The mock provider is replaced behind the same response shape.
 15. **All API money is PHP and two decimal places.** The database uses `numeric(10,2)`; JSON uses numbers. The client formats currency.
@@ -98,7 +100,7 @@ Identifiers are stable across re-seeds. A pilot load may use its own stable iden
 {
   "error": {
     "code": "INVALID_REQUEST",
-    "message": "The basket contains an unknown medicine.",
+    "message": "The list contains an unknown medicine.",
     "details": {
       "medicine_ids": ["POC-999"]
     }
@@ -126,7 +128,7 @@ Three mappings are worth calling out against PRD section 7:
 
 - `medicine.data_source` maps the PRD Medicine `source` field; `pnf_listed` / `pnf_entry` / `pnf_page` refine the single `pnf_status` field into checkable facts.
 - `price_observation_with_mdrp` exposes the PRD `mdrp_ceiling` and `above_mdrp_flag` fields per form; they are derived from `mdrp_ceiling`, not stored on the price row.
-- `price_report.result_key` is the POC's stable stand-in for the PRD `result_id`. Results are computed per request, so no result row exists to reference; the key is derived from the pharmacy and the sorted basket medicine ids. It deliberately excludes quantity and sale forms.
+- `price_report.result_key` is the POC's stable stand-in for the PRD `result_id`. Results are computed per request, so no result row exists to reference; the key is derived from the pharmacy and the sorted list medicine ids. It deliberately excludes quantity and sale forms.
 
 ---
 
@@ -140,7 +142,7 @@ A medicine is identified by brand or generic name plus strength and dosage form.
 
 - `medicine.strength`, `medicine.dosage_form`, and `medicine.generic_name` are required.
 - `medicine.brand_name` is nullable for a generic-only row.
-- `medicine.base_unit` is required and is the unit the basket counts in: `tablet`, `capsule`, `mL`, `g`, `actuation`, `sachet`, or `unit-dose`.
+- `medicine.base_unit` is required and is the unit the list counts in: `tablet`, `capsule`, `mL`, `g`, `actuation`, `sachet`, or `unit-dose`.
 - A different sellable pack, strip, or loose presentation is not a separate medicine row. It is a sale-form observation for the same medicine.
 - The seeder derives `base_unit` from the reference product's unit basis; for a medicine without a reference pack (POC-041) it derives it from the dosage form.
 - Multiple simultaneous pack sizes at one pharmacy are out of scope for the POC; the contract records one pack observation per `(medicine, pharmacy)`. Extending the unique key to the pack is a pilot change.
@@ -149,7 +151,7 @@ A medicine is identified by brand or generic name plus strength and dosage form.
 
 The sale forms are `pack`, `strip`, and `loose`. Every active seeded medicine has all three rows at every seeded pharmacy, and each row carries one state:
 
-| State | Meaning | Price fields | Basket effect |
+| State | Meaning | Price fields | List effect |
 |---|---|---|---|
 | `available` | The pharmacy sells this form; the shelf price is observed. | Required | Can fulfill a quantity |
 | `pack_only` | This strip or loose form is not sold; the pack is the fallback. | Null | Never incomplete; the UI shows "Sold per pack only" when the pack is the only sellable form |
@@ -173,9 +175,9 @@ Rules:
 - The three rows are independent for stock: a pharmacy may have the pack in stock, the strip out of stock, and loose in stock.
 - `unit_rate_php` (`shelf_price_php / pack_quantity`) is generated for MDRP comparison only. It is never a normal price line and never a buyable price.
 
-### 4.3 Basket
+### 4.3 List (the `Basket` DTO)
 
-A basket is a list of 1–10 line items:
+A list holds 1–10 line items:
 
 ```json
 {
@@ -189,37 +191,37 @@ A basket is a list of 1–10 line items:
 Rules:
 
 - `medicine_id` must exist and be `active`.
-- No duplicate `medicine_id` in one basket.
+- No duplicate `medicine_id` in one list.
 - `quantity` is positive. It is an integer for `tablet`, `capsule`, `sachet`, `actuation`, and `unit-dose`, and may have up to three decimal places for `mL` and `g`.
 - `unit` must equal the medicine's `base_unit`. A mismatch is rejected, never silently converted.
-- The basket is held client-side. The server validates it per request and stores nothing.
-- The client may keep the basket in React state and optionally `sessionStorage` for a reload; it must clear on tab close and must never put it in `localStorage`, IndexedDB, or the service worker cache.
+- The list is held client-side. The server validates it per request and stores nothing.
+- The client may keep the list in React state and optionally `sessionStorage` for a reload; it must clear on tab close and must never put it in `localStorage`, IndexedDB, or the service worker cache.
 - Search history stays on-device and is never sent as an event property.
-- The API enforces 1–10 lines, the quantity rules above, and a sanity ceiling of 100,000 base units per line. It does not store the basket.
+- The API enforces 1–10 lines, the quantity rules above, and a sanity ceiling of 100,000 base units per line. It does not store the list.
 
 Client guardrails, owned by the results UI (#43):
 
 - Loose entry for countable medicines: 1–90 base units per line.
 - Pack or strip entry: 1–10 sellable units per line; the client converts the sellable units to base units before sending.
 - A soft warning above an estimated 30-day supply. The exact estimate and copy belong to #43; the payload remains a base-unit quantity.
-- These are entry guardrails, not server ranking rules. A structurally valid basket above them is still priced; the UI is what prevents accidental over-ordering.
+- These are entry guardrails, not server ranking rules. A structurally valid list above them is still priced; the UI is what prevents accidental over-ordering.
 
 ### 4.4 Completeness, exact fulfillment, and pack-only
 
-For a basket item at a pharmacy:
+For a list item at a pharmacy:
 
 - A **sellable form** is `sale_state = 'available'` and `stock_status` is `in_stock` or `low_stock`.
 - **Exact** means non-negative integer counts of sellable forms sum exactly to the requested quantity: `sum(count × pack_quantity) = quantity`.
-- **Complete** means every basket item is exact. The pharmacy's total is the cheapest exact combination for all items.
+- **Complete** means every list item is exact. The pharmacy's total is the cheapest exact combination for all items.
 - **Sold per pack only** means every item has at least one sellable form, but at least one item is not exact. The server selects the cheapest covering purchase for each non-exact item, using one sellable pack or strip form repeated, and shows the form, its observed price, the number of units to buy, and the covered quantity.
 - **Incomplete** means at least one item has no sellable form. Missing reasons, in order of resolution:
   - `not_stocked` — all three forms are `not_stocked`;
   - `out_of_stock` — a form is `available` but `stock_status = 'out_of_stock'`, and no form is sellable;
   - `stock_unknown` — a form is `available` but `stock_status = 'unknown'`, and no form is sellable;
   - `no_price` — no form is `available` (only `unknown` or no rows).
-- `pack_only` and `not_applicable` forms never make a basket incomplete. They are informational: the medicine is sold by the pack.
+- `pack_only` and `not_applicable` forms never make a list incomplete. They are informational: the medicine is sold by the pack.
 - A price record older than 14 days is still sellable but flagged `stale: true`.
-- A pharmacy with no sellable form for any basket item is **no price data**: it is returned in `no_price_data`, never ranked, and displayed as "No price data" — never as "Unavailable" (PRD FR-30).
+- A pharmacy with no sellable form for any list item is **no price data**: it is returned in `no_price_data`, never ranked, and displayed as "No price data" — never as "Unavailable" (PRD FR-30).
 - A pharmacy with at least one sellable item but a missing item is `incomplete`.
 - MDRP status never affects completeness.
 
@@ -235,16 +237,16 @@ For each item, the server chooses the cheapest exact combination of sellable for
 
 ### 4.6 Ranking
 
-Complete exact baskets split into two MDRP tiers:
+Complete exact lists split into two MDRP tiers:
 
-1. **Compliant:** no chosen component in the basket is above its effective MDRP ceiling.
+1. **Compliant:** no chosen component in the list is above its effective MDRP ceiling.
 2. **Above ceiling:** at least one chosen component is above its effective MDRP ceiling.
 
-Every compliant complete basket ranks before every above-ceiling complete basket. Within each tier the order is:
+Every compliant complete list ranks before every above-ceiling complete list. Within each tier the order is:
 
 1. total shelf price ascending;
 2. distance ascending;
-3. the oldest chosen-component `verified_at` descending (the basket is as fresh as its stalest component);
+3. the oldest chosen-component `verified_at` descending (the list is as fresh as its stalest component);
 4. pharmacy name ascending (deterministic final tie-break).
 
 The `cheapest_complete` highlight goes only to the first result in the compliant tier. If no complete result is compliant, no result is highlighted. An above-ceiling result is never labelled "cheapest". Above-ceiling complete results stay visible in their own group; they are not excluded.
@@ -255,7 +257,7 @@ The sold-per-pack-only bucket is separate and is never ranked against exact opti
 2. distance ascending;
 3. pharmacy name ascending.
 
-Incomplete baskets separately, by:
+Incomplete lists separately, by:
 
 1. fewest missing items ascending;
 2. known exact subtotal ascending;
@@ -264,9 +266,9 @@ Incomplete baskets separately, by:
 
 `no_price_data` pharmacies are not ranked; they are ordered by distance, then name. The sold-per-pack-only and incomplete groups keep their existing order; `above_mdrp_ceiling` is informational for them.
 
-The complete total is `sum(chosen form price × count)` across items. The pack-only covering total is the sum of exact item totals and the covering purchase totals for non-exact items. It is labelled as the amount the patient must buy, not as a comparable exact total. An incomplete basket's known subtotal is the sum of its exact item totals; pack-only item covering totals are shown per item.
+The complete total is `sum(chosen form price × count)` across items. The pack-only covering total is the sum of exact item totals and the covering purchase totals for non-exact items. It is labelled as the amount the patient must buy, not as a comparable exact total. An incomplete list's known subtotal is the sum of its exact item totals; pack-only item covering totals are shown per item.
 
-`sort=distance` keeps the MDRP tier first, then orders complete baskets by distance, then total. Pack-only entries are ordered by distance, then covering total. Incomplete and no-price ordering is unchanged.
+`sort=distance` keeps the MDRP tier first, then orders complete lists by distance, then total. Pack-only entries are ordered by distance, then covering total. Incomplete and no-price ordering is unchanged.
 
 ### 4.7 MDRP
 
@@ -413,7 +415,7 @@ create index medicine_generic_trgm_idx
 create index medicine_active_idx on medicine (active);
 ```
 
-`active = false` is the only way a medicine without an FDA registration number can exist. Search, basket validation, and results all filter to `active = true`.
+`active = false` is the only way a medicine without an FDA registration number can exist. Search, list validation, and results all filter to `active = true`.
 
 `vat_exempt` is the product-level VAT status used only to normalize a VAT-exclusive MDRP ceiling: `true` means the product is VAT-exempt, `false` means it is VATable, and `null` means the status is unknown. The seeder sets POC-016 to `true`; it does not guess a status for the other catalog rows.
 
@@ -741,7 +743,7 @@ create index app_event_session_occurred_idx
   on app_event (session_id, occurred_at desc);
 ```
 
-No IP address, user agent, account id, query text, basket contents, report note, or image data. The event name and property allowlist are enforced by the API (section 7.12), not by the table.
+No IP address, user agent, account id, query text, list contents, report note, or image data. The event name and property allowlist are enforced by the API (section 7.12), not by the table.
 
 ### 5.11 `updated_at` trigger
 
@@ -881,22 +883,22 @@ The seeder runs these checks after writing, before commit. A failure rolls back.
 
 ### 6.5 Demo cases
 
-The seed must make these states reachable from known searches and baskets. Exact prices, strip sizes, and pharmacy/medicine pairs are ticket #42; the shape and conditions are fixed here.
+The seed must make these states reachable from known searches and lists. Exact prices, strip sizes, and pharmacy/medicine pairs are ticket #42; the shape and conditions are fixed here.
 
 | Case | Seed condition | How to reach it |
 |---|---|---|
-| Complete exact basket | POC-001 and POC-036 are sellable loose at three or more pharmacies with different exact totals | Search `amlodipine`, add 5 tablets of POC-001; search `paracetamol`, add 10 tablets of POC-036 |
+| Complete exact list | POC-001 and POC-036 are sellable loose at three or more pharmacies with different exact totals | Search `amlodipine`, add 5 tablets of POC-001; search `paracetamol`, add 10 tablets of POC-036 |
 | Exact mix | A pharmacy sells a strip of 10 and loose tablets for POC-036, so 12 tablets is 1 strip + 2 loose | Same search; add 12 tablets |
 | Sold per pack only | A pharmacy stocks POC-003 only as a pack of 30, with no loose or strip | Search `losartan`, add 10 tablets; inspect the pack-only bucket |
 | Sold by the pack (`not_applicable`) | POC-019 is an inhaler; its loose and strip forms are `not_applicable`, and the pack is 200 actuations | Search `salbutamol`, add 30 actuations; inspect the pack-only bucket |
-| Incomplete basket | One pharmacy has one of the two demo items, not the other | Same POC-001 + POC-036 basket; inspect `incomplete` |
-| Not stocked | A pharmacy has all three forms of POC-036 as `not_stocked` | Same basket; inspect `missing_items` reason `not_stocked` |
+| Incomplete list | One pharmacy has one of the two demo items, not the other | Same POC-001 + POC-036 list; inspect `incomplete` |
+| Not stocked | A pharmacy has all three forms of POC-036 as `not_stocked` | Same list; inspect `missing_items` reason `not_stocked` |
 | Per-form stock | At one pharmacy, POC-001 pack is in stock, strip is out of stock, loose is in stock | Search `amlodipine`, add 5 tablets; the exact line uses loose |
-| Stale record | A POC-036 loose observation older than 14 days remains sellable and is flagged `stale: true` | Same paracetamol basket; inspect the chosen component |
+| Stale record | A POC-036 loose observation older than 14 days remains sellable and is flagged `stale: true` | Same paracetamol list; inspect the chosen component |
 | MDRP loose vs pack | POC-016 has an observed loose price, a strip rate, and a box rate, all above the VAT-exempt PHP 30.31/tablet ceiling; no result is marked cheapest | Search `janumet` or `metformin sitagliptin`, open results and the price block |
 | No price | POC-041 is active but has no known reference pack; all three forms at all pharmacies are `unknown` | Search `omeprazole`; the medicine is returned with `available_forms: []`, and results show no price data |
-| Muted no-price pharmacy | A pharmacy has no sellable form for either demo basket item | Same POC-001 + POC-036 basket; inspect `no_price_data` |
-| Rx vs OTC | POC-001 is Rx; POC-036 is OTC | Same basket |
+| Muted no-price pharmacy | A pharmacy has no sellable form for either demo list item | Same POC-001 + POC-036 list; inspect `no_price_data` |
+| Rx vs OTC | POC-001 is Rx; POC-036 is OTC | Same list |
 | Low-confidence scan | Sample prescription A includes POC-025 at confidence 0.41 | Scan sample A |
 | Unknown scan image | Any other image returns the default script | Scan any non-sample image |
 | Report persistence | A report on a result remains visible after reload | Report a result, reload, inspect `reported` |
@@ -1042,8 +1044,8 @@ All endpoints are same-origin, behind Caddy basic auth, and return `Cache-Contro
 | `GET` | `/api/config` | Client runtime config | No |
 | `GET` | `/api/health` | Deploy health check | No |
 | `GET` | `/api/search` | Autocomplete and exact-product lookup | No |
-| `POST` | `/api/basket` | Validate and resolve a basket | No |
-| `POST` | `/api/results` | Rank pharmacies for a basket | No |
+| `POST` | `/api/basket` | Validate and resolve a list | No |
+| `POST` | `/api/results` | Rank pharmacies for a list | No |
 | `GET` | `/api/pharmacies/{pharmacy_id}` | Pharmacy detail and form prices | No |
 | `GET` | `/api/pharmacies` | Pharmacy directory for the home map | No |
 | `GET` | `/api/directions` | Native road route from the device origin to a pharmacy | No |
@@ -1237,7 +1239,7 @@ Empty state: `200` with `items: []` and `total: 0`. A query that is too long or 
 
 ### 7.6 `POST /api/basket`
 
-Validates and resolves a basket without pricing it. The scan confirm screen and manual add flow use this to turn IDs into canonical medicine summaries before calling results.
+Validates and resolves a list without pricing it. The scan confirm screen and manual add flow use this to turn IDs into canonical medicine summaries before calling results.
 
 Request:
 
@@ -1308,11 +1310,11 @@ Errors:
 - `422 INVALID_QUANTITY` — the quantity is non-positive, has the wrong integer/decimal shape, or exceeds the 100,000-unit sanity ceiling.
 - `422 BASKET_TOO_LARGE` — more than 10 items.
 
-The endpoint never persists the basket.
+The endpoint never persists the list.
 
 ### 7.7 `POST /api/results`
 
-Ranks pharmacies for a quantity basket. This is the single ranking endpoint for both single-item searches and multi-item baskets.
+Ranks pharmacies for a quantity list. This is the single ranking endpoint for both single-item searches and multi-item lists.
 
 Request:
 
@@ -1329,7 +1331,7 @@ Request:
 
 - `items`: same rules as `/api/basket`. Required.
 - `origin`: optional. Latitude -90..90, longitude -180..180. If omitted or null, the server uses `NAGA_CENTER_LAT` / `NAGA_CENTER_LNG` (default `13.6215`, `123.1945`) and reports `source: "naga_center"`.
-- `sort`: `price` (default) or `distance`. `price` uses the exact-fulfillment ranking with compliant complete baskets before above-ceiling complete baskets. `distance` keeps the MDRP tier first, then orders complete baskets by distance, then total; pack-only entries by distance, then covering total; incomplete and no-price ordering is unchanged.
+- `sort`: `price` (default) or `distance`. `price` uses the exact-fulfillment ranking with compliant complete lists before above-ceiling complete lists. `distance` keeps the MDRP tier first, then orders complete lists by distance, then total; pack-only entries by distance, then covering total; incomplete and no-price ordering is unchanged.
 
 Response `200`:
 
@@ -1520,30 +1522,30 @@ Result shape details:
 - `items[].pack_only`: the covering purchase for a non-exact item with a sellable form. Absent otherwise.
 - `items[].forms`: every form offer at the pharmacy for that medicine, including `pack_only`, `not_applicable`, `not_stocked`, and `unknown`, so the UI can explain the state.
 - `above_mdrp_ceiling`: true when at least one chosen component (or the covering purchase, for a pack-only item) has `mdrp.above = true`. For complete results it controls the two-tier ranking and the cheapest highlight; for the other groups it is informational.
-- `total_shelf_price_php`: the exact basket total, or null when the result is not exact.
+- `total_shelf_price_php`: the exact list total, or null when the result is not exact.
 - `known_total_php`: the sum of exact item totals; 0 when none. It is present on every result.
-- `covering_total_php`: the amount the patient must buy for the whole basket (exact items plus covering purchases); non-null only when the result has at least one pack-only item, otherwise null.
+- `covering_total_php`: the amount the patient must buy for the whole list (exact items plus covering purchases); non-null only when the result has at least one pack-only item, otherwise null.
 - `missing_items`: empty for complete and pack-only results; otherwise one entry per missing item with a `reason`.
 - `reported`: true when at least one `price_report` exists for `result_key`.
 - `reported_at`: the latest report's `created_at`, or null.
-- `candidate_generics`: one entry per basket medicine that has candidates. Never mixed into `complete`, `sold_per_pack_only`, or `incomplete`.
+- `candidate_generics`: one entry per list medicine that has candidates. Never mixed into `complete`, `sold_per_pack_only`, or `incomplete`.
 - `no_price_data` entries carry only the pharmacy summary. They are not reportable results because there is no price result to report.
 
 Errors:
 
-- `400 INVALID_REQUEST` / `INVALID_ORIGIN` — malformed basket or coordinates.
+- `400 INVALID_REQUEST` / `INVALID_ORIGIN` — malformed list or coordinates.
 - `422 UNKNOWN_MEDICINE` / `DUPLICATE_MEDICINE` / `BASKET_TOO_LARGE` / `INVALID_UNIT` / `INVALID_QUANTITY`.
 - `500 INTERNAL` — unexpected failure.
 
 Empty states:
 
-- No active medicine matches: the endpoint rejects unknown IDs with `422`; it does not return an empty basket.
-- No pharmacy has any sellable form for the basket: `complete: []`, `sold_per_pack_only: []`, `incomplete: []`, and `no_price_data` contains every pharmacy. This is a valid `200`.
+- No active medicine matches: the endpoint rejects unknown IDs with `422`; it does not return an empty list.
+- No pharmacy has any sellable form for the list: `complete: []`, `sold_per_pack_only: []`, `incomplete: []`, and `no_price_data` contains every pharmacy. This is a valid `200`.
 - No candidate generics: `candidate_generics: []`.
 
 ### 7.8 `GET /api/pharmacies/{pharmacy_id}`
 
-Basket lines are carried as repeatable `items` values, one per line:
+List lines are carried as repeatable `items` values, one per line:
 
 ```text
 GET /api/pharmacies/mercury-naga-penafrancia?items=POC-001:5:tablet&items=POC-036:10:tablet
@@ -1553,7 +1555,7 @@ Query parameters:
 
 | Name | Required | Rules |
 |---|---|---|
-| `items` | No | Repeatable basket line, `medicine_id:quantity:unit`. 1–10 unique medicines. Omit for the full stock list. |
+| `items` | No | Repeatable list line, `medicine_id:quantity:unit`. 1–10 unique medicines. Omit for the full stock list. |
 | `origin_latitude` | No | With `origin_longitude`; valid coordinates. |
 | `origin_longitude` | No | With `origin_latitude`; valid coordinates. |
 
@@ -1674,8 +1676,8 @@ Response `200`:
 
 - `forms` is the per-medicine form list, with all three states, for the detail sheet's stock list and the pack-only/not-applicable labels.
 - `medicines` carries the `MedicineSummary` for every medicine in `forms`, so the detail sheet can label its stock list without a second catalog request. It is an additive field on this response only.
-- When `items` is omitted, `medicines` and `forms` contain every active medicine with at least one `available` form at the pharmacy. When supplied, they contain every requested medicine, including `not_stocked` and `unknown` rows, so the basket explanation is complete.
-- `basket` is present only when `items` is supplied. It carries the requested quantities and units and uses the same exact-fulfillment, pack-only, and completeness rules as results, so the detail total matches the results total for the same basket.
+- When `items` is omitted, `medicines` and `forms` contain every active medicine with at least one `available` form at the pharmacy. When supplied, they contain every requested medicine, including `not_stocked` and `unknown` rows, so the list explanation is complete.
+- `basket` is present only when `items` is supplied. It carries the requested quantities and units and uses the same exact-fulfillment, pack-only, and completeness rules as results, so the detail total matches the results total for the same list.
 - Directions are requested from `GET /api/directions`; the detail response carries no external maps URL. The client keeps the patient in the embedded map.
 - `open_now` is null when hours are unknown. `hours_text` is the display string; the client must not parse it to decide open/closed.
 - `distance_m` uses the supplied origin or the Naga center fallback.
@@ -1685,14 +1687,14 @@ Errors:
 - `404 UNKNOWN_PHARMACY` — no such pharmacy.
 - `400 INVALID_REQUEST` — an `items` value is not `medicine_id:quantity:unit`.
 - `422 UNKNOWN_MEDICINE` — an inactive or missing ID in `items`.
-- `422 DUPLICATE_MEDICINE` / `INVALID_UNIT` / `INVALID_QUANTITY` / `BASKET_TOO_LARGE` — the same basket rules as `/api/basket`.
+- `422 DUPLICATE_MEDICINE` / `INVALID_UNIT` / `INVALID_QUANTITY` / `BASKET_TOO_LARGE` — the same list rules as `/api/basket`.
 - `400 INVALID_ORIGIN` — one coordinate without the other or out of range.
 
-Empty state: a pharmacy with no sellable form for a requested basket returns `forms` with all `not_stocked`/`unknown` states and an incomplete basket with all items missing. This is the muted no-price pharmacy.
+Empty state: a pharmacy with no sellable form for a requested list returns `forms` with all `not_stocked`/`unknown` states and an incomplete list with all items missing. This is the muted no-price pharmacy.
 
 #### `GET /api/pharmacies` — pharmacy directory
 
-The home map pins every seeded pharmacy before any basket exists. The directory takes no parameters and carries no prices.
+The home map pins every seeded pharmacy before any list exists. The directory takes no parameters and carries no prices.
 
 ```json
 {
@@ -1709,7 +1711,7 @@ The home map pins every seeded pharmacy before any basket exists. The directory 
 }
 ```
 
-`cheapest_pharmacy_id` names the pharmacy whose prices run lowest across the catalog, or is `null` when none qualifies. It is a catalog-wide price index, not a basket ranking, and never replaces §4.6:
+`cheapest_pharmacy_id` names the pharmacy whose prices run lowest across the catalog, or is `null` when none qualifies. It is a catalog-wide price index, not a list ranking, and never replaces §4.6:
 
 1. Take each verified pharmacy's lowest `available`, non-stale `unit_rate_php` per active medicine.
 2. For each medicine priced at two or more of those pharmacies, divide each rate by that medicine's median rate.
@@ -1869,7 +1871,7 @@ Rules:
 - `warnings` values: `LOW_CONFIDENCE_ITEM`, `NO_MATCH`, `DEFAULT_SCRIPT`.
 - `image_retained` is always `false`; it is a contract guarantee, not a provider hint.
 - `scan_id` is an ephemeral correlation UUID for the client. It is not stored. It is not linked to a patient or a session.
-- The endpoint does not interpret dosage, sig codes, or quantity. The confirm screen sets a quantity in the base unit (default 1, editable) and sends the confirmed basket to `/api/basket` and `/api/results`.
+- The endpoint does not interpret dosage, sig codes, or quantity. The confirm screen sets a quantity in the base unit (default 1, editable) and sends the confirmed list to `/api/basket` and `/api/results`.
 
 Mock behavior:
 
@@ -1990,7 +1992,7 @@ Rules:
 - `name`: one of the allowlisted event names below.
 - `properties`: only the allowlisted keys and value types for that event. Unknown names or keys are rejected; do not silently drop them.
 - The server sets `occurred_at` and `app_env`; the client does not send them.
-- No free text, no medicine names, no query text, no basket contents, no quantities, no report note, no IP, no user agent.
+- No free text, no medicine names, no query text, no list contents, no quantities, no report note, no IP, no user agent.
 
 Event allowlist:
 
@@ -2039,8 +2041,8 @@ Errors:
 | `413` | `IMAGE_TOO_LARGE` | Scan image over 8 MB |
 | `415` | `UNSUPPORTED_IMAGE_TYPE` | Scan image type not accepted |
 | `422` | `UNKNOWN_MEDICINE` | Medicine ID missing or inactive |
-| `422` | `DUPLICATE_MEDICINE` | Repeated medicine in one basket |
-| `422` | `BASKET_TOO_LARGE` | More than 10 basket items |
+| `422` | `DUPLICATE_MEDICINE` | Repeated medicine in one list |
+| `422` | `BASKET_TOO_LARGE` | More than 10 list items |
 | `422` | `INVALID_QUANTITY` | Quantity non-positive, wrong shape, or above the sanity ceiling |
 | `422` | `INVALID_UNIT` | Unit missing or not the medicine's base unit |
 | `422` | `CONSENT_REQUIRED` | Scan called without consent |
@@ -2074,18 +2076,18 @@ Errors:
 
 ### 8.2 No accounts and no patient identifiers
 
-- No accounts, login, profiles, saved baskets, or user IDs.
+- No accounts, login, profiles, saved lists, or user IDs.
 - No patient names, contact details, prescription images, OCR text, or diagnosis data in the database.
 - The only free-text field is `price_report.note`; the UI warns against personal information, the field is capped at 500 characters, and the public API never returns it.
 - Search history is on-device only. The server logs only `query_length`, never the query.
 - The anonymous event `session_id` is a random UUID in `sessionStorage`; it is not a cookie, not a device fingerprint, and not linked to an identity.
 
-### 8.3 Basket retention
+### 8.3 List retention
 
-- Basket contents are held in the client's page memory and optionally `sessionStorage`.
+- List contents are held in the client's page memory and optionally `sessionStorage`.
 - They are never sent to a storage endpoint; they appear only in `/api/basket` and `/api/results` request bodies.
 - The service worker must not cache `/api/*` requests or responses.
-- The client must clear the basket on tab close and provide a clear-basket action.
+- The client must clear the list on tab close and provide a clear-list action.
 
 ### 8.4 Scan retention
 
@@ -2178,12 +2180,12 @@ The POC provider is `MockScanProvider`. The pilot provider is Cloud Vision behin
 - `bun run db:acceptance` passes against Postgres 17.
 - Commands are documented in the README.
 
-### 10.2 Quantity basket and exact-fulfillment API (#44)
+### 10.2 Quantity list and exact-fulfillment API (#44)
 
 - `/api/basket` and `/api/results` accept `medicine_id`, `quantity`, and `unit`, and reject a unit that differs from the medicine's base unit.
 - The server finds the cheapest exact combination, including mixed forms such as 1 strip + 2 loose.
 - The `sold_per_pack_only` bucket is separate from exact results and shows the covering purchase and amount to buy.
-- `pack_only` and `not_applicable` never make a basket incomplete; `not_stocked`, `out_of_stock`, `stock_unknown`, and `no_price` produce the documented missing reasons.
+- `pack_only` and `not_applicable` never make a list incomplete; `not_stocked`, `out_of_stock`, `stock_unknown`, and `no_price` produce the documented missing reasons.
 - MDRP is compared per form and labelled `loose_price`, `strip_rate`, `box_rate`, or `pack_price`.
 - The API never returns a bare per-unit figure outside the MDRP block.
 - `bun run typecheck`, `bun run lint`, and the unit/route tests pass.
@@ -2201,7 +2203,7 @@ The POC provider is `MockScanProvider`. The pilot provider is Cloud Vision behin
 
 ### 10.4 End-to-end acceptance (#45)
 
-- The scripted phone run covers quantity baskets, exact fulfillment, the exact mix, pack-only, `not_applicable`, per-form stock, stale, no-price, and MDRP per form.
+- The scripted phone run covers quantity lists, exact fulfillment, the exact mix, pack-only, `not_applicable`, per-form stock, stale, no-price, and MDRP per form.
 - The seed-twice/wipe/reseed path and non-seed survivors pass.
 - The README and pilot-cutover notes describe the sale-form and quantity model.
 - `bun run verify` and `bun run db:acceptance` pass.
@@ -2212,10 +2214,10 @@ The POC provider is `MockScanProvider`. The pilot provider is Cloud Vision behin
 
 - Complete results split into compliant and above-ceiling tiers; every compliant result ranks before every above-ceiling result, and the existing tie-breakers apply within each tier.
 - The cheapest highlight goes only to the first compliant complete result; the all-above POC-016 case has no highlight and shows every option in the above-ceiling group.
-- A mixed basket whose above-ceiling result has a lower total is still ranked after the compliant result.
+- A mixed list whose above-ceiling result has a lower total is still ranked after the compliant result.
 - The API exposes the published ceiling, the effective ceiling, `vat_exclusive`, and `vat_exempt`; the view derives `above_mdrp_flag` from the effective ceiling.
 - POC-016 is VAT-exempt and stays at PHP 30.31/tablet. A synthetic VATable product with a VAT-exclusive ceiling of PHP 10.00 is compared at PHP 11.20; a PHP 11.00 price is compliant and a PHP 11.30 price is above.
-- The browser acceptance covers the all-above case and a mixed basket with one compliant and one above-ceiling complete result.
+- The browser acceptance covers the all-above case and a mixed list with one compliant and one above-ceiling complete result.
 - `bun run typecheck`, `bun run lint`, the unit/route tests, the browser acceptance, and `bun run db:acceptance` pass.
 
 ### 10.6 Downstream screens
@@ -2245,7 +2247,7 @@ These are intentionally left to their implementation tickets:
 
 ## 12. Out of scope
 
-- Patient accounts, saved baskets, order/reservation/payment/delivery, and pharmacy dashboards.
+- Patient accounts, saved lists, order/reservation/payment/delivery, and pharmacy dashboards.
 - Real price/stock collection, pharmacy recruitment, and pilot operations.
 - Real OCR or cloud OCR integration in the POC.
 - Turn-by-turn navigation, live re-routing, traffic-aware travel estimates, and voice guidance. Directions are a route preview only.
@@ -2253,4 +2255,4 @@ These are intentionally left to their implementation tickets:
 - Public/anonymous access; the POC is behind basic auth and `noindex`.
 - LGU/public health center data, Bikol localization, expansion beyond Naga City, monetization, and the metrics program.
 - Production hardening: HA, backups, monitoring/alerting, CI/CD, multi-user auth, and a public API.
-- Splitting a basket across pharmacies, and multiple pack sizes for one medicine at one pharmacy.
+- Splitting a list across pharmacies, and multiple pack sizes for one medicine at one pharmacy.

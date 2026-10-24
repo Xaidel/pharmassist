@@ -15,7 +15,7 @@ export const Route = createFileRoute('/api/results')({
           return apiError(
             400,
             'INVALID_REQUEST',
-            'The basket is malformed or too large.',
+            'The list is malformed or too large.',
           )
         }
 
@@ -24,7 +24,7 @@ export const Route = createFileRoute('/api/results')({
           return apiError(
             400,
             'INVALID_REQUEST',
-            'The basket or origin is malformed.',
+            'The list or origin is malformed.',
             {
               issues: parsed.error.issues.map((issue) => ({
                 path: issue.path,

@@ -17,8 +17,8 @@ export function BasketToggleButton({
 }: BasketToggleButtonProps): React.JSX.Element {
   const label =
     count === 0
-      ? 'Basket, empty'
-      : `Basket, ${String(count)} ${count === 1 ? 'medicine' : 'medicines'}`
+      ? 'Your list, empty'
+      : `Your list, ${String(count)} ${count === 1 ? 'medicine' : 'medicines'}`
 
   return (
     <button

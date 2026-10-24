@@ -281,7 +281,7 @@ export function BasketPanel({
       <CardHeader>
         <div className="flex items-center gap-3 border-b-2 border-dashed border-border pb-4">
           <div className="min-w-0 flex-1">
-            <h2 className="font-display text-xl font-semibold">Your basket</h2>
+            <h2 className="font-display text-xl font-semibold">Your list</h2>
             <p className="text-base text-muted-foreground">
               {items.length === 0
                 ? 'No medicines yet'
@@ -292,7 +292,7 @@ export function BasketPanel({
           </div>
           {onClose !== undefined && (
             <Button
-              aria-label="Close basket"
+              aria-label="Close list"
               className="shrink-0"
               onClick={onClose}
               size="icon"
@@ -307,7 +307,7 @@ export function BasketPanel({
       <CardContent className="pt-4">
         {items.length === 0 ? (
           <p className="text-base text-muted-foreground">
-            Search for a medicine and tap Add to basket to start your list.
+            Search for a medicine and tap Add to your list to get started.
           </p>
         ) : (
           <ol className="divide-y divide-dashed divide-border">
@@ -431,7 +431,7 @@ export function BasketPanel({
                   type="button"
                   variant="ghost"
                 >
-                  Clear basket
+                  Clear list
                 </Button>
               </div>
             )}

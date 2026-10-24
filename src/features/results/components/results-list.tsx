@@ -62,7 +62,7 @@ export function ResultsList({
               className="font-display text-xl font-semibold"
               id="complete-results-heading"
             >
-              Complete baskets
+              Complete lists
             </h2>
             <p className="mt-1 text-base text-muted-foreground">
               Have all your medicines.{' '}

@@ -19,10 +19,10 @@ async function openJanumetResults(page: Page): Promise<void> {
   await expect(
     page.getByRole('heading', { name: /medicines? match/ }),
   ).toBeVisible()
-  await page.getByRole('button', { name: '+ Add to basket' }).first().click()
+  await page.getByRole('button', { name: '+ Add to your list' }).first().click()
   await page.getByRole('button', { name: 'See prices' }).first().click()
   await expect(
-    page.getByRole('heading', { name: 'Complete baskets' }),
+    page.getByRole('heading', { name: 'Complete lists' }),
   ).toBeVisible()
 }
 
@@ -110,7 +110,7 @@ test('opens pharmacy detail and renders a native route', async ({ page }) => {
       .getByText(/MDRP ceiling \(EO 104 s\. 2020/)
       .first(),
   ).toBeVisible()
-  await expect(dialog.getByText('Exact basket', { exact: false })).toBeVisible()
+  await expect(dialog.getByText('Exact list', { exact: false })).toBeVisible()
 
   await dialog.getByRole('button', { name: 'Show route on map' }).click()
   await expect(dialog).not.toBeVisible()

@@ -192,7 +192,7 @@ export function ReviewScreen({
           {confirmed.length === 1
             ? 'medicine'
             : `${String(confirmed.length)} medicines`}{' '}
-          to basket
+          to your list
         </Button>
         <Button
           onClick={onSearchInstead}

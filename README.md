@@ -77,13 +77,13 @@ bun run db:acceptance
 
 `db:acceptance` creates and drops `pharmassist_tooling_*` on the server in `DATABASE_URL`; it never touches the application database.
 
-## Sale forms and quantity baskets
+## Sale forms and quantity lists
 
-Each active medicine has a pack, strip, and loose observation at every seeded pharmacy, and each observation carries one explicit state: `available`, `pack_only`, `not_applicable`, `not_stocked`, or `unknown`. Only an available form has a shelf price. The results screen ranks MDRP-compliant complete baskets before baskets with an item above the ceiling, marks only a compliant basket as cheapest, keeps covering purchases in a separate "Sold per pack only" bucket, shows `pack_only` forms as "Sold per pack only" and `not_applicable` forms as "Sold by the pack" — never as unavailable. MDRP comparisons expose the published and effective ceiling, including the 12% gross-up for a VATable product with a VAT-exclusive ceiling. Derived per-unit rates appear only inside the MDRP comparison, labelled `Box rate`, `Strip rate`, or `Sold loose`.
+Each active medicine has a pack, strip, and loose observation at every seeded pharmacy, and each observation carries one explicit state: `available`, `pack_only`, `not_applicable`, `not_stocked`, or `unknown`. Only an available form has a shelf price. The results screen ranks MDRP-compliant complete lists before lists with an item above the ceiling, marks only a compliant list as cheapest, keeps covering purchases in a separate "Sold per pack only" bucket, shows `pack_only` forms as "Sold per pack only" and `not_applicable` forms as "Sold by the pack" — never as unavailable. MDRP comparisons expose the published and effective ceiling, including the 12% gross-up for a VATable product with a VAT-exclusive ceiling. Derived per-unit rates appear only inside the MDRP comparison, labelled `Box rate`, `Strip rate`, or `Sold loose`.
 
-The seed makes every demo case reachable and labelled: complete exact baskets, the strip + loose exact mix, pack-only covering purchases, `not_applicable` pack-only copy, incomplete and not-stocked reasons, per-form stock, stale verification, all-above MDRP, no-price data, and per-form MDRP comparisons. `bun run db:acceptance` proves the seed, wipe, and MDRP fixtures; `bun run test:e2e` exercises the same states through the mobile viewport, and `bun run verify` runs the full gate.
+The seed makes every demo case reachable and labelled: complete exact lists, the strip + loose exact mix, pack-only covering purchases, `not_applicable` pack-only copy, incomplete and not-stocked reasons, per-form stock, stale verification, all-above MDRP, no-price data, and per-form MDRP comparisons. `bun run db:acceptance` proves the seed, wipe, and MDRP fixtures; `bun run test:e2e` exercises the same states through the mobile viewport, and `bun run verify` runs the full gate.
 
-Basket quantities are entered in each medicine's base unit: tablets, capsules, mL, g, actuations, sachets, or unit-doses. The results screen offers one-tap full-pack presets for bottles, inhalers, and tubes, and shows a soft warning above an estimated 30-day supply. These entry guardrails are client-side only; the API still prices any structurally valid basket and enforces only the contract bounds.
+List quantities are entered in each medicine's base unit: tablets, capsules, mL, g, actuations, sachets, or unit-doses. The results screen offers one-tap full-pack presets for bottles, inhalers, and tubes, and shows a soft warning above an estimated 30-day supply. These entry guardrails are client-side only; the API still prices any structurally valid list and enforces only the contract bounds.
 
 ## Scripts
 
@@ -120,4 +120,4 @@ Material that governs derived applications belongs in `template_docs/`. Material
 
 ## Status
 
-The scaffold, PWA, Compose stack, Postgres schema, seed/wipe tooling, typo-tolerant medicine search with anonymous search events, map-first results with basket ranking, pharmacy detail, directions, report flows, and the mocked prescription scan are in place. VPS deployment remains as the final slice in [the POC map](https://github.com/Xaidel/pharmassist/issues/17).
+The scaffold, PWA, Compose stack, Postgres schema, seed/wipe tooling, typo-tolerant medicine search with anonymous search events, map-first results with list ranking, pharmacy detail, directions, report flows, and the mocked prescription scan are in place. VPS deployment remains as the final slice in [the POC map](https://github.com/Xaidel/pharmassist/issues/17).

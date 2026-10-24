@@ -80,7 +80,7 @@ test('enforces consent and reviews a low-confidence sample before adding', async
   await expect(page.getByText('Low confidence').first()).toBeVisible()
 
   // Nothing auto-adds; confirm the reviewed items into the basket.
-  await page.getByRole('button', { name: /medicines to basket/ }).click()
+  await page.getByRole('button', { name: /medicines to your list/ }).click()
   await expect(page).toHaveURL(/\/results/)
 })
 

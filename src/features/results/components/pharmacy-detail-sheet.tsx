@@ -199,7 +199,7 @@ function DetailBasketSummary({
       </h3>
       <p className="mt-1 text-base leading-relaxed text-muted-foreground">
         {basket.status === 'complete'
-          ? `Exact basket · ${formatPeso(total)}`
+          ? `Exact list · ${formatPeso(total)}`
           : basket.status === 'sold_per_pack_only'
             ? `Sold per pack only · ${formatPeso(
                 basket.covering_total_php ?? 0,
