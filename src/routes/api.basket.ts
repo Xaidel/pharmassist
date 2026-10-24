@@ -15,7 +15,7 @@ export const Route = createFileRoute('/api/basket')({
           return apiError(
             400,
             'INVALID_REQUEST',
-            'The basket is malformed or too large.',
+            'The list is malformed or too large.',
           )
         }
 
@@ -24,7 +24,7 @@ export const Route = createFileRoute('/api/basket')({
           return apiError(
             400,
             'INVALID_REQUEST',
-            'The basket is malformed or too large.',
+            'The list is malformed or too large.',
             {
               issues: parsed.error.issues.map((issue) => ({
                 path: issue.path,
@@ -52,7 +52,7 @@ export const Route = createFileRoute('/api/basket')({
           return apiError(
             503,
             'DATABASE_UNAVAILABLE',
-            'The basket service is temporarily unavailable.',
+            'The list service is temporarily unavailable.',
           )
         }
       },

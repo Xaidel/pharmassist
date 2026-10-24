@@ -8,13 +8,13 @@
 
 ## 1. Summary
 
-Pharmassist is a mobile-first medicine price and availability map. A patient searches for a medicine — or scans a prescription — and sees which nearby pharmacies have it, what it costs, and which single pharmacy is cheapest for the whole basket. v1 is a seeded-data, information-only pilot in Naga City that tests whether patients will use and trust the loop before real data operations and pharmacy partnerships are built. It does not sell, reserve, or deliver medicines.
+Pharmassist is a mobile-first medicine price and availability map. A patient searches for a medicine — or scans a prescription — and sees which nearby pharmacies have it, what it costs, and which single pharmacy is cheapest for the whole list. v1 is a seeded-data, information-only pilot in Naga City that tests whether patients will use and trust the loop before real data operations and pharmacy partnerships are built. It does not sell, reserve, or deliver medicines.
 
 ## 2. Problem
 
 Patients in Naga City pay out of pocket for medicines and have no reliable way to know, before traveling, which nearby pharmacy has the medicine in stock or at the lowest total price. Prices vary by pharmacy and pack; prescriptions can contain several medicines; asking by phone or walking between drugstores costs time and fare.
 
-The current market is single-seller, not comparison-first. Watsons, Generika, MedsGo, and MedExpress publish only their own prices; Mercury Drug publishes no online prices. Naga has chain stores but no confirmed same-day pharmacy delivery. No product answers "where in Naga is my full basket cheapest and in stock right now?" before the patient orders, uploads a prescription, or creates an account.
+The current market is single-seller, not comparison-first. Watsons, Generika, MedsGo, and MedExpress publish only their own prices; Mercury Drug publishes no online prices. Naga has chain stores but no confirmed same-day pharmacy delivery. No product answers "where in Naga is my full list cheapest and in stock right now?" before the patient orders, uploads a prescription, or creates an account.
 
 ## 3. Goals and non-goals
 
@@ -22,7 +22,7 @@ The current market is single-seller, not comparison-first. Watsons, Generika, Me
 
 - Let a patient find an exact medicine by brand or generic name.
 - Let a patient scan a prescription and confirm the extracted items, where OCR passes its accuracy and legal gates.
-- Rank pharmacies by the total shelf price of the complete basket at one pharmacy.
+- Rank pharmacies by the total shelf price of the complete list at one pharmacy.
 - Show results on a map with price-labeled pins and a sorted list.
 - Make data freshness, MDRP ceilings, and uncertainty visible.
 - Validate patient demand and trust with seeded data before investing in data operations.
@@ -32,7 +32,7 @@ The current market is single-seller, not comparison-first. Watsons, Generika, Me
 
 - Clinical advice, dosage guidance, diagnosis, or treatment recommendations.
 - Patient accounts, refill reminders, delivery, telehealth, or pharmacy dashboards. These are captured in the post-v1 roadmap.
-- Splitting a basket across multiple pharmacies.
+- Splitting a list across multiple pharmacies.
 - Real-time stock, crowdsourcing, or self-serve pharmacy updates.
 - Native iOS/Android apps.
 - Paid marketing.
@@ -78,9 +78,9 @@ An out-of-pocket patient in Naga City, often buying for themselves or a family m
 1. The user taps **Scan prescription** and sees a clear consent notice explaining what is processed, where, and that the image is not stored.
 2. They take a photo.
 3. OCR suggests medicine names; the user reviews and confirms or edits each item. Manual search is the fallback.
-4. The confirmed items form a basket.
-5. The app ranks pharmacies that have the complete basket, cheapest total first.
-6. If no pharmacy has everything, the app shows closest-to-complete options separately, with missing items listed. It never auto-splits the basket.
+4. The confirmed items form a list.
+5. The app ranks pharmacies that have the complete list, cheapest total first.
+6. If no pharmacy has everything, the app shows closest-to-complete options separately, with missing items listed. It never auto-splits the list.
 7. If OCR is unavailable or fails, the scan path collapses to manual search without penalty.
 
 The OCR data-flow choice (cloud stateless proxy versus on-device only) is unresolved in issue #16. The launch gate is in section 6.2.
@@ -111,31 +111,31 @@ The OCR data-flow choice (cloud stateless proxy versus on-device only) is unreso
 - **FR-10:** Explicit, specific consent notice before camera or OCR. No scan without consent.
 - **FR-11:** OCR suggests medicine names; every item must be confirmed or edited by the user before ranking. No auto-add.
 - **FR-12:** If OCR is unavailable or fails, the user can add items manually.
-- **FR-13:** No server-side prescription storage, no OCR-text storage, and no secondary use. Patient identifiers are stripped or ignored; the basket is session-only and deleted on session end.
+- **FR-13:** No server-side prescription storage, no OCR-text storage, and no secondary use. Patient identifiers are stripped or ignored; the list is session-only and deleted on session end.
 - **FR-14:** If cloud OCR is used, it must run through a stateless, non-logging proxy with processor terms, a DPIA, and client-side deletion immediately after extraction. If on-device OCR is used, no image leaves the device. Ticket 14 chooses the route.
 - **FR-15:** No pharmacist review of scans in v1.
 - **FR-16:** The app does not interpret dosage or sig codes; it only captures product names.
 - **FR-17:** OCR launch gate: test 120 de-identified prescriptions (300+ items). Proceed if top-3 medicine-name recall is at least 70% and dangerous top-1 error is at most 2%. Drop OCR from v1 if top-3 recall is below 50%.
 
-### 6.3 Basket comparison
+### 6.3 List comparison
 
-- **FR-18:** A basket is one or more confirmed medicines.
-- **FR-19:** v1 ranks single pharmacies by the total shelf price of the complete basket.
+- **FR-18:** A list is one or more confirmed medicines.
+- **FR-19:** v1 ranks single pharmacies by the total shelf price of the complete list.
 - **FR-20:** No splitting across pharmacies in v1.
-- **FR-21:** If no pharmacy has the complete basket, show closest-to-complete options separately, listing the missing items.
-- **FR-22:** The basket total uses exact pack shelf prices. Pack-size normalization rules are defined in the data model.
-- **FR-23:** A basket is complete only when every item has a verified price and stock record at one pharmacy.
+- **FR-21:** If no pharmacy has the complete list, show closest-to-complete options separately, listing the missing items.
+- **FR-22:** The list total uses exact pack shelf prices. Pack-size normalization rules are defined in the data model.
+- **FR-23:** A list is complete only when every item has a verified price and stock record at one pharmacy.
 
 ### 6.4 Map and results
 
 - **FR-24:** Map-first results with pharmacy pins labeled with the relevant shelf price.
-- **FR-25:** The cheapest MDRP-compliant complete option is visually highlighted. A complete basket with an item above the ceiling is never highlighted as cheapest.
+- **FR-25:** The cheapest MDRP-compliant complete option is visually highlighted. A complete list with an item above the ceiling is never highlighted as cheapest.
 - **FR-26:** A sorted, swipeable bottom list mirrors the map.
 - **FR-27:** Each result shows distance, open-now status, last-verified date, and stock status.
 - **FR-28:** The pharmacy detail sheet shows name, address, hours, phone, stock list, price breakdown, last verified, and directions.
 - **FR-29:** Directions render the road route from the user's current location to the pharmacy inside the embedded map, with distance and estimated travel time. The POC does not hand off to an external maps app and does not provide turn-by-turn guidance. See the [native pharmacy directions ADR](adr/proposed/architecture/2026-10-21-native-pharmacy-directions.md).
 - **FR-30:** Unverified pharmacies may appear muted as "no price data." They are never shown as "unavailable."
-- **FR-31:** Default sort is cheapest basket; a "nearest first" sort is available.
+- **FR-31:** Default sort is cheapest list; a "nearest first" sort is available.
 - **FR-32:** No fare or transport-cost modeling in v1.
 - **FR-33:** No implied partnership or endorsement by a pharmacy, the LGU, DOH, or FDA. Public-source attribution is shown where data comes from a public source.
 
@@ -187,14 +187,14 @@ The OCR data-flow choice (cloud stateless proxy versus on-device only) is unreso
 | **Medicine** | id, brand_name, generic_name, strength, dosage_form, pack_size, manufacturer, generic_group_id (candidate), fda_registration_no, rx_otc, pnf_status, source |
 | **Pharmacy** | id, name, type (chain, independent, public health center), address, barangay, lat/lng, hours, phone, verification_status, data_source |
 | **PriceRecord** | medicine_id, pharmacy_id, shelf_price, currency, mdrp_ceiling (optional), above_mdrp_flag, stock_status, verified_at, verified_by, source, notes |
-| **Basket** | items (medicine_id, packs), total_shelf_price, completeness |
+| **List** | items (medicine_id, packs), total_shelf_price, completeness |
 | **Report** | result_id, reason, note, created_at, status, resolution |
 
 Data rules:
 
 - Exact-product matching uses medicine identity, strength, form, and pack size.
 - Pack size is normalized for display only; the ranking uses the actual pack shelf price.
-- A basket is complete when every item has a verified price and stock record at one pharmacy.
+- A list is complete when every item has a verified price and stock record at one pharmacy.
 - A price older than 14 days is flagged as possibly outdated.
 - Public health centers are stored as a distinct pharmacy type and displayed separately.
 - Pharmacy records contain business facts only: no personal data about pharmacists or staff.
@@ -202,14 +202,14 @@ Data rules:
 
 ## 8. Ranking rules
 
-1. Filter to exact product matches for every basket item.
-2. Keep pharmacies with verified price data for every item (complete basket).
-3. Split complete baskets into two tiers: baskets with no item above its effective MDRP ceiling, and baskets with at least one. Every compliant basket ranks before every above-ceiling basket.
+1. Filter to exact product matches for every list item.
+2. Keep pharmacies with verified price data for every item (complete list).
+3. Split complete lists into two tiers: lists with no item above its effective MDRP ceiling, and lists with at least one. Every compliant list ranks before every above-ceiling list.
 4. Rank within each tier by total shelf price, ascending.
 5. Tie-breakers: distance, then most recent verification.
-6. Highlight only the cheapest compliant complete option; if no complete basket is compliant, highlight none.
-7. Show above-ceiling complete baskets in a separate group. Never mark them cheapest.
-8. Show incomplete baskets separately, sorted by fewest missing items, then by known total.
+6. Highlight only the cheapest compliant complete option; if no complete list is compliant, highlight none.
+7. Show above-ceiling complete lists in a separate group. Never mark them cheapest.
+8. Show incomplete lists separately, sorted by fewest missing items, then by known total.
 9. Unverified pharmacies are muted and never ranked.
 10. Flag any MDRP item whose observed price exceeds the effective ceiling.
 11. Never compute senior/PWD net prices.
@@ -230,7 +230,7 @@ The final metrics and instrumentation are defined in issue #12. Candidate bars f
 - 200+ unique patients over 8 weeks.
 - 30% of search or scan sessions ending in a pharmacy selection or directions tap.
 - 25% of users returning within four weeks.
-- 15% median basket saving versus the most expensive in-stock option.
+- 15% median list saving versus the most expensive in-stock option.
 - Fewer than 10% of reported prices are wrong.
 
 ## 11. Pilot plan
@@ -257,7 +257,7 @@ The final metrics and instrumentation are defined in issue #12. Candidate bars f
 | LGU data sharing lacks a lawful basis | Aggregate/de-identified only; DSA and city legal/DPO review for patient-level data |
 | Patients do not trust or return | Clinic and LGU trust channels, transparent freshness, no pay-to-rank |
 | Pharmacy monetization does not materialize | Validate willingness to pay before building the model (issues #8 and #14) |
-| Basket data is incomplete | Complete baskets ranked first; incomplete options shown separately with missing items |
+| List data is incomplete | Complete lists ranked first; incomplete options shown separately with missing items |
 | Chain resistance or price-war dynamics | Keep pharmacy inclusion free and factual; validate partner concerns in issue #8; revisit post-pilot |
 | Low-end devices and bandwidth | PWA, lightweight map and list, graceful degradation |
 | Native routing is unavailable or low quality | Keep pharmacy detail and prices usable, show a retryable route error, use a replaceable server-side routing adapter, and label the route as a preview; choose a supported provider or self-host before the pilot |
@@ -282,9 +282,9 @@ Resolved research is in issues #1 to #6 and their notes under `docs/research/`.
 - **Medicine:** a specific product identified by brand or generic name, strength, dosage form, and pack size.
 - **Exact product:** the same medicine identity as the searched item; no cross-strength or cross-form substitution.
 - **Candidate generic alternative:** a product derived from the same INN plus strength and form, shown separately and requiring pharmacist review. Not a therapeutic-equivalence claim.
-- **Basket:** the set of medicines a patient wants to buy together, usually from one prescription.
-- **Complete basket:** a pharmacy has verified price and stock data for every item in the basket.
-- **Incomplete basket:** a pharmacy is missing one or more items; shown separately.
+- **List:** the set of medicines a patient wants to buy together, usually from one prescription.
+- **Complete list:** a pharmacy has verified price and stock data for every item in the list.
+- **Incomplete list:** a pharmacy is missing one or more items; shown separately.
 - **Reference shelf price:** the observed retail shelf price at a pharmacy, with a verification date and source. Not a computed net price.
 - **MDRP:** Maximum Drug Retail Price. Ceilings under EO 104 s. 2020 and EO 155 s. 2021, shown separately from the observed shelf price.
 - **Seeded data:** one-time pilot data collected from real pharmacies, not a live feed.
@@ -294,13 +294,13 @@ Resolved research is in issues #1 to #6 and their notes under `docs/research/`.
 
 ## 15. Post-v1 roadmap
 
-- Patient accounts and saved baskets.
+- Patient accounts and saved lists.
 - Refill reminders.
 - Delivery and online ordering.
 - Telehealth and pharmacist consultation.
 - Pharmacy-side dashboards and self-serve price and stock updates.
 - Real-time or crowdsourced stock.
-- Basket splitting across pharmacies.
+- List splitting across pharmacies.
 - Expansion beyond Naga City.
 - Native apps if retention justifies them.
 

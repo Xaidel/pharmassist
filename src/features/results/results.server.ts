@@ -91,7 +91,7 @@ async function resolveBasket(
     return fail(
       422,
       'BASKET_TOO_LARGE',
-      `A basket cannot contain more than ${String(BASKET_MAX_ITEMS)} items.`,
+      `A list cannot contain more than ${String(BASKET_MAX_ITEMS)} items.`,
     )
   }
 
@@ -100,7 +100,7 @@ async function resolveBasket(
     return fail(
       422,
       'DUPLICATE_MEDICINE',
-      'A basket cannot contain the same medicine twice.',
+      'A list cannot contain the same medicine twice.',
       { medicine_ids: duplicates },
     )
   }

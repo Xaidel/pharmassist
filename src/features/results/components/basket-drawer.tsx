@@ -50,7 +50,7 @@ export function BasketDrawer({
 
   return (
     <div
-      aria-label="Your basket"
+      aria-label="Your list"
       className={cn(
         'max-h-basket overflow-y-auto overscroll-contain rounded-3xl shadow-sheet focus-visible:outline-none',
         className,

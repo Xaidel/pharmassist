@@ -225,7 +225,7 @@ export function parsePharmacyDetailQuery(
     return queryFailure(
       422,
       'DUPLICATE_MEDICINE',
-      'A basket cannot contain the same medicine twice.',
+      'A list cannot contain the same medicine twice.',
     )
   }
 

@@ -110,7 +110,7 @@ test('ranks a compliant basket before a cheaper VATable above-ceiling basket', a
     await page.goto('/results')
 
     await expect(
-      page.getByRole('heading', { name: 'Complete baskets' }),
+      page.getByRole('heading', { name: 'Complete lists' }),
     ).toBeVisible()
     await expect(
       page.getByRole('heading', { name: 'Above MDRP ceiling' }),

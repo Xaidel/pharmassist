@@ -99,9 +99,9 @@ function createPinElement(
     'aria-label',
     `${pin.name}: ${pin.label}${
       pin.variant === 'cheapest'
-        ? ', cheapest compliant complete basket'
+        ? ', cheapest compliant complete list'
         : pin.variant === 'nearest'
-          ? ', nearest compliant complete basket'
+          ? ', nearest compliant complete list'
           : pin.variant === 'above-mdrp'
             ? ', above MDRP ceiling'
             : ''

@@ -95,7 +95,7 @@ type ActiveRoute = {
 function resultErrorMessage(error: unknown): string {
   if (error instanceof ResultsRequestError) {
     if (error.code === 'UNKNOWN_MEDICINE') {
-      return 'One medicine in this basket is no longer in the catalog. Remove it or clear the basket.'
+      return 'One medicine in your list is no longer in the catalog. Remove it or clear the list.'
     }
     return error.message
   }
@@ -240,8 +240,8 @@ export function ResultsExperience({
         if (!outcome.added) {
           addNotice =
             outcome.reason === 'full'
-              ? 'A basket can hold up to 10 medicines. Remove one before adding another.'
-              : 'That medicine is already in your basket.'
+              ? 'Your list can hold up to 10 medicines. Remove one before adding another.'
+              : 'That medicine is already in your list.'
         }
       }
     }
@@ -555,8 +555,8 @@ export function ResultsExperience({
     if (!outcome.added) {
       setNotice(
         outcome.reason === 'full'
-          ? 'A basket can hold up to 10 medicines. Remove one before adding another.'
-          : 'That medicine is already in your basket.',
+          ? 'Your list can hold up to 10 medicines. Remove one before adding another.'
+          : 'That medicine is already in your list.',
       )
       return
     }
@@ -841,7 +841,7 @@ export function ResultsExperience({
         >
           {/* The map, top bar, and cards already say what this is; the title stays for screen readers. */}
           <h1 className="sr-only" id="results-sheet-heading">
-            Compare basket prices
+            Compare your list prices
           </h1>
           {data !== null && (
             <div
@@ -915,18 +915,18 @@ export function ResultsExperience({
               className="mt-4 text-sm text-muted-foreground"
               role="status"
             >
-              Loading your basket…
+              Loading your list…
             </p>
           )}
 
           {empty && (
             <div className="mt-4">
               <h2 className="font-display text-lg font-semibold">
-                Your basket is empty
+                Your list is empty
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Search for a medicine and tap Add to basket to rank the seeded
-                pharmacies for your basket.
+                Search for a medicine and tap Add to your list to rank the seeded
+                pharmacies for your list.
               </p>
               <Link
                 className="mt-4 inline-flex text-sm font-semibold text-primary underline-offset-2 hover:underline"
@@ -960,7 +960,7 @@ export function ResultsExperience({
                   Try again
                 </Button>
                 <Button onClick={handleClear} type="button" variant="outline">
-                  Clear basket
+                  Clear list
                 </Button>
               </div>
             </div>
@@ -1094,8 +1094,8 @@ export function ResultsExperience({
                 <p className="mt-2">
                   MDRP ceilings come from EO 104 s. 2020 and EO 155 s. 2021 and
                   are shown separately from the observed price. MDRP-compliant
-                  complete baskets rank before baskets with an item above the
-                  published ceiling, and only a compliant basket can be marked
+                  complete lists rank before lists with an item above the
+                  published ceiling, and only a compliant list can be marked
                   cheapest. A VAT-exclusive ceiling is compared at 1.12 times
                   the published amount for VATable products, and directly for
                   VAT-exempt products. Statutory senior and PWD discounts are

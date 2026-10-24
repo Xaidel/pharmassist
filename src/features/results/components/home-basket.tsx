@@ -115,7 +115,7 @@ export function HomeBasket({
         if (isAbortError(requestError)) {
           return
         }
-        setError('Your basket could not load. Check your connection.')
+        setError('Your list could not load. Check your connection.')
       })
       .finally(() => {
         if (!controller.signal.aborted) {
