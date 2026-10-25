@@ -8,7 +8,7 @@
 
 ## 1. Summary
 
-Pharmassist is a mobile-first medicine price and availability map. A patient searches for a medicine — or scans a prescription — and sees which nearby pharmacies have it, what it costs, and which single pharmacy is cheapest for the whole list. v1 is a seeded-data, information-only pilot in Naga City that tests whether patients will use and trust the loop before real data operations and pharmacy partnerships are built. It does not sell, reserve, or deliver medicines.
+Pharmassist is a mobile-first medicine price and availability map. A patient searches for a medicine — or scans a prescription — and sees which nearby pharmacies have it, what it costs, and which single pharmacy is cheapest for the whole list. v1 is a seeded-data, information-only pilot in Naga City that tests whether patients will use and trust the loop before real data operations and pharmacy partnerships are built. It does not sell or deliver medicines and reserves nothing; it may forward a list ahead for pre-bagging (an advisory send-ahead).
 
 ## 2. Problem
 
@@ -37,7 +37,7 @@ The current market is single-seller, not comparison-first. Watsons, Generika, Me
 - Native iOS/Android apps.
 - Paid marketing.
 - Expansion beyond Naga City.
-- Any cart, order, reservation, payment, or delivery transaction.
+- Any cart, order, payment, or delivery transaction, or any reservation that holds or guarantees stock.
 - Any computed senior-citizen or PWD net price. Shelf prices are shown; statutory discounts are disclosed.
 - Turn-by-turn navigation, live re-routing, traffic-aware travel estimates, or voice guidance. Directions are an indicative route preview inside the embedded map.
 
@@ -152,7 +152,7 @@ The OCR data-flow choice (cloud stateless proxy versus on-device only) is unreso
 ### 6.6 Privacy and clinical boundary
 
 - **FR-41:** No accounts or patient identity in v1.
-- **FR-42:** Prescription images are discarded immediately; prescription contents are not stored server-side.
+- **FR-42:** Prescription images are discarded immediately; prescription contents are not stored server-side, except for an explicit send-ahead reservation (FR-60), which stores only a pharmacy snapshot, a list snapshot, and a reference code and expires automatically.
 - **FR-43:** Search history stays on-device.
 - **FR-44:** No dosage, diagnosis, substitution, or treatment advice. Users are directed to a pharmacist or doctor.
 - **FR-45:** Generic-versus-brand statements are descriptive. No therapeutic-equivalence claim without an FDA or formulary basis.
@@ -175,10 +175,11 @@ The OCR data-flow choice (cloud stateless proxy versus on-device only) is unreso
 
 ### 6.9 Transaction and compliance boundary
 
-- **FR-56:** v1 has no cart, order, reservation, payment, or delivery feature. The counter for Rx items is the pharmacy's licensed pharmacist.
+- **FR-56:** v1 has no cart, order, payment, or delivery feature, and no reservation that holds or guarantees stock. The one exception is an advisory send-ahead (FR-60), which forwards the list ahead for pre-bagging and transacts nothing. The counter for Rx items is the pharmacy's licensed pharmacist.
 - **FR-57:** Any future ordering, payment, delivery, merchant offers, affiliate checkout, or per-transaction commission is a roadmap gate that triggers RA 11967 and a fresh DPA assessment.
 - **FR-58:** The launch requires an FDA/CDRR opinion on presenting neutral Rx price and availability information, plus counsel sign-off. This is a launch gate, not a build task.
 - **FR-59:** A Naga Mayor's Permit is required if the operation has a physical outlet or hub in the city. LGU/CHO data goes through a partnership or DSA, not an FOI commercial-purpose request.
+- **FR-60:** An advisory send-ahead lets a patient forward their list to a chosen pharmacy to be pre-bagged before arrival, cutting queue wait. It is transaction-free: it does not hold or guarantee stock, takes no payment, and stores no patient identity. The record holds only a pharmacy snapshot, a list snapshot, and a reference code, and expires after 24 hours. In v1 the list reaches the pharmacy through an SMS the patient sends from their own phone; where a pharmacy has no SMS-able mobile number, the app shows a warning instead. A pharmacy-exclusive dashboard for receiving reservations is on the post-v1 roadmap.
 
 ## 7. Data model (pilot)
 
@@ -189,6 +190,7 @@ The OCR data-flow choice (cloud stateless proxy versus on-device only) is unreso
 | **PriceRecord** | medicine_id, pharmacy_id, shelf_price, currency, mdrp_ceiling (optional), above_mdrp_flag, stock_status, verified_at, verified_by, source, notes |
 | **List** | items (medicine_id, packs), total_shelf_price, completeness |
 | **Report** | result_id, reason, note, created_at, status, resolution |
+| **SendAhead** | reference_code, pharmacy_id, pharmacy_name_snapshot, medicine_ids, medicine_labels, quantities, status, expires_at, created_at |
 
 Data rules:
 
@@ -290,7 +292,8 @@ Resolved research is in issues #1 to #6 and their notes under `docs/research/`.
 - **Seeded data:** one-time pilot data collected from real pharmacies, not a live feed.
 - **Public health center:** an LGU-run facility, shown separately from retail pharmacies because of eligibility, queue, and subsidy differences.
 - **Pilot:** the seeded-data Naga City validation, not a production launch.
-- **Transaction-free:** no cart, order, reservation, payment, or delivery in the product.
+- **Transaction-free:** no cart, order, payment, or delivery in the product. An advisory send-ahead reservation is permitted and is not a transaction.
+- **Send-ahead (advisory reservation):** a patient forwards their list to a chosen pharmacy so it can be pre-bagged before arrival. It holds no stock, takes no payment, and stores no patient identity.
 
 ## 15. Post-v1 roadmap
 
@@ -299,6 +302,7 @@ Resolved research is in issues #1 to #6 and their notes under `docs/research/`.
 - Delivery and online ordering.
 - Telehealth and pharmacist consultation.
 - Pharmacy-side dashboards and self-serve price and stock updates.
+- A pharmacy-exclusive dashboard to receive and manage send-ahead reservations.
 - Real-time or crowdsourced stock.
 - List splitting across pharmacies.
 - Expansion beyond Naga City.
