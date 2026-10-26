@@ -1,4 +1,4 @@
-import { ShoppingBasket } from 'lucide-react'
+import { ClipboardList } from 'lucide-react'
 
 import { BASKET_DRAWER_ID } from './basket-drawer'
 
@@ -29,7 +29,7 @@ export function BasketToggleButton({
       onClick={onToggle}
       type="button"
     >
-      <ShoppingBasket aria-hidden="true" className="size-6" />
+      <ClipboardList aria-hidden="true" className="size-6" />
       {count > 0 && (
         <span
           aria-hidden="true"
