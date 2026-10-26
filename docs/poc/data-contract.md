@@ -1,10 +1,10 @@
 # Pharmassist POC — data contract and schema mapping
 
-**Ticket:** [Xaidel/pharmassist#41](https://github.com/Xaidel/pharmassist/issues/41), revising [Xaidel/pharmassist#21](https://github.com/Xaidel/pharmassist/issues/21)
-**Decision:** [16 - Pack vs per-piece (tingi) pricing](https://github.com/Xaidel/pharmassist/issues/36)
+**Ticket:** [Xaidel/pharmassist#41](https://github.com/Xaidel/pharmassist/issues/41), revising [Xaidel/pharmassist#21](https://github.com/Xaidel/pharmassist/issues/21); send-ahead revision [Xaidel/pharmassist#68](https://github.com/Xaidel/pharmassist/issues/68)
+**Decision:** [16 - Pack vs per-piece (tingi) pricing](https://github.com/Xaidel/pharmassist/issues/36); send-ahead persistence and patient share are governed by the [`send-ahead-persistence`](../adr/proposed/security/2026-10-25-send-ahead-persistence.md) and [`send-ahead-patient-share`](../adr/proposed/security/2026-10-25-send-ahead-patient-share.md) records.
 **Parent map:** [Map: Pharmassist POC — seeded-data working demo](https://github.com/Xaidel/pharmassist/issues/17)
-**Status:** Contract for implementation. This revision replaces the pack-only medicine identity, pack list, and pack-based ranking in #21. Schema and seed migration are ticket #42; quantity list and exact-fulfillment ranking are #44; results UI is #43; end-to-end acceptance is #45. Native directions are governed by the [native pharmacy directions ADR](../adr/proposed/architecture/2026-10-21-native-pharmacy-directions.md).
-**Last updated:** 2026-10-23
+**Status:** Contract for implementation. This revision replaces the pack-only medicine identity, pack list, and pack-based ranking in #21, and adds the send-ahead reservation in #68. Schema and seed migration are ticket #42; quantity list and exact-fulfillment ranking are #44; results UI is #43; end-to-end acceptance is #45. Native directions are governed by the [native pharmacy directions ADR](../adr/proposed/architecture/2026-10-21-native-pharmacy-directions.md).
+**Last updated:** 2026-10-27
 
 ---
 
@@ -12,13 +12,14 @@
 
 This document fixes the POC data layer before the sale-form schema, seed, API, and UI are built or migrated. It covers:
 
-- the Postgres schema mapped from PRD section 7 — Medicine, Pharmacy, PriceObservation, Basket (session-only), and Report — plus seed batches, MDRP ceilings, candidate generics, and anonymous events;
+- the Postgres schema mapped from PRD section 7 — Medicine, Pharmacy, PriceObservation, Basket (session-only), Report, and SendAhead — plus seed batches, MDRP ceilings, candidate generics, and anonymous events;
 - medicine identity without a pack, and pack, strip, and loose as per-pharmacy sale forms;
 - a quantity list in each medicine's base dispensing unit, with explicit non-sale form states;
 - strict exact-fulfillment ranking and the sold-per-pack-only bucket;
 - `poc-seed` tagging and a wipe that cannot touch non-seed rows;
-- the HTTP contract for search, list validation, results/ranking, pharmacy detail, native directions, scan, report, and events;
-- session-only list semantics, with no accounts, no patient identifiers, and no image retention;
+- the HTTP contract for search, list validation, results/ranking, pharmacy detail, native directions, scan, report, send-ahead, and events;
+- session-only list semantics on every path except the explicit send-ahead reservation, with no accounts, no patient identifiers, and no image retention;
+- the send-ahead record, its 24-hour expiry, and the patient's SMS share channel;
 - the scan endpoint as the stable swap point for the real OCR route chosen in [OCR data-flow and legal-risk decision](https://github.com/Xaidel/pharmassist/issues/16).
 
 The contract is deliberately vendor-neutral. The POC seed and the mock OCR provider are replaceable without changing the UI or the API shapes.
@@ -41,7 +42,7 @@ The implementation copies these fixtures into the app's seed bundle; the researc
 
 ## 2. Decisions at a glance
 
-1. **The list is not a database table.** It is a client-side value object, held in page memory (optionally `sessionStorage`) and sent to the server only inside request bodies. This satisfies PRD FR-13/FR-42: prescription contents are never stored server-side. The server is stateless for lists.
+1. **The list is not a database table on every path except send-ahead.** It is a client-side value object, held in page memory (optionally `sessionStorage`) and sent to the server only inside request bodies. The one exception is an explicit send-ahead reservation, which stores a list snapshot with a reference code, no patient identity, and a 24-hour expiry. This satisfies PRD FR-13/FR-42 as narrowed by FR-60. The server is stateless for lists everywhere else.
 2. **The list counts base dispensing units, not packs.** Each line is `medicine_id`, `quantity`, and `unit`; the unit must equal the medicine's `base_unit`. Pack, strip, and loose are offers the server uses to fulfill the quantity.
 3. **Medicine identity excludes the pack.** A medicine is brand or generic name plus strength and dosage form. Pack, strip, and loose are sale forms observed per pharmacy; they are not separate medicine rows.
 4. **One current observation per medicine, pharmacy, and sale form.** The POC holds the current record only; re-verification updates it. Price history is a pilot concern.
@@ -56,6 +57,7 @@ The implementation copies these fixtures into the app's seed bundle; the researc
 13. **A medicine without an FDA registration number is not listable.** It stays in the catalog with `active = false`. In the current seed that is POC-028 only.
 14. **The scan endpoint is the OCR seam.** `POST /api/scan` validates consent, never stores the image or recognized text, and returns only medicine candidates. The mock provider is replaced behind the same response shape.
 15. **All API money is PHP and two decimal places.** The database uses `numeric(10,2)`; JSON uses numbers. The client formats currency.
+16. **A send-ahead reservation is advisory and transaction-free.** It stores a pharmacy snapshot, a list snapshot, a reference code, and a 24-hour expiry; it stores no patient identity or contact data, holds no stock, takes no payment, has no public read-back endpoint, and survives a seed wipe. The patient delivers it to the pharmacy through their own SMS app.
 
 ---
 
@@ -68,6 +70,7 @@ The implementation copies these fixtures into the app's seed bundle; the researc
 - `medicine_alternative.id`: `<medicine_id>-ALT-<n>`, for example `POC-001-ALT-1`.
 - `mdrp_ceiling.id`: `<order>-<row>`, for example `EO104-044`.
 - `price_observation.id`, `price_report.id`: UUIDs.
+- `send_ahead.id`: UUID; `send_ahead.reference_code`: `SA-` plus six characters from an unambiguous uppercase alphabet (`ABCDEFGHJKMNPQRSTUVWXYZ23456789`), globally unique and human-presented. It is not an identity and carries no patient data.
 - `app_event.session_id`: a random UUID generated by the client and kept in `sessionStorage`. It is not a cookie and is not linked to an identity.
 
 Identifiers are stable across re-seeds. A pilot load may use its own stable identifiers as long as it follows the same character rules.
@@ -85,6 +88,7 @@ Identifiers are stable across re-seeds. A pilot load may use its own stable iden
 - JSON: ISO 8601 UTC with a `Z` suffix, for example `2026-10-20T00:00:00Z`.
 - Open-now calculations use `Asia/Manila`, the pharmacy market's local timezone.
 - Staleness is `verified_at < now() - interval '14 days'`.
+- A send-ahead reservation expires at `created_at + interval '24 hours'`; `expires_at` is stored, not recomputed by the client.
 
 ### 3.4 HTTP
 
@@ -324,6 +328,18 @@ The published MRP for this row is VAT-exclusive, but metformin + sitagliptin is 
 - `pharmacy.hours_text`, `pharmacy.phone`, and `pharmacy.barangay` may be null when not verified. Null means unknown, not closed and not absent.
 - `open_now` is null when hours are unknown. It is never inferred from `hours_text` when structured hours are absent.
 - Public health centers are a distinct `pharmacy.type`; the POC seed contains retail pharmacies only.
+- `pharmacy.mobile` is the SMS-able number used by the send-ahead share action. It is a business contact number, not patient data. It is null when the pharmacy has only a landline or no verified number.
+
+### 4.9 Send-ahead reservation
+
+- A send-ahead is created only by an explicit patient action from a pharmacy result that has price data. A no-price result never offers the action.
+- The list is validated exactly as the basket is: 1–10 unique, active medicines; each `unit` equals the medicine's `base_unit`; each quantity is a positive whole number of counted units or a positive measured quantity with at most three decimals, not above 100,000 base units.
+- The server snapshots the pharmacy name and mobile, the medicine IDs and labels, and the base-unit quantities. The arrays are aligned and sorted by `medicine_id`; there is no foreign key to `medicine`, `pharmacy`, or `seed_batch`.
+- The reservation stores no patient name, phone, account identifier, IP address, or user agent. It is keyed only by its reference code.
+- `status` is `created` at insert. `expires_at` is `created_at + 24 hours`. A documented purge marks expired rows `expired` and deletes them; expiry is never inferred by the client.
+- There is no read-back or lookup endpoint. The POC resolves a code through SQL, the same as reports. The patient sends the reservation to the pharmacy through their own SMS app; the app does not contact the pharmacy.
+- A pharmacy with no `mobile` still receives a reservation record; the patient sees a warning instead of the SMS action.
+- The record survives a seed wipe and is never written by the seeder.
 
 ---
 
@@ -346,6 +362,7 @@ create type verification_status as enum ('verified', 'unverified');
 create type mdrp_basis as enum ('per_unit', 'per_pack');
 create type report_reason as enum ('wrong_price', 'wrong_stock', 'wrong_details', 'other');
 create type report_status as enum ('open', 'triaged', 'resolved', 'dismissed');
+create type send_ahead_status as enum ('created', 'expired');
 ```
 
 `app_env` is a text check rather than an enum so test deployments can use `dev`, `test`, or `pilot` without a migration: `check (app_env in ('dev', 'test', 'pilot'))`.
@@ -509,6 +526,7 @@ create table pharmacy (
   latitude numeric(9,6) not null check (latitude between -90 and 90),
   longitude numeric(9,6) not null check (longitude between -180 and 180),
   phone text,
+  mobile text,
   hours_text text,
   open_24h boolean not null default false,
   opening_hours jsonb,
@@ -525,6 +543,8 @@ create table pharmacy (
 
 create index pharmacy_type_idx on pharmacy (type);
 ```
+
+`phone` is the published call number as collected, including landlines and multiple numbers. `mobile` is the one SMS-able number the send-ahead share action may open; the seeder backfills it only when a verified mobile number exists and leaves it null for a landline-only or unknown pharmacy. Neither field is patient data.
 
 `opening_hours` shape, local time in `Asia/Manila`:
 
@@ -777,6 +797,36 @@ create trigger price_report_set_updated_at
   for each row execute function set_updated_at();
 ```
 
+### 5.12 `send_ahead`
+
+```sql
+create table send_ahead (
+  id uuid primary key default gen_random_uuid(),
+  reference_code text not null unique,
+  pharmacy_id text not null,
+  pharmacy_name_snapshot text not null,
+  medicine_ids text[] not null default '{}',
+  medicine_labels text[] not null default '{}',
+  quantities numeric(10,3)[] not null default '{}',
+  status send_ahead_status not null default 'created',
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  check (cardinality(medicine_ids) between 1 and 10),
+  check (cardinality(medicine_ids) = cardinality(medicine_labels)),
+  check (cardinality(medicine_ids) = cardinality(quantities)),
+  check (char_length(reference_code) <= 16),
+  check (expires_at > created_at)
+);
+
+create index send_ahead_expires_at_idx on send_ahead (expires_at);
+```
+
+- The table is a snapshot, not a relational extension of the seed: `pharmacy_id` has no foreign key and the arrays have no foreign keys, so a wipe cannot orphan or delete a reservation.
+- `medicine_ids`, `medicine_labels`, and `quantities` are aligned and sorted by `medicine_id`. Quantities are base-unit amounts, with the same three-decimal shape as the list.
+- `status` is `created` at insert. Expired rows are marked `expired` and then deleted by the purge; no endpoint reads or updates them.
+- The table is never seeded and is never part of a `seed_batch`.
+- The POC has no read-back endpoint. Operators resolve a code with SQL against this table, the same as reports.
+
 ---
 
 ## 6. Seed and wipe contract
@@ -809,9 +859,9 @@ Every seeded row in these tables carries `seed_batch_id = 'poc-seed'`:
 - `pharmacy`
 - `price_observation`
 
-`price_report` and `app_event` are never seeded. The `seed_batch` row itself is the batch.
+`price_report`, `send_ahead`, and `app_event` are never seeded. The `seed_batch` row itself is the batch.
 
-The tag is the only wipe scope. There is no `poc_seed` boolean that could drift from the batch reference.
+The tag is the only wipe scope. There is no `poc_seed` boolean that could drift from the batch reference. `send_ahead` has no `seed_batch_id`, so the wipe cannot select it.
 
 ### 6.3 Wipe
 
@@ -824,7 +874,7 @@ The wipe is a script (ticket #42) and a documented SQL sequence. It must:
    - non-seed `medicine_alternative` referencing a seeded `medicine`;
    - non-seed `price_observation` referencing a seeded `mdrp_ceiling`.
    If any exist, abort with a report; do not delete anything.
-4. Snapshot the non-seed row counts of `price_report`, `app_event`, and any pilot rows.
+4. Snapshot the non-seed row counts of `price_report`, `send_ahead`, `app_event`, and any pilot rows.
 5. Delete in dependency order, inside one transaction:
 
 ```sql
@@ -849,7 +899,21 @@ delete from seed_batch
 
 6. Verify the non-seed counts are unchanged and no `poc-seed` rows remain.
 
-The wipe never touches `price_report` or `app_event`. Reports survive with their snapshots; events remain anonymous.
+The wipe never touches `price_report`, `send_ahead`, or `app_event`. Reports survive with their snapshots; reservations survive with their codes and list snapshots; events remain anonymous.
+
+A separate documented purge removes expired reservations:
+
+```sql
+update send_ahead
+   set status = 'expired'
+ where status = 'created'
+   and expires_at <= now();
+
+delete from send_ahead
+ where expires_at <= now();
+```
+
+`bun run db:purge-send-ahead` runs both statements in one transaction. The POC keeps no expired reservation longer than the purge interval.
 
 ### 6.4 Seed validation
 
@@ -857,6 +921,7 @@ The seeder runs these checks after writing, before commit. A failure rolls back.
 
 - Exactly 50 `medicine` rows with `seed_batch_id = 'poc-seed'`.
 - Exactly 10 `pharmacy` rows with `seed_batch_id = 'poc-seed'`.
+- Five seeded pharmacies carry a verified SMS-able `mobile`; the rest are null because the source only published a landline or no number.
 - Exactly 49 `medicine_alternative` rows with `seed_batch_id = 'poc-seed'` (POC-028 has no candidate generic).
 - Exactly one inactive medicine, POC-028, with `fda_registration_no is null`.
 - Every medicine has three `price_observation` rows at every seeded pharmacy: `pack`, `strip`, and `loose`, including POC-028.
@@ -1052,6 +1117,7 @@ All endpoints are same-origin, behind Caddy basic auth, and return `Cache-Contro
 | `POST` | `/api/scan` | Mock OCR; returns medicine candidates | No |
 | `POST` | `/api/reports` | Create a wrong-price/stock report | Yes |
 | `GET` | `/api/reports` | Report summary for a result | No |
+| `POST` | `/api/send-ahead` | Create an advisory send-ahead reservation | Yes |
 | `POST` | `/api/events` | Anonymous event batch | Yes |
 
 ### 7.2 Shared DTOs
@@ -1573,6 +1639,7 @@ Response `200`:
     "latitude": 13.623234,
     "longitude": 123.185995,
     "phone": "(054) 472-3214 / (054) 811-2228 / (0968) 878-7678",
+    "mobile": "+639688787678",
     "hours_text": "24 hours",
     "opening_hours": null,
     "open_24h": true,
@@ -1680,6 +1747,7 @@ Response `200`:
 - `basket` is present only when `items` is supplied. It carries the requested quantities and units and uses the same exact-fulfillment, pack-only, and completeness rules as results, so the detail total matches the results total for the same list.
 - Directions are requested from `GET /api/directions`; the detail response carries no external maps URL. The client keeps the patient in the embedded map.
 - `open_now` is null when hours are unknown. `hours_text` is the display string; the client must not parse it to decide open/closed.
+- `mobile` is the SMS-able number for the send-ahead share action, or null when the pharmacy has only a landline or no verified number. It is not a substitute for the published `phone` display.
 - `distance_m` uses the supplied origin or the Naga center fallback.
 
 Errors:
@@ -2011,8 +2079,9 @@ Event allowlist:
 | `basket_item_added` | `{ "source": "search" \| "scan", "item_count": int }` |
 | `basket_item_removed` | `{ "item_count": int }` |
 | `report_submitted` | `{ "reason": "wrong_price" \| "wrong_stock" \| "wrong_details" \| "other" }` |
+| `send_ahead_created` | `{ "pharmacy_id": string }` |
 
-`pharmacy_id` is a public business identifier, not personal data. `query_length` is a count, never the query. Quantities and sale forms are never sent as event properties.
+`send_ahead_created` carries only `pharmacy_id`; it never carries the list, the reference code, or patient data. `pharmacy_id` is a public business identifier, not personal data. `query_length` is a count, never the query. Quantities and sale forms are never sent as event properties.
 
 Response `202`:
 
@@ -2028,7 +2097,64 @@ Errors:
 - `422 INVALID_EVENT` — unknown event name, property key, or value type.
 - `429 EVENT_RATE_LIMITED` — more than 120 events per minute per session.
 
-### 7.13 Error catalogue
+### 7.13 `POST /api/send-ahead`
+
+Create one advisory send-ahead reservation from an explicit patient action.
+
+Request:
+
+```json
+{
+  "pharmacy_id": "mercury-naga-penafrancia",
+  "items": [
+    { "medicine_id": "POC-016", "quantity": 5, "unit": "tablet" }
+  ]
+}
+```
+
+Rules:
+
+- `pharmacy_id` must exist.
+- `items`: 1–10 unique, active medicine IDs. Each `unit` must equal the medicine's base unit. Each quantity is a positive whole number of counted units or a positive measured quantity with at most three decimals, not above 100,000 base units.
+- The body is strict: unknown fields, including any patient name or contact field, are rejected rather than ignored.
+- The server snapshots the pharmacy name and `mobile`, resolves each medicine's display label, sorts the lines by `medicine_id`, and stores the aligned arrays.
+- `reference_code` is generated server-side from a cryptographic random source as `SA-` plus six unambiguous characters.
+- `expires_at` is `created_at + interval '24 hours'`. `status` is `created`.
+- The response carries no computed total. The confirmation slip shows the total the results or pharmacy-detail response already computed for the list, labelled as indicative.
+- The request never carries patient identity, contact data, an account identifier, or a client-supplied reference code.
+
+Response `201`:
+
+```json
+{
+  "reference_code": "SA-7K3M9Q",
+  "pharmacy_name": "Mercury Drug — Naga City Peñafrancia",
+  "pharmacy_mobile": "+639688787678",
+  "items": [
+    {
+      "medicine_id": "POC-016",
+      "label": "Janumet 500 mg + 50 mg Film-coated tablet",
+      "quantity": 5,
+      "unit": "tablet"
+    }
+  ],
+  "expires_at": "2026-10-28T08:30:00Z",
+  "status": "created"
+}
+```
+
+`pharmacy_mobile` is null when the pharmacy has no SMS-able number; the UI warns instead of offering the SMS action, but the reservation is still created.
+
+Errors:
+
+- `400 INVALID_REQUEST` — malformed body, empty list, or an unknown field.
+- `404 UNKNOWN_PHARMACY`.
+- `422 UNKNOWN_MEDICINE`, `DUPLICATE_MEDICINE`, `BASKET_TOO_LARGE`, `INVALID_UNIT`, or `INVALID_QUANTITY` — the same list rules as `/api/basket` and `/api/results`.
+- `503 DATABASE_UNAVAILABLE`.
+
+There is no `GET` read-back and no code-lookup endpoint. A wrong method returns `405 METHOD_NOT_ALLOWED`. A reservation is inspectable only through SQL in the POC.
+
+### 7.14 Error catalogue
 
 | HTTP | Code | Meaning |
 |---:|---|---|
@@ -2071,6 +2197,7 @@ Errors:
 | `pharmacy` | No | Business facts only; no staff personal data |
 | `price_observation` | No | Business price/stock data per sale form |
 | `price_report` | Potentially (free-text note) | No account; note is operator-facing and must not contain patient identifiers |
+| `send_ahead` | Yes (list contents) | Sensitive personal information; snapshot only, no patient identity or contact data, 24-hour expiry, no read-back surface |
 | `app_event` | No | Random session UUID and coarse event properties |
 | `seed_batch` | No | Operational metadata |
 
@@ -2078,6 +2205,7 @@ Errors:
 
 - No accounts, login, profiles, saved lists, or user IDs.
 - No patient names, contact details, prescription images, OCR text, or diagnosis data in the database.
+- The one exception to the client-only-list rule is the explicit send-ahead reservation. It stores the list snapshot and a reference code, never a patient name, phone, account identifier, IP address, or user agent.
 - The only free-text field is `price_report.note`; the UI warns against personal information, the field is capped at 500 characters, and the public API never returns it.
 - Search history is on-device only. The server logs only `query_length`, never the query.
 - The anonymous event `session_id` is a random UUID in `sessionStorage`; it is not a cookie, not a device fingerprint, and not linked to an identity.
@@ -2085,9 +2213,10 @@ Errors:
 ### 8.3 List retention
 
 - List contents are held in the client's page memory and optionally `sessionStorage`.
-- They are never sent to a storage endpoint; they appear only in `/api/basket` and `/api/results` request bodies.
+- They are never sent to a storage endpoint; they appear only in `/api/basket`, `/api/results`, and an explicit `/api/send-ahead` reservation request.
 - The service worker must not cache `/api/*` requests or responses.
 - The client must clear the list on tab close and provide a clear-list action.
+- A send-ahead reservation is the only persisted list copy, and only after the patient explicitly asks for one.
 
 ### 8.4 Scan retention
 
@@ -2107,12 +2236,21 @@ delete from app_event where occurred_at < now() - interval '90 days';
 
 - Reports are retained for the POC duration for operator triage. They contain no account link.
 
-### 8.6 Access and transport
+### 8.6 Send-ahead retention
+
+- A send-ahead reservation expires 24 hours after creation.
+- `bun run db:purge-send-ahead` marks expired rows `expired` and deletes them in one transaction; a scheduled or manual run keeps the table bounded to unexpired reservations.
+- The reservation is not seeded and has no foreign key to seeded rows, so a seed wipe neither deletes nor orphans it.
+- There is no public or basic-auth read-back endpoint. A code resolves only through SQL.
+- The patient is the sender: the app composes an SMS in the patient's own messaging app and never contacts the pharmacy directly.
+
+### 8.7 Access and transport
 
 - Caddy terminates TLS and enforces one shared basic-auth credential.
 - The app and API are same-origin; no CORS.
 - `X-Robots-Tag: noindex` on all responses and a `noindex` meta tag in the app shell.
-- No request bodies, query strings, images, or report notes in access logs. Log method, path without query, status, and duration only.
+- No request bodies, query strings, images, report notes, or send-ahead list contents in access logs. Log method, path without query, status, and duration only.
+- No endpoint, including `/api/send-ahead`, is exempted from basic auth, and no read-back code route exists.
 - Routing requests are stateless: the device origin is held in memory for one request, sent only to the configured routing provider, and never stored or logged.
 - The POC is not public. The demo badge is shown when `APP_ENV=dev` and hidden when `APP_ENV=pilot`.
 
@@ -2228,6 +2366,17 @@ The POC provider is `MockScanProvider`. The pilot provider is Cloud Vision behin
 - Scan uses section 7.10, shows the low-confidence item, and never auto-adds; the confirm screen sets a base-unit quantity.
 - Report persists and the visible `reported` state survives reload.
 - Events are anonymous and reject free text and quantities.
+- A complete, pack-only, or incomplete pharmacy offers Send ahead; a no-price pharmacy does not.
+
+### 10.7 Send-ahead reservation (#68)
+
+- A seeded result with price data exposes Send ahead and creates `POST /api/send-ahead`; the slip shows the reference code, pharmacy, item list with base-unit quantities, the indicative total where the result computes one, and the expiry.
+- The slip offers Send via SMS with the pharmacy's mobile and the plain-text message pre-filled; a landline-only or phone-less pharmacy shows a warning instead, and the reservation still exists.
+- A no-price pharmacy hides Send ahead.
+- The API rejects an unknown medicine, a mismatched unit, an invalid quantity, a duplicate, or more than 10 items, and stores no patient name, phone, or account data.
+- `send_ahead` rows survive a seed wipe, the seeder never writes them, and `bun run db:purge-send-ahead` removes expired rows.
+- No read-back or code-lookup endpoint exists; `GET /api/send-ahead` returns `405`.
+- `bun run verify` and `bun run db:acceptance` pass, and browser acceptance covers the slip, the SMS link, the no-mobile warning, and the hidden no-price action.
 
 ---
 
@@ -2241,13 +2390,14 @@ These are intentionally left to their implementation tickets:
 - the production routing provider and any self-hosting plan; the POC uses a replaceable OSRM-compatible adapter (ticket #27 and the [native pharmacy directions ADR](../adr/proposed/architecture/2026-10-21-native-pharmacy-directions.md));
 - VPS provider, hostname, TLS/basic-auth wiring, and the pilot-cutover runbook (ticket #29);
 - price history, audit trails, admin report triage UI, and a real OCR provider (out of scope for the POC map);
-- multiple simultaneous pack sizes per pharmacy, and report attribution to a specific sale form (pilot follow-ups).
+- multiple simultaneous pack sizes per pharmacy, and report attribution to a specific sale form (pilot follow-ups);
+- a pharmacy-side send-ahead dashboard or code lookup; the POC uses the patient's SMS and SQL inspection (the [`send-ahead-patient-share`](../adr/proposed/security/2026-10-25-send-ahead-patient-share.md) record defers it).
 
 ---
 
 ## 12. Out of scope
 
-- Patient accounts, saved lists, order/reservation/payment/delivery, and pharmacy dashboards.
+- Patient accounts, saved lists, transactional reservations that hold stock, ordering, payment, delivery, and pharmacy dashboards. The advisory send-ahead in section 7.13 is in scope and is not a transactional reservation.
 - Real price/stock collection, pharmacy recruitment, and pilot operations.
 - Real OCR or cloud OCR integration in the POC.
 - Turn-by-turn navigation, live re-routing, traffic-aware travel estimates, and voice guidance. Directions are a route preview only.

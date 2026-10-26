@@ -7,6 +7,7 @@ import type { ToolingConfig } from '../db/config'
 import { connect, ToolingError, withDatabaseName } from '../db/database'
 import { runMigrations } from '../db/migrate'
 
+import { runSendAheadPurge } from './purge-send-ahead'
 import { runSeed } from './seed'
 import { runWipe } from './wipe'
 
@@ -78,6 +79,7 @@ async function verifySchema(databaseUrl: string): Promise<void> {
       'seed_batch',
       'price_report',
       'app_event',
+      'send_ahead',
       'schema_migrations',
     ]) {
       assert(tables.has(table), `Missing table ${table}`)
@@ -113,9 +115,22 @@ async function verifySchema(databaseUrl: string): Promise<void> {
       'base_unit',
       'sale_form',
       'sale_state',
+      'send_ahead_status',
     ]) {
       assert(enums.has(enumName), `Missing enum ${enumName}`)
     }
+
+    const mobileColumn = await client.query<{ count: number }>(
+      `select count(*)::int as count
+         from information_schema.columns
+        where table_schema = 'public'
+          and table_name = 'pharmacy'
+          and column_name = 'mobile'`,
+    )
+    assert(
+      (mobileColumn.rows[0]?.count ?? 0) === 1,
+      'Missing pharmacy.mobile column',
+    )
 
     const indexes = new Set(
       (
@@ -142,6 +157,7 @@ async function verifySchema(databaseUrl: string): Promise<void> {
       'price_report_status_idx',
       'app_event_name_occurred_idx',
       'app_event_session_occurred_idx',
+      'send_ahead_expires_at_idx',
     ]) {
       assert(indexes.has(indexName), `Missing index ${indexName}`)
     }
@@ -205,6 +221,56 @@ async function insertSyntheticNonSeedRows(databaseUrl: string): Promise<void> {
       `insert into app_event (name, session_id, app_env)
        values ('app_open', gen_random_uuid(), 'test')`,
     )
+    await client.query(
+      `insert into send_ahead (
+         reference_code, pharmacy_id, pharmacy_name_snapshot, medicine_ids,
+         medicine_labels, quantities, expires_at
+       ) values (
+         'SA-TEST01', 'mercury-naga-penafrancia', 'Mercury Drug - Naga City Penafrancia',
+         array['POC-001'], array['Norvasc 5 mg Tablet'], array[5]::numeric[],
+         now() + interval '24 hours'
+       )`,
+    )
+  } finally {
+    await client.end()
+  }
+}
+
+async function insertExpiredSendAhead(databaseUrl: string): Promise<void> {
+  const client = await connect(databaseUrl)
+  try {
+    await client.query(
+      `insert into send_ahead (
+         reference_code, pharmacy_id, pharmacy_name_snapshot, medicine_ids,
+         medicine_labels, quantities, created_at, expires_at
+       ) values (
+         'SA-TEST02', 'mercury-naga-penafrancia', 'Mercury Drug - Naga City Penafrancia',
+         array['POC-001'], array['Norvasc 5 mg Tablet'], array[5]::numeric[],
+         now() - interval '25 hours', now() - interval '1 hour'
+       )`,
+    )
+  } finally {
+    await client.end()
+  }
+}
+
+async function verifySendAheadPurge(databaseUrl: string): Promise<void> {
+  const client = await connect(databaseUrl)
+  try {
+    const live = await client.query<{ count: number }>(
+      `select count(*)::int as count from send_ahead where reference_code = 'SA-TEST01'`,
+    )
+    assert(
+      (live.rows[0]?.count ?? 0) === 1,
+      'The purge removed a live send-ahead reservation',
+    )
+    const expired = await client.query<{ count: number }>(
+      `select count(*)::int as count from send_ahead where reference_code = 'SA-TEST02'`,
+    )
+    assert(
+      (expired.rows[0]?.count ?? 0) === 0,
+      'The purge left an expired send-ahead reservation',
+    )
   } finally {
     await client.end()
   }
@@ -261,6 +327,13 @@ async function verifySurvivors(databaseUrl: string): Promise<void> {
     assert(
       (event.rows[0]?.count ?? 0) === 1,
       'The anonymous event did not survive the wipe',
+    )
+    const reservation = await client.query<{ count: number }>(
+      `select count(*)::int as count from send_ahead where reference_code = 'SA-TEST01'`,
+    )
+    assert(
+      (reservation.rows[0]?.count ?? 0) === 1,
+      'The send-ahead reservation did not survive the wipe',
     )
   } finally {
     await client.end()
@@ -495,8 +568,8 @@ export async function runAcceptance(baseDatabaseUrl: string): Promise<void> {
   try {
     const firstMigration = await runMigrations({ databaseUrl: scratch.url })
     assert(
-      firstMigration.applied.length === 3,
-      'The clean database should apply three migrations',
+      firstMigration.applied.length === 4,
+      'The clean database should apply four migrations',
     )
     const secondMigration = await runMigrations({ databaseUrl: scratch.url })
     assert(
@@ -552,12 +625,24 @@ export async function runAcceptance(baseDatabaseUrl: string): Promise<void> {
     )
 
     await deleteBlockingPrice(scratch.url)
+    await insertExpiredSendAhead(scratch.url)
+    const purge = await runSendAheadPurge(scratch.url)
+    assert(
+      purge.deleted === 1,
+      'The purge must delete the expired send-ahead reservation',
+    )
+    await verifySendAheadPurge(scratch.url)
+
     const wipe = await runWipe({ config })
     assert(wipe.wiped, 'The wipe should report that it removed the POC batch')
     assert(wipe.preserved.price_report === 1, 'The wipe must preserve reports')
     assert(
       wipe.preserved.app_event === 1,
       'The wipe must preserve anonymous events',
+    )
+    assert(
+      wipe.preserved.send_ahead === 1,
+      'The wipe must preserve send-ahead reservations',
     )
     assert(
       wipe.preserved.non_seed_rows.pharmacy === 1,
@@ -616,6 +701,7 @@ export async function runAcceptance(baseDatabaseUrl: string): Promise<void> {
         `${table} still has seeded rows after the final wipe`,
       )
     }
+    await verifySurvivors(scratch.url)
 
     console.log(
       'Acceptance passed: migrations, idempotent seed, guarded wipe, survivors.',

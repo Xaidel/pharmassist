@@ -20,6 +20,7 @@ import { Route as ApiReportsRouteImport } from './routes/api.reports'
 import { Route as ApiResultsRouteImport } from './routes/api.results'
 import { Route as ApiScanRouteImport } from './routes/api.scan'
 import { Route as ApiSearchRouteImport } from './routes/api.search'
+import { Route as ApiSendAheadRouteImport } from './routes/api.send-ahead'
 import { Route as ApiPharmaciesIndexRouteImport } from './routes/api.pharmacies.index'
 import { Route as ApiPharmaciesPharmacyIdRouteImport } from './routes/api.pharmacies.$pharmacyId'
 
@@ -78,6 +79,11 @@ const ApiSearchRoute = ApiSearchRouteImport.update({
   path: '/api/search',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSendAheadRoute = ApiSendAheadRouteImport.update({
+  id: '/api/send-ahead',
+  path: '/api/send-ahead',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPharmaciesIndexRoute = ApiPharmaciesIndexRouteImport.update({
   id: '/api/pharmacies/',
   path: '/api/pharmacies/',
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/api/results': typeof ApiResultsRoute
   '/api/scan': typeof ApiScanRoute
   '/api/search': typeof ApiSearchRoute
+  '/api/send-ahead': typeof ApiSendAheadRoute
   '/api/pharmacies/$pharmacyId': typeof ApiPharmaciesPharmacyIdRoute
   '/api/pharmacies/': typeof ApiPharmaciesIndexRoute
 }
@@ -116,6 +123,7 @@ export interface FileRoutesByTo {
   '/api/results': typeof ApiResultsRoute
   '/api/scan': typeof ApiScanRoute
   '/api/search': typeof ApiSearchRoute
+  '/api/send-ahead': typeof ApiSendAheadRoute
   '/api/pharmacies/$pharmacyId': typeof ApiPharmaciesPharmacyIdRoute
   '/api/pharmacies': typeof ApiPharmaciesIndexRoute
 }
@@ -132,6 +140,7 @@ export interface FileRoutesById {
   '/api/results': typeof ApiResultsRoute
   '/api/scan': typeof ApiScanRoute
   '/api/search': typeof ApiSearchRoute
+  '/api/send-ahead': typeof ApiSendAheadRoute
   '/api/pharmacies/$pharmacyId': typeof ApiPharmaciesPharmacyIdRoute
   '/api/pharmacies/': typeof ApiPharmaciesIndexRoute
 }
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
     | '/api/results'
     | '/api/scan'
     | '/api/search'
+    | '/api/send-ahead'
     | '/api/pharmacies/$pharmacyId'
     | '/api/pharmacies/'
   fileRoutesByTo: FileRoutesByTo
@@ -164,6 +174,7 @@ export interface FileRouteTypes {
     | '/api/results'
     | '/api/scan'
     | '/api/search'
+    | '/api/send-ahead'
     | '/api/pharmacies/$pharmacyId'
     | '/api/pharmacies'
   id:
@@ -179,6 +190,7 @@ export interface FileRouteTypes {
     | '/api/results'
     | '/api/scan'
     | '/api/search'
+    | '/api/send-ahead'
     | '/api/pharmacies/$pharmacyId'
     | '/api/pharmacies/'
   fileRoutesById: FileRoutesById
@@ -195,6 +207,7 @@ export interface RootRouteChildren {
   ApiResultsRoute: typeof ApiResultsRoute
   ApiScanRoute: typeof ApiScanRoute
   ApiSearchRoute: typeof ApiSearchRoute
+  ApiSendAheadRoute: typeof ApiSendAheadRoute
   ApiPharmaciesPharmacyIdRoute: typeof ApiPharmaciesPharmacyIdRoute
   ApiPharmaciesIndexRoute: typeof ApiPharmaciesIndexRoute
 }
@@ -278,6 +291,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/send-ahead': {
+      id: '/api/send-ahead'
+      path: '/api/send-ahead'
+      fullPath: '/api/send-ahead'
+      preLoaderRoute: typeof ApiSendAheadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/pharmacies/': {
       id: '/api/pharmacies/'
       path: '/api/pharmacies'
@@ -307,6 +327,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiResultsRoute: ApiResultsRoute,
   ApiScanRoute: ApiScanRoute,
   ApiSearchRoute: ApiSearchRoute,
+  ApiSendAheadRoute: ApiSendAheadRoute,
   ApiPharmaciesPharmacyIdRoute: ApiPharmaciesPharmacyIdRoute,
   ApiPharmaciesIndexRoute: ApiPharmaciesIndexRoute,
 }

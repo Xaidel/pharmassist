@@ -114,6 +114,7 @@ export const pharmacySeedSchema = z
     latitude: z.number().min(-90).max(90),
     longitude: z.number().min(-180).max(180),
     phone: z.string().min(1).nullable(),
+    mobile: z.string().min(1).nullable(),
     hours_text: z.string().min(1).nullable(),
     open_24h: z.boolean(),
     opening_hours: openingHoursSchema.nullable(),

@@ -925,8 +925,8 @@ export function ResultsExperience({
                 Your list is empty
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Search for a medicine and tap Add to your list to rank the seeded
-                pharmacies for your list.
+                Search for a medicine and tap Add to your list to rank the
+                seeded pharmacies for your list.
               </p>
               <Link
                 className="mt-4 inline-flex text-sm font-semibold text-primary underline-offset-2 hover:underline"

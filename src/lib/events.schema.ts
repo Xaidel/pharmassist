@@ -92,6 +92,12 @@ const eventSchema = z.discriminatedUnion('name', [
     name: z.literal('report_submitted'),
     properties: z.strictObject({ reason: reportReasonSchema }),
   }),
+  z.strictObject({
+    name: z.literal('send_ahead_created'),
+    properties: z.strictObject({
+      pharmacy_id: z.string().min(1).max(64),
+    }),
+  }),
 ])
 
 const sessionIdSchema = z

@@ -54,6 +54,20 @@ describe('loadFixture', () => {
     expect(bundle.prices).toHaveLength(1500)
   })
 
+  it('backfills only the pharmacies with an SMS-able mobile number', async () => {
+    const bundle = await loadFixture(fixtureDirectory)
+    const mobileById = new Map(
+      bundle.pharmacies.map((pharmacy) => [pharmacy.id, pharmacy.mobile]),
+    )
+
+    expect(mobileById.get('mercury-naga-penafrancia')).toBe('+639688787678')
+    expect(mobileById.get('generika-san-felipe')).toBeNull()
+    expect(mobileById.get('watsons-sm-city-naga')).toBeNull()
+    expect(
+      bundle.pharmacies.filter((pharmacy) => pharmacy.mobile !== null),
+    ).toHaveLength(5)
+  })
+
   it('keeps exactly the intended catalog gaps', async () => {
     const bundle = await loadFixture(fixtureDirectory)
     const inactive = bundle.medicines.filter((medicine) => !medicine.active)

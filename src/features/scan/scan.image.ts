@@ -24,6 +24,15 @@ function readUint16BE(bytes: Uint8Array, offset: number): number {
   return (byteAt(bytes, offset) << 8) | byteAt(bytes, offset + 1)
 }
 
+function readUint32BE(bytes: Uint8Array, offset: number): number {
+  return (
+    byteAt(bytes, offset) * 0x1000000 +
+    (byteAt(bytes, offset + 1) << 16) +
+    (byteAt(bytes, offset + 2) << 8) +
+    byteAt(bytes, offset + 3)
+  )
+}
+
 function readUint24LE(bytes: Uint8Array, offset: number): number {
   return (
     byteAt(bytes, offset) |
@@ -54,8 +63,8 @@ function readPngDimensions(bytes: Uint8Array): ImageDimensions | null {
   if (bytes.length < 24) {
     return null
   }
-  const width = readUint16BE(bytes, 16)
-  const height = readUint16BE(bytes, 20)
+  const width = readUint32BE(bytes, 16)
+  const height = readUint32BE(bytes, 20)
   return width === 0 || height === 0 ? null : { width, height }
 }
 

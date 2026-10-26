@@ -48,6 +48,7 @@ const pharmacy = {
   latitude: 13.623234,
   longitude: 123.185995,
   phone: null,
+  mobile: '+639688787678',
   hours_text: '24 hours',
   opening_hours: null,
   open_24h: true,
