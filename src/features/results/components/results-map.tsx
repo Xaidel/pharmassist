@@ -75,11 +75,12 @@ function createPinElement(
   selected: boolean,
   tracked: boolean,
   muted: boolean,
-): Pick<CalloutPin<HTMLButtonElement>, 'root' | 'callout'> {
+): Pick<CalloutPin<HTMLButtonElement>, 'root' | 'callout' | 'dot'> {
   const {
     root: button,
     body,
     callout,
+    dot,
   } = createCalloutPin({
     tag: 'button',
     label: pin.label,
@@ -111,7 +112,7 @@ function createPinElement(
   button.dataset.pinCalloutState = muted ? 'muted' : 'shown'
   body.dataset.pinBody = muted ? 'muted' : 'focused'
   callout.dataset.pinCallout = ''
-  return { root: button, callout }
+  return { root: button, callout, dot }
 }
 
 function createOriginMarkerElement(): HTMLDivElement {
@@ -299,21 +300,25 @@ export function ResultsMap({
       markersRef.current.push(originMarker)
     }
 
-    const callouts: { callout: HTMLDivElement; priority: number }[] = []
+    const callouts: {
+      callout: HTMLDivElement
+      dot: HTMLDivElement
+      priority: number
+    }[] = []
     for (const [index, pin] of pins.entries()) {
       const selected = pin.key === selectedKey
       const tracked = focusMode && pin.pharmacyId === trackedPharmacyId
       const muted = focusMode && !selected && !tracked
-      const { root: element, callout } = createPinElement(
-        pin,
-        selected,
-        tracked,
-        muted,
-      )
+      const {
+        root: element,
+        callout,
+        dot,
+      } = createPinElement(pin, selected, tracked, muted)
       // Selected, then tracked, then starred, then list order keeps its label
       // when crowded.
       callouts.push({
         callout,
+        dot,
         priority: selected
           ? -3
           : tracked
@@ -365,9 +370,7 @@ export function ResultsMap({
 
     const relayout = (): void => {
       declutterCallouts(
-        [...callouts]
-          .sort((left, right) => left.priority - right.priority)
-          .map(({ callout }) => callout),
+        [...callouts].sort((left, right) => left.priority - right.priority),
       )
     }
     relayout()
