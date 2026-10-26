@@ -87,9 +87,9 @@ export function HomePage({
       >
         <h1 className="mx-auto w-64 max-w-full shrink-0">
           <img
-            alt="PharmAssist — Got a list?"
+            alt="Pharmassist — Got a list?"
             className="h-auto w-full"
-            height={52}
+            height={67}
             src="/brand/pharmassist-logo.png"
             width={260}
           />

@@ -44,7 +44,8 @@
   --input: oklch(0.78 0.03 75);
   --ring: oklch(0.5 0.13 274);
   --destructive: oklch(0.53 0.19 28);
-  --highlight: oklch(0.5 0.2 27);
+  /* The logo's green (#618b35), darkened so small text on cream stays readable. */
+  --highlight: oklch(0.48 0.12 131);
   /* Medicine kinds: tablets, liquids, creams, inhalers, and sachets or vials. */
   --kind-pill: oklch(0.46 0.09 195);
   --kind-liquid: oklch(0.47 0.11 60);
