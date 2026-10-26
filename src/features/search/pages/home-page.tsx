@@ -7,6 +7,9 @@ import { cn } from '#/lib/cn'
 import { InfoButton } from '#/shared/components/info-button'
 import { Button } from '#/shared/components/ui/button'
 
+// Imported, not served from public/, so the build fingerprints the file and a
+// changed logo gets a new URL instead of a stale browser-cached copy.
+import logoUrl from '../assets/pharmassist-logo.png'
 import { HomeMap } from '../components/home-map'
 import {
   SearchExperience,
@@ -102,10 +105,10 @@ export function HomePage({
             to="/"
           >
             <img
-              alt="PharmAssist — Got a list?"
+              alt="Pharmassist — Got a list?"
               className="h-auto w-full"
-              height={52}
-              src="/brand/pharmassist-logo.png"
+              height={67}
+              src={logoUrl}
               width={260}
             />
           </Link>

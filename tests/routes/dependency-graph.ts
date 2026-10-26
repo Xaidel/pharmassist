@@ -347,7 +347,13 @@ export function boundaryFindings(sources: Map<string, string>): string[] {
         )
       const target = resolveSource(path, dependency.specifier, paths)
       if (target === null) {
-        if (/\.css(?:\?.*)?$/.test(dependency.specifier)) continue
+        // Stylesheets and bundled images carry no code dependencies.
+        if (
+          /\.(?:css|png|jpe?g|webp|avif|gif|svg)(?:\?.*)?$/.test(
+            dependency.specifier,
+          )
+        )
+          continue
         if (
           dependency.specifier.startsWith('.') ||
           dependency.specifier.startsWith('#/')

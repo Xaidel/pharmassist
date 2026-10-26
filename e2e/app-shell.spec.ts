@@ -7,7 +7,7 @@ test('serves the search-first shell and registers the app-shell worker', async (
 
   await expect(
     page.getByRole('heading', {
-      name: 'PharmAssist — Got a list?',
+      name: 'Pharmassist — Got a list?',
     }),
   ).toBeVisible()
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(

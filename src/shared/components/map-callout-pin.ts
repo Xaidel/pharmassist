@@ -9,7 +9,9 @@ const TONES = {
     box: 'border-highlight bg-card',
     inner: 'border-highlight text-highlight',
     tip: 'border-highlight bg-card',
-    dot: 'bg-highlight',
+    // The halo keeps the green dot visible on the grey map even when its
+    // label is decluttered away.
+    dot: 'bg-highlight shadow-pin-halo',
   },
   primary: {
     box: 'border-primary bg-primary',

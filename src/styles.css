@@ -30,6 +30,9 @@
   --color-kind-inhaler: var(--kind-inhaler);
   --color-kind-other: var(--kind-other);
   --color-destructive-foreground: var(--destructive-foreground);
+  /* Outside the dot's white ring: a soft highlight halo for standout map pins. */
+  --shadow-pin-halo: 0 0 0 5px
+    color-mix(in oklch, var(--highlight) 35%, transparent);
 }
 
 :root {
@@ -46,13 +49,15 @@
   --input: oklch(0.78 0.03 75);
   --ring: oklch(0.5 0.13 274);
   --destructive: oklch(0.53 0.19 28);
-  --highlight: oklch(0.5 0.2 27);
+  /* The logo's green (#618b35), darkened so small text on cream stays readable. */
+  --highlight: oklch(0.48 0.12 131);
   /* Medicine kinds: tablets, liquids, creams, inhalers, and sachets or vials. */
   --kind-pill: oklch(0.46 0.09 195);
   --kind-liquid: oklch(0.47 0.11 60);
   --kind-topical: oklch(0.47 0.14 350);
   --kind-inhaler: oklch(0.46 0.12 245);
-  --kind-other: oklch(0.46 0.1 150);
+  /* Violet, not green, so it is never mistaken for the cheapest highlight. */
+  --kind-other: oklch(0.46 0.13 305);
   --destructive-foreground: oklch(0.985 0.009 82);
 }
 
