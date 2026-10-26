@@ -7,8 +7,10 @@
   --tracking-eyebrow: 0.2em;
   --tracking-eyebrow-wide: 0.24em;
   --leading-display: 0.95;
-  --shadow-sheet: 0 -12px 40px -12px
-    color-mix(in oklch, var(--foreground) 28%, transparent);
+  /* A soft lift plus a tight contact shadow, so sheets read as separate from the map. */
+  --shadow-sheet:
+    0 -12px 36px -10px color-mix(in oklch, var(--foreground) 36%, transparent),
+    0 -2px 6px -2px color-mix(in oklch, var(--foreground) 18%, transparent);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

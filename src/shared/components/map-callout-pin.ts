@@ -49,6 +49,8 @@ export type CalloutPin<Root extends HTMLElement> = {
   /** The visual wrapper inside the marker; scale or animate this instead. */
   body: HTMLDivElement
   callout: HTMLDivElement
+  /** The location dot; it stays visible when the callout is decluttered. */
+  dot: HTMLDivElement
 }
 
 type CalloutPinOptions<Tag extends 'button' | 'div'> = {
@@ -113,7 +115,7 @@ export function createCalloutPin<Tag extends 'button' | 'div'>({
 
   body.append(callout, dot)
   root.append(body)
-  return { root, body, callout }
+  return { root, body, callout, dot }
 }
 
 const LABEL_GAP_PX = 4
@@ -127,16 +129,28 @@ function overlaps(left: DOMRect, right: DOMRect): boolean {
   )
 }
 
+/** A callout pin to declutter; a pinned callout always shows. */
+export type DeclutterPin = Pick<CalloutPin<HTMLElement>, 'callout' | 'dot'> & {
+  pinned?: boolean
+}
+
 /**
- * Hide each callout that would overlap one placed before it, leaving its dot.
- * Pass callouts in priority order: earlier ones always show.
+ * Hide each callout that would overlap one placed before it or cover another
+ * pin's dot, leaving its own dot. Pass pins in priority order: earlier ones win
+ * label collisions, and pinned ones, such as a tapped or selected pin, always
+ * show.
  */
-export function declutterCallouts(callouts: readonly HTMLDivElement[]): void {
+export function declutterCallouts(pins: readonly DeclutterPin[]): void {
+  const dots = pins.map(({ dot }) => dot.getBoundingClientRect())
   const placed: DOMRect[] = []
-  for (const callout of callouts) {
+  for (const [index, { callout, pinned = false }] of pins.entries()) {
     callout.style.visibility = 'visible'
     const rect = callout.getBoundingClientRect()
-    if (placed.some((other) => overlaps(rect, other))) {
+    const blocked =
+      !pinned &&
+      (placed.some((other) => overlaps(rect, other)) ||
+        dots.some((dot, other) => other !== index && overlaps(rect, dot)))
+    if (blocked) {
       callout.style.visibility = 'hidden'
     } else {
       placed.push(rect)

@@ -10,18 +10,19 @@ import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { cn } from '#/lib/cn'
+import { loadBaseMapStyle } from '#/shared/components/base-map-style'
 import { addNagaBoundary } from '#/shared/components/naga-boundary'
 import {
   createCalloutPin,
   declutterCallouts,
   type CalloutPin,
   type CalloutTone,
+  type DeclutterPin,
 } from '#/shared/components/map-callout-pin'
 
 import type { RouteGeometry } from '../directions.schema'
 import { NAGA_CENTER } from '../results.domain'
 
-const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/positron'
 const ROUTE_SOURCE_ID = 'active-route'
 const ROUTE_LAYER_ID = 'active-route-line'
 const ROUTE_COLOR = '#0f6b57'
@@ -75,11 +76,12 @@ function createPinElement(
   selected: boolean,
   tracked: boolean,
   muted: boolean,
-): Pick<CalloutPin<HTMLButtonElement>, 'root' | 'callout'> {
+): Pick<CalloutPin<HTMLButtonElement>, 'root' | 'callout' | 'dot'> {
   const {
     root: button,
     body,
     callout,
+    dot,
   } = createCalloutPin({
     tag: 'button',
     label: pin.label,
@@ -111,7 +113,7 @@ function createPinElement(
   button.dataset.pinCalloutState = muted ? 'muted' : 'shown'
   body.dataset.pinBody = muted ? 'muted' : 'focused'
   callout.dataset.pinCallout = ''
-  return { root: button, callout }
+  return { root: button, callout, dot }
 }
 
 function createOriginMarkerElement(): HTMLDivElement {
@@ -232,7 +234,6 @@ export function ResultsMap({
           module.setWorkerUrl(maplibreWorkerUrl)
           map = new module.Map({
             container: containerRef.current,
-            style: MAP_STYLE_URL,
             center: [
               initialOrigin?.longitude ?? NAGA_CENTER.longitude,
               initialOrigin?.latitude ?? NAGA_CENTER.latitude,
@@ -240,6 +241,7 @@ export function ResultsMap({
             zoom: 12.4,
             attributionControl: { compact: true },
           })
+          loadBaseMapStyle(map)
           mapRef.current = map
           libRef.current = module
           const created = map
@@ -299,21 +301,22 @@ export function ResultsMap({
       markersRef.current.push(originMarker)
     }
 
-    const callouts: { callout: HTMLDivElement; priority: number }[] = []
+    const callouts: (DeclutterPin & { priority: number })[] = []
     for (const [index, pin] of pins.entries()) {
       const selected = pin.key === selectedKey
       const tracked = focusMode && pin.pharmacyId === trackedPharmacyId
       const muted = focusMode && !selected && !tracked
-      const { root: element, callout } = createPinElement(
-        pin,
-        selected,
-        tracked,
-        muted,
-      )
+      const {
+        root: element,
+        callout,
+        dot,
+      } = createPinElement(pin, selected, tracked, muted)
       // Selected, then tracked, then starred, then list order keeps its label
       // when crowded.
       callouts.push({
         callout,
+        dot,
+        pinned: selected,
         priority: selected
           ? -3
           : tracked
@@ -365,9 +368,7 @@ export function ResultsMap({
 
     const relayout = (): void => {
       declutterCallouts(
-        [...callouts]
-          .sort((left, right) => left.priority - right.priority)
-          .map(({ callout }) => callout),
+        [...callouts].sort((left, right) => left.priority - right.priority),
       )
     }
     relayout()
