@@ -109,10 +109,28 @@ export function HomeMap({ className }: HomeMapProps): React.JSX.Element {
           if (directory === null || directory.pharmacies.length === 0) {
             return
           }
-          const callouts: { callout: HTMLDivElement; priority: number }[] = []
+          type HomePin = {
+            root: HTMLDivElement
+            callout: HTMLDivElement
+            dot: HTMLDivElement
+            priority: number
+          }
+          const callouts: HomePin[] = []
+          // A tapped dot shows its name even where its label was decluttered.
+          let revealed: HomePin | null = null
+          const reveal = (pin: HomePin | null): void => {
+            revealed?.root.classList.remove('z-10')
+            revealed = pin
+            revealed?.root.classList.add('z-10')
+            relayout()
+          }
           for (const pharmacy of directory.pharmacies) {
             const variant = pinVariant(pharmacy, directory.cheapest_pharmacy_id)
-            const { root: element, callout } = createCalloutPin({
+            const {
+              root: element,
+              callout,
+              dot,
+            } = createCalloutPin({
               tag: 'div',
               label: pharmacy.name,
               tone: PIN_TONES[variant],
@@ -120,7 +138,27 @@ export function HomeMap({ className }: HomeMapProps): React.JSX.Element {
               rootClassName: 'pointer-events-none',
             })
             element.dataset.homePin = variant
-            callouts.push({ callout, priority: PIN_PRIORITY[variant] })
+            const pin: HomePin = {
+              root: element,
+              callout,
+              dot,
+              priority: PIN_PRIORITY[variant],
+            }
+            callouts.push(pin)
+            // The marker stays click-through; only the dot, with a padded hit
+            // area, takes taps.
+            dot.classList.add(
+              'pointer-events-auto',
+              'relative',
+              'cursor-pointer',
+              'before:absolute',
+              'before:-inset-2.5',
+              "before:content-['']",
+            )
+            dot.dataset.homePinDot = ''
+            dot.addEventListener('click', () => {
+              reveal(pin)
+            })
             markers.push(
               new module.Marker({ element, anchor: 'bottom', offset: [0, 6] })
                 .setLngLat([pharmacy.longitude, pharmacy.latitude])
@@ -149,15 +187,32 @@ export function HomeMap({ className }: HomeMapProps): React.JSX.Element {
             },
           )
 
-          const byPriority = callouts
-            .sort((left, right) => left.priority - right.priority)
-            .map(({ callout }) => callout)
-          const relayout = (): void => {
-            declutterCallouts(byPriority)
+          const byPriority = callouts.sort(
+            (left, right) => left.priority - right.priority,
+          )
+          function relayout(): void {
+            declutterCallouts(
+              revealed === null
+                ? byPriority
+                : [
+                    { ...revealed, pinned: true },
+                    ...byPriority.filter((pin) => pin !== revealed),
+                  ],
+            )
           }
           relayout()
           created.on('move', relayout)
           created.on('resize', relayout)
+          // A tap on open map hides the tapped name again.
+          created.on('click', (event) => {
+            const target = event.originalEvent.target
+            if (
+              !(target instanceof Element) ||
+              target.closest('[data-home-pin-dot]') === null
+            ) {
+              reveal(null)
+            }
+          })
         } catch {
           // The sheet stays usable over the plain background.
         }
