@@ -10,6 +10,7 @@ import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { cn } from '#/lib/cn'
+import { loadBaseMapStyle } from '#/shared/components/base-map-style'
 import { addNagaBoundary } from '#/shared/components/naga-boundary'
 import {
   createCalloutPin,
@@ -21,7 +22,6 @@ import {
 import type { RouteGeometry } from '../directions.schema'
 import { NAGA_CENTER } from '../results.domain'
 
-const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/positron'
 const ROUTE_SOURCE_ID = 'active-route'
 const ROUTE_LAYER_ID = 'active-route-line'
 const ROUTE_COLOR = '#0f6b57'
@@ -232,7 +232,6 @@ export function ResultsMap({
           module.setWorkerUrl(maplibreWorkerUrl)
           map = new module.Map({
             container: containerRef.current,
-            style: MAP_STYLE_URL,
             center: [
               initialOrigin?.longitude ?? NAGA_CENTER.longitude,
               initialOrigin?.latitude ?? NAGA_CENTER.latitude,
@@ -240,6 +239,7 @@ export function ResultsMap({
             zoom: 12.4,
             attributionControl: { compact: true },
           })
+          loadBaseMapStyle(map)
           mapRef.current = map
           libRef.current = module
           const created = map

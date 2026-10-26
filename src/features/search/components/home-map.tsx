@@ -4,6 +4,7 @@ import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import { useEffect, useRef, useState } from 'react'
 
 import { cn } from '#/lib/cn'
+import { loadBaseMapStyle } from '#/shared/components/base-map-style'
 import { addNagaBoundary } from '#/shared/components/naga-boundary'
 import {
   createCalloutPin,
@@ -12,8 +13,6 @@ import {
 } from '#/shared/components/map-callout-pin'
 
 import { fetchPharmacyPins, type PharmacyPins } from '../pharmacy-pins.api'
-
-const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/positron'
 
 // Frames central Naga City above the home sheet.
 const HOME_CENTER = { latitude: 13.6105, longitude: 123.1945 } as const
@@ -93,11 +92,11 @@ export function HomeMap({ className }: HomeMapProps): React.JSX.Element {
           module.setWorkerUrl(maplibreWorkerUrl)
           const created = new module.Map({
             container,
-            style: MAP_STYLE_URL,
             center: [HOME_CENTER.longitude, HOME_CENTER.latitude],
             zoom: 13.2,
             attributionControl: { compact: true },
           })
+          loadBaseMapStyle(created)
           map = created
           created.once('load', () => {
             if (!disposed) {
