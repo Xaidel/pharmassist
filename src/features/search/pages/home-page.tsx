@@ -1,4 +1,4 @@
-import { getRouteApi } from '@tanstack/react-router'
+import { getRouteApi, Link } from '@tanstack/react-router'
 import { ScanLine } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -54,6 +54,13 @@ export function HomePage({
     [navigate],
   )
 
+  // A new key remounts the search, clearing its input and results; a reset
+  // search never restores the URL query.
+  const [searchKey, setSearchKey] = useState(0)
+  const handleHome = useCallback((): void => {
+    setSearchKey((key) => key + 1)
+  }, [])
+
   const handleScan = useCallback((): void => {
     void navigate({ to: '/scan' })
   }, [navigate])
@@ -86,18 +93,30 @@ export function HomePage({
         )}
       >
         <h1 className="mx-auto w-64 max-w-full shrink-0">
-          <img
-            alt="PharmAssist — Got a list?"
-            className="h-auto w-full"
-            height={52}
-            src="/brand/pharmassist-logo.png"
-            width={260}
-          />
+          {/* The logo returns to a fresh home: the search clears and the URL drops q. */}
+          <Link
+            className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            onClick={handleHome}
+            replace
+            search={{}}
+            to="/"
+          >
+            <img
+              alt="PharmAssist — Got a list?"
+              className="h-auto w-full"
+              height={52}
+              src="/brand/pharmassist-logo.png"
+              width={260}
+            />
+          </Link>
         </h1>
 
         <SearchExperience
+          key={searchKey}
           {...(basket === undefined ? {} : { basket })}
-          {...(initialQuery === undefined ? {} : { initialQuery })}
+          {...(initialQuery === undefined || searchKey > 0
+            ? {}
+            : { initialQuery })}
           onQueryChange={handleQueryChange}
         />
 
