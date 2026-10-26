@@ -54,6 +54,10 @@ const VALID_EVENTS: AppEvent[] = [
   },
   { name: 'basket_item_removed', properties: { item_count: 0 } },
   { name: 'report_submitted', properties: { reason: 'wrong_price' } },
+  {
+    name: 'send_ahead_created',
+    properties: { pharmacy_id: 'mercury-naga-penafrancia' },
+  },
 ]
 
 describe('eventBatchSchema', () => {

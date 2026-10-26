@@ -2,7 +2,7 @@
 
 **Version:** 0.2 (research-integrated baseline)
 **Status:** Draft — open decisions are tracked in `https://github.com/Xaidel/pharmassist/issues/7`; v1.0 is produced by issue #15.
-**Last updated:** 2026-10-21
+**Last updated:** 2026-10-27
 **Owner:** Karl
 **Pilot market:** Naga City, Camarines Sur, Philippines
 
@@ -152,7 +152,7 @@ The OCR data-flow choice (cloud stateless proxy versus on-device only) is unreso
 ### 6.6 Privacy and clinical boundary
 
 - **FR-41:** No accounts or patient identity in v1.
-- **FR-42:** Prescription images are discarded immediately; prescription contents are not stored server-side, except for an explicit send-ahead reservation (FR-60), which stores only a pharmacy snapshot, a list snapshot, and a reference code and expires automatically.
+- **FR-42:** Prescription images are discarded immediately; prescription contents are not stored server-side, except for an explicit send-ahead reservation (FR-60), which stores only a pharmacy snapshot, a list snapshot, and a reference code and expires automatically ([`send-ahead-persistence`](adr/proposed/security/2026-10-25-send-ahead-persistence.md)).
 - **FR-43:** Search history stays on-device.
 - **FR-44:** No dosage, diagnosis, substitution, or treatment advice. Users are directed to a pharmacist or doctor.
 - **FR-45:** Generic-versus-brand statements are descriptive. No therapeutic-equivalence claim without an FDA or formulary basis.
@@ -175,11 +175,11 @@ The OCR data-flow choice (cloud stateless proxy versus on-device only) is unreso
 
 ### 6.9 Transaction and compliance boundary
 
-- **FR-56:** v1 has no cart, order, payment, or delivery feature, and no reservation that holds or guarantees stock. The one exception is an advisory send-ahead (FR-60), which forwards the list ahead for pre-bagging and transacts nothing. The counter for Rx items is the pharmacy's licensed pharmacist.
+- **FR-56:** v1 has no cart, order, payment, or delivery feature, and no reservation that holds or guarantees stock. The one exception is an advisory send-ahead (FR-60), which forwards the list ahead for pre-bagging and transacts nothing. The counter for Rx items is the pharmacy's licensed pharmacist. The exception is recorded in [`send-ahead-persistence`](adr/proposed/security/2026-10-25-send-ahead-persistence.md).
 - **FR-57:** Any future ordering, payment, delivery, merchant offers, affiliate checkout, or per-transaction commission is a roadmap gate that triggers RA 11967 and a fresh DPA assessment.
 - **FR-58:** The launch requires an FDA/CDRR opinion on presenting neutral Rx price and availability information, plus counsel sign-off. This is a launch gate, not a build task.
 - **FR-59:** A Naga Mayor's Permit is required if the operation has a physical outlet or hub in the city. LGU/CHO data goes through a partnership or DSA, not an FOI commercial-purpose request.
-- **FR-60:** An advisory send-ahead lets a patient forward their list to a chosen pharmacy to be pre-bagged before arrival, cutting queue wait. It is transaction-free: it does not hold or guarantee stock, takes no payment, and stores no patient identity. The record holds only a pharmacy snapshot, a list snapshot, and a reference code, and expires after 24 hours. In v1 the list reaches the pharmacy through an SMS the patient sends from their own phone; where a pharmacy has no SMS-able mobile number, the app shows a warning instead. A pharmacy-exclusive dashboard for receiving reservations is on the post-v1 roadmap.
+- **FR-60:** An advisory send-ahead lets a patient forward their list to a chosen pharmacy to be pre-bagged before arrival, cutting queue wait. It is transaction-free: it does not hold or guarantee stock, takes no payment, and stores no patient identity. The record holds only a pharmacy snapshot, a list snapshot, and a reference code, and expires after 24 hours ([`send-ahead-persistence`](adr/proposed/security/2026-10-25-send-ahead-persistence.md)). In v1 the list reaches the pharmacy through an SMS the patient sends from their own phone; where a pharmacy has no SMS-able mobile number, the app shows a warning instead ([`send-ahead-patient-share`](adr/proposed/security/2026-10-25-send-ahead-patient-share.md)). A pharmacy-exclusive dashboard for receiving reservations is on the post-v1 roadmap.
 
 ## 7. Data model (pilot)
 

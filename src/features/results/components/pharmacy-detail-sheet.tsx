@@ -28,6 +28,7 @@ import {
 
 import { PriceLineItem } from './price-line'
 import { ResultItemList } from './result-items'
+import { SendAheadPanel, type SendAheadExpectedTotal } from './send-ahead-panel'
 
 const REPORT_REASON_OPTIONS: readonly {
   value: ReportReason
@@ -172,6 +173,27 @@ function ReportForm({
       </div>
     </form>
   )
+}
+
+function sendAheadExpectedTotal(
+  basket: NonNullable<PharmacyDetailResponse['basket']>,
+): SendAheadExpectedTotal {
+  if (basket.status === 'complete') {
+    return {
+      label: 'Expected total',
+      amountPhp: basket.total_shelf_price_php ?? basket.known_total_php,
+    }
+  }
+  if (basket.status === 'sold_per_pack_only') {
+    return {
+      label: 'Expected total for whole packs',
+      amountPhp: basket.covering_total_php ?? basket.known_total_php,
+    }
+  }
+  return {
+    label: 'Known total (some items missing)',
+    amountPhp: basket.known_total_php,
+  }
 }
 
 function DetailBasketSummary({
@@ -396,6 +418,16 @@ export function PharmacyDetailSheet({
             <DetailBasketSummary
               basket={detail.basket}
               medicines={detail.medicines}
+            />
+          )}
+
+          {resultKey !== null && detail.basket !== undefined && (
+            <SendAheadPanel
+              expectedTotal={sendAheadExpectedTotal(detail.basket)}
+              items={basketItems}
+              pharmacyId={detail.pharmacy.pharmacy_id}
+              pharmacyMobile={detail.pharmacy.mobile}
+              pharmacyName={detail.pharmacy.name}
             />
           )}
 

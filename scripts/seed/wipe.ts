@@ -19,6 +19,7 @@ export type WipeReport = {
   preserved: {
     price_report: number
     app_event: number
+    send_ahead: number
     non_seed_rows: Record<string, number>
   }
 }
@@ -63,6 +64,10 @@ async function snapshotNonSeed(
     app_event: await countRows(
       client,
       'select count(*)::int as count from app_event',
+    ),
+    send_ahead: await countRows(
+      client,
+      'select count(*)::int as count from send_ahead',
     ),
     non_seed_rows: nonSeedRows,
   }
@@ -191,6 +196,12 @@ async function verifyWipe(
       'The wipe changed app_event row counts',
     )
   }
+  if (after.send_ahead !== before.send_ahead) {
+    throw new ToolingError(
+      'WIPE_VALIDATION',
+      'The wipe changed send_ahead row counts',
+    )
+  }
   for (const table of seededTables) {
     if (after.non_seed_rows[table] !== before.non_seed_rows[table]) {
       throw new ToolingError(
@@ -272,7 +283,7 @@ if (isMainModule()) {
           .join(', ')}.`,
       )
       console.log(
-        `Preserved price_report=${String(report.preserved.price_report)}, app_event=${String(report.preserved.app_event)}.`,
+        `Preserved price_report=${String(report.preserved.price_report)}, app_event=${String(report.preserved.app_event)}, send_ahead=${String(report.preserved.send_ahead)}.`,
       )
     }
   } catch (error) {

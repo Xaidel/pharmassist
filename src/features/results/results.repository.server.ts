@@ -69,6 +69,7 @@ const PHARMACY_COLUMNS = `
   latitude::float8 as latitude,
   longitude::float8 as longitude,
   phone,
+  mobile,
   hours_text,
   opening_hours,
   open_24h,

@@ -63,7 +63,7 @@ bun run db:migrate
 bun run db:seed
 ```
 
-The seeder reads the full POC fixture at `scripts/seed/fixtures/poc-seed/` — 50 medicines, 10 Naga pharmacies, 204 published MDRP ceilings, and mocked prices with the demo trust states — writes one `poc-seed` batch in a single transaction, and is idempotent. The wipe removes only rows tagged `seed_batch_id = 'poc-seed'`; it refuses to run while a non-seed row depends on seeded data, and it never touches reports or anonymous events.
+The seeder reads the full POC fixture at `scripts/seed/fixtures/poc-seed/` — 50 medicines, 10 Naga pharmacies, 204 published MDRP ceilings, and mocked prices with the demo trust states — writes one `poc-seed` batch in a single transaction, and is idempotent. The wipe removes only rows tagged `seed_batch_id = 'poc-seed'`; it refuses to run while a non-seed row depends on seeded data, and it never touches reports, send-ahead reservations, or anonymous events.
 
 ```sh
 bun run db:wipe
@@ -85,6 +85,10 @@ The seed makes every demo case reachable and labelled: complete exact lists, the
 
 List quantities are entered in each medicine's base unit: tablets, capsules, mL, g, actuations, sachets, or unit-doses. The results screen offers one-tap full-pack presets for bottles, inhalers, and tubes, and shows a soft warning above an estimated 30-day supply. These entry guardrails are client-side only; the API still prices any structurally valid list and enforces only the contract bounds.
 
+## Send-ahead reservations
+
+A pharmacy result with price data offers **Send ahead** from the detail sheet. The app creates an advisory `send_ahead` record through `POST /api/send-ahead` and shows a slip with a copyable `SA-` reference code, the pharmacy, the base-unit list, the indicative total, and a 24-hour expiry. The slip opens the patient's SMS app pre-filled with the pharmacy's `mobile` and the reservation message; a pharmacy with only a landline or no number shows a warning instead, but the record is still created. No patient identity is stored, no read-back endpoint exists, and the code resolves through SQL in the POC. Expired rows are removed with `bun run db:purge-send-ahead`; a seed wipe leaves reservations untouched.
+
 ## Scripts
 
 | Command | Purpose |
@@ -99,7 +103,8 @@ List quantities are entered in each medicine's base unit: tablets, capsules, mL,
 | `bun run db:migrate` | Apply pending Postgres migrations |
 | `bun run db:seed` | Load the seed fixture in one idempotent transaction |
 | `bun run db:wipe` | Remove `poc-seed` rows without touching non-seed data |
-| `bun run db:acceptance` | Prove migrations, idempotent seed, and guarded wipe on a scratch database |
+| `bun run db:purge-send-ahead` | Delete expired send-ahead reservations |
+| `bun run db:acceptance` | Prove migrations, idempotent seed, guarded wipe, and send-ahead purge on a scratch database |
 | `bun run verify` | Format, lint, typecheck, tests, browser acceptance, and capability fixture |
 
 Install Chromium once before browser tests: `bunx playwright install chromium`. Browser acceptance reads the seeded database, so `bun run verify` requires a running Postgres with `bun run db:migrate` and `bun run db:seed` applied, and `DATABASE_URL` set.
@@ -120,4 +125,4 @@ Material that governs derived applications belongs in `template_docs/`. Material
 
 ## Status
 
-The scaffold, PWA, Compose stack, Postgres schema, seed/wipe tooling, typo-tolerant medicine search with anonymous search events, map-first results with list ranking, pharmacy detail, directions, report flows, and the mocked prescription scan are in place. VPS deployment remains as the final slice in [the POC map](https://github.com/Xaidel/pharmassist/issues/17).
+The scaffold, PWA, Compose stack, Postgres schema, seed/wipe tooling, typo-tolerant medicine search with anonymous search events, map-first results with list ranking, pharmacy detail, directions, report flows, the mocked prescription scan, and the advisory send-ahead reservation are in place. VPS deployment remains as the final slice in [the POC map](https://github.com/Xaidel/pharmassist/issues/17).

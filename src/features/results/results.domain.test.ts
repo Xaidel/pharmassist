@@ -44,6 +44,7 @@ function pharmacy(
     latitude,
     longitude: 0,
     phone: null,
+    mobile: null,
     hours_text: null,
     opening_hours: null,
     open_24h: false,

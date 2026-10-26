@@ -99,6 +99,7 @@ export type PharmacyRecord = {
   latitude: number
   longitude: number
   phone: string | null
+  mobile: string | null
   hours_text: string | null
   opening_hours: OpeningHours | null
   open_24h: boolean

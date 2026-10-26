@@ -244,11 +244,11 @@ async function upsertPharmacies(
   for (const row of bundle.pharmacies) {
     await client.query(
       `insert into pharmacy (
-         id, name, brand, type, address, barangay, latitude, longitude, phone, hours_text,
+         id, name, brand, type, address, barangay, latitude, longitude, phone, mobile, hours_text,
          open_24h, opening_hours, verification_status, data_source, source_url,
          coordinate_confidence, notes, seed_batch_id
        ) values (
-         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19
        )
        on conflict (id) do update set
          name = excluded.name,
@@ -259,6 +259,7 @@ async function upsertPharmacies(
          latitude = excluded.latitude,
          longitude = excluded.longitude,
          phone = excluded.phone,
+         mobile = excluded.mobile,
          hours_text = excluded.hours_text,
          open_24h = excluded.open_24h,
          opening_hours = excluded.opening_hours,
@@ -278,6 +279,7 @@ async function upsertPharmacies(
         row.latitude,
         row.longitude,
         row.phone,
+        row.mobile,
         row.hours_text,
         row.open_24h,
         row.opening_hours,

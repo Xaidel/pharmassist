@@ -28,6 +28,7 @@
     "db:migrate": "bun scripts/db/migrate.ts",
     "db:seed": "bun scripts/seed/seed.ts",
     "db:wipe": "bun scripts/seed/wipe.ts",
+    "db:purge-send-ahead": "bun scripts/seed/purge-send-ahead.ts",
     "db:acceptance": "bun scripts/seed/acceptance.ts",
     "verify": "bun run format:check && bun run lint && bun run typecheck && bun run test && bun run test:e2e && bun run test:capabilities"
   },
