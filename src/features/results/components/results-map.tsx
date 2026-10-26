@@ -16,6 +16,7 @@ import {
   declutterCallouts,
   type CalloutPin,
   type CalloutTone,
+  type DeclutterPin,
 } from '#/shared/components/map-callout-pin'
 
 import type { RouteGeometry } from '../directions.schema'
@@ -300,11 +301,7 @@ export function ResultsMap({
       markersRef.current.push(originMarker)
     }
 
-    const callouts: {
-      callout: HTMLDivElement
-      dot: HTMLDivElement
-      priority: number
-    }[] = []
+    const callouts: (DeclutterPin & { priority: number })[] = []
     for (const [index, pin] of pins.entries()) {
       const selected = pin.key === selectedKey
       const tracked = focusMode && pin.pharmacyId === trackedPharmacyId
@@ -319,6 +316,7 @@ export function ResultsMap({
       callouts.push({
         callout,
         dot,
+        pinned: selected,
         priority: selected
           ? -3
           : tracked
