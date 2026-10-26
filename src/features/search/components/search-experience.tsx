@@ -275,6 +275,18 @@ export function SearchExperience({
     void runSearch(query)
   }
 
+  function handleValueChange(next: string): void {
+    setQuery(next)
+    // Emptying the box, including with its clear (x) button, drops the shown
+    // results and the URL query at once instead of waiting for a submit.
+    if (
+      normalizeSearchQuery(next) === '' &&
+      (results !== null || error !== null)
+    ) {
+      void runSearch('')
+    }
+  }
+
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
     if (event.key === 'Escape') {
       setOpen(false)
@@ -325,7 +337,7 @@ export function SearchExperience({
         listboxId={listboxId}
         onKeyDown={handleKeyDown}
         onSubmit={handleSubmit}
-        onValueChange={setQuery}
+        onValueChange={handleValueChange}
         open={open}
         statusId={statusId}
         value={query}

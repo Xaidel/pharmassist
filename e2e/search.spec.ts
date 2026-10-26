@@ -50,6 +50,22 @@ test('finds a medicine from a typo and records an anonymous search event', async
   }
 })
 
+test('clearing the search box drops the results at once', async ({ page }) => {
+  await page.goto('/')
+  const input = page.getByRole('combobox', { name: 'Medicine name' })
+
+  await input.fill('paracetamol')
+  await page.getByRole('button', { name: 'Search', exact: true }).click()
+  const heading = page.getByRole('heading', { name: /medicines? match/ })
+  await expect(heading).toBeVisible()
+  await expect(page).toHaveURL(/[?&]q=paracetamol/)
+
+  // fill('') fires the same input event as the box's clear (x) button.
+  await input.fill('')
+  await expect(heading).toBeHidden()
+  await expect(page).not.toHaveURL(/[?&]q=/)
+})
+
 test('shows a pending state and a zero-result state', async ({ page }) => {
   await page.route(/\/api\/search\?/, async (route) => {
     await new Promise((resolve) => {
