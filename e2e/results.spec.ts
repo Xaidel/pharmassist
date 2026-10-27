@@ -519,6 +519,77 @@ test('rejects malformed baskets with the contract error codes', async ({
   })
 })
 
+test('toggles the results map between 3D and 2D without moving the camera', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await searchAndCompare(page, 'janumet')
+
+  const map = page.locator('#results-map [aria-label="Map of pharmacy prices"]')
+  await expect(map).toHaveAttribute('data-pitch', '45', { timeout: 15_000 })
+  await expect(map).toHaveAttribute('data-bearing', '0')
+  await expect(map).toHaveAttribute('data-buildings', 'visible')
+  const zoom = await map.getAttribute('data-zoom')
+
+  await page.getByRole('button', { name: 'Switch to 2D map' }).click()
+  await expect(map).toHaveAttribute('data-pitch', '0')
+  await expect(map).toHaveAttribute('data-buildings', 'hidden')
+  await expect(
+    page.getByRole('button', { name: 'Switch to 3D map' }),
+  ).toBeVisible()
+  expect(await map.getAttribute('data-zoom')).toBe(zoom)
+
+  const to3d = page.getByRole('button', { name: 'Switch to 3D map' })
+  await to3d.focus()
+  await expect(to3d).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(map).toHaveAttribute('data-pitch', '45')
+  await expect(map).toHaveAttribute('data-buildings', 'visible')
+  expect(await map.getAttribute('data-zoom')).toBe(zoom)
+
+  await page.getByRole('button', { name: 'Switch to 2D map' }).focus()
+  await page.keyboard.press('Space')
+  await expect(map).toHaveAttribute('data-pitch', '0')
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.getByRole('button', { name: 'Switch to 3D map' }).click()
+  await expect(map).toHaveAttribute('data-pitch', '45', { timeout: 1_000 })
+})
+
+test('hides the 3D buildings when the map leaves Naga and restores them on a fresh visit', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await searchAndCompare(page, 'janumet')
+
+  const map = page.locator('#results-map [aria-label="Map of pharmacy prices"]')
+  await expect(map).toHaveAttribute('data-buildings', 'visible', {
+    timeout: 15_000,
+  })
+  await expect(map).toHaveAttribute('data-pitch', '45')
+
+  const box = await map.boundingBox()
+  if (box === null) {
+    throw new Error('The results map is not visible')
+  }
+  const x = box.x + 40
+  const y = box.y + 150
+  await page.mouse.move(x, y)
+  await page.mouse.down()
+  await page.mouse.move(x, y + 500, { steps: 30 })
+  await page.mouse.up()
+
+  await expect(map).toHaveAttribute('data-buildings', 'hidden', {
+    timeout: 5_000,
+  })
+  await expect(map).toHaveAttribute('data-pitch', '45')
+
+  // A fresh visit starts in 3D again inside Naga.
+  await page.reload()
+  await expect(map).toHaveAttribute('data-pitch', '45', { timeout: 15_000 })
+  await expect(map).toHaveAttribute('data-buildings', 'visible')
+})
+
 test('keeps the results usable at a phone viewport while prices load slowly', async ({
   page,
 }) => {

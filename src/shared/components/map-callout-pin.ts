@@ -134,21 +134,39 @@ export type DeclutterPin = Pick<CalloutPin<HTMLElement>, 'callout' | 'dot'> & {
   pinned?: boolean
 }
 
+/** The visible area a callout must fit inside to stay legible. */
+export type CalloutViewport = {
+  left: number
+  right: number
+  top: number
+  bottom: number
+}
+
 /**
- * Hide each callout that would overlap one placed before it or cover another
- * pin's dot, leaving its own dot. Pass pins in priority order: earlier ones win
- * label collisions, and pinned ones, such as a tapped or selected pin, always
- * show.
+ * Hide each callout that would overlap one placed before it, cover another
+ * pin's dot, or spill outside the visible map area, leaving its own dot. Pass
+ * pins in priority order: earlier ones win label collisions, and pinned ones,
+ * such as a tapped or selected pin, always show.
  */
-export function declutterCallouts(pins: readonly DeclutterPin[]): void {
+export function declutterCallouts(
+  pins: readonly DeclutterPin[],
+  viewport?: CalloutViewport,
+): void {
   const dots = pins.map(({ dot }) => dot.getBoundingClientRect())
   const placed: DOMRect[] = []
   for (const [index, { callout, pinned = false }] of pins.entries()) {
     callout.style.visibility = 'visible'
     const rect = callout.getBoundingClientRect()
+    const outside =
+      viewport !== undefined &&
+      (rect.left < viewport.left ||
+        rect.right > viewport.right ||
+        rect.top < viewport.top ||
+        rect.bottom > viewport.bottom)
     const blocked =
       !pinned &&
-      (placed.some((other) => overlaps(rect, other)) ||
+      (outside ||
+        placed.some((other) => overlaps(rect, other)) ||
         dots.some((dot, other) => other !== index && overlaps(rect, dot)))
     if (blocked) {
       callout.style.visibility = 'hidden'
