@@ -11,6 +11,14 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { cn } from '#/lib/cn'
 import { loadBaseMapStyle } from '#/shared/components/base-map-style'
+import {
+  addBuildingExtrusions,
+  applyBuildingGate,
+  MAP_BUILDING_MIN_ZOOM,
+  MAP_PITCH_2D,
+  MAP_PITCH_3D,
+  setMapPitchMode,
+} from '#/shared/components/map-3d'
 import { addNagaBoundary } from '#/shared/components/naga-boundary'
 import {
   createCalloutPin,
@@ -165,6 +173,8 @@ type ResultsMapProps = {
   route: RouteGeometry | null
   routeLoading: boolean
   onSelect: (key: string, focused: boolean) => void
+  /** True while the camera and buildings use their 3D mode. */
+  is3d: boolean
   /** Pixels the floating top bar covers at the top of the map. */
   coveredTop: number
   /** Share of the map height the bottom sheet covers. */
@@ -181,17 +191,14 @@ export function ResultsMap({
   route,
   routeLoading,
   onSelect,
+  is3d,
   coveredTop,
   coveredBottomRatio,
 }: ResultsMapProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const coveredTopRef = useRef(coveredTop)
   const coveredBottomRatioRef = useRef(coveredBottomRatio)
-
-  useEffect(() => {
-    coveredTopRef.current = coveredTop
-    coveredBottomRatioRef.current = coveredBottomRatio
-  }, [coveredTop, coveredBottomRatio])
+  const is3dRef = useRef(is3d)
 
   // Frame content in the map area the overlays leave uncovered.
   const visiblePadding = useCallback(
@@ -217,6 +224,36 @@ export function ResultsMap({
   const [mapError, setMapError] = useState<string | null>(null)
 
   useEffect(() => {
+    is3dRef.current = is3d
+    const map = mapRef.current
+    if (map === null) {
+      return
+    }
+    setMapPitchMode(map, is3d, prefersReducedMotion())
+    applyBuildingGate(map, {
+      is3d,
+      coveredTop: coveredTopRef.current,
+      coveredBottomRatio: coveredBottomRatioRef.current,
+      reducedMotion: prefersReducedMotion(),
+    })
+  }, [is3d])
+
+  useEffect(() => {
+    coveredTopRef.current = coveredTop
+    coveredBottomRatioRef.current = coveredBottomRatio
+    const map = mapRef.current
+    if (map === null) {
+      return
+    }
+    applyBuildingGate(map, {
+      is3d: is3dRef.current,
+      coveredTop,
+      coveredBottomRatio,
+      reducedMotion: prefersReducedMotion(),
+    })
+  }, [coveredTop, coveredBottomRatio])
+
+  useEffect(() => {
     onSelectRef.current = onSelect
   }, [onSelect])
 
@@ -239,16 +276,39 @@ export function ResultsMap({
               initialOrigin?.latitude ?? NAGA_CENTER.latitude,
             ],
             zoom: 12.4,
+            pitch: is3dRef.current ? MAP_PITCH_3D : MAP_PITCH_2D,
+            bearing: 0,
+            maxPitch: MAP_PITCH_3D,
+            dragRotate: false,
+            touchPitch: false,
+            pitchWithRotate: false,
             attributionControl: { compact: true },
           })
           loadBaseMapStyle(map)
+          const created = map
+          created.touchZoomRotate.disableRotation()
+          created.keyboard.disableRotation()
           mapRef.current = map
           libRef.current = module
-          const created = map
+
+          const applyGate = (): void => {
+            applyBuildingGate(created, {
+              is3d: is3dRef.current,
+              coveredTop: coveredTopRef.current,
+              coveredBottomRatio: coveredBottomRatioRef.current,
+              reducedMotion: prefersReducedMotion(),
+            })
+          }
+          created.on('move', applyGate)
+          created.on('moveend', applyGate)
+          created.on('resize', applyGate)
+
           // Under the route layer, which is added later.
           created.once('load', () => {
             if (!disposed) {
               addNagaBoundary(created)
+              addBuildingExtrusions(created)
+              applyGate()
             }
           })
           setIsReady(true)
@@ -351,24 +411,57 @@ export function ResultsMap({
           south = Math.min(south, pin.latitude)
           north = Math.max(north, pin.latitude)
         }
-        map.fitBounds(
+        // Building geometry starts at zoom 13, so the city-wide pin fit is
+        // tightened to that zoom; the outlying callouts may meet the edges.
+        const camera = map.cameraForBounds(
           [
             [west, south],
             [east, north],
           ],
           {
-            padding: visiblePadding(48),
+            padding: {
+              top: coveredTopRef.current + 16,
+              right: 0,
+              bottom:
+                Math.round(
+                  (containerRef.current?.clientHeight ?? 0) *
+                    coveredBottomRatioRef.current,
+                ) + 16,
+              left: 0,
+            },
             maxZoom: 14,
-            duration: prefersReducedMotion() ? 0 : 600,
           },
         )
+        if (camera !== undefined) {
+          map.jumpTo({
+            ...camera,
+            zoom: Math.max(camera.zoom ?? map.getZoom(), MAP_BUILDING_MIN_ZOOM),
+            pitch: is3dRef.current ? MAP_PITCH_3D : MAP_PITCH_2D,
+            bearing: 0,
+          })
+        }
         fittedRef.current = true
       }
     }
 
     const relayout = (): void => {
+      const container = containerRef.current
+      const viewport =
+        container === null
+          ? undefined
+          : {
+              left: 0,
+              right: container.clientWidth,
+              top: coveredTopRef.current,
+              bottom:
+                container.clientHeight -
+                Math.round(
+                  container.clientHeight * coveredBottomRatioRef.current,
+                ),
+            }
       declutterCallouts(
         [...callouts].sort((left, right) => left.priority - right.priority),
+        viewport,
       )
     }
     relayout()

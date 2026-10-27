@@ -50,6 +50,41 @@ test('finds a medicine from a typo and records an anonymous search event', async
   }
 })
 
+test('opens the home map in a fixed 3D camera', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  const map = page.locator('[data-home-map]')
+  await expect(map).toHaveAttribute('data-home-map', 'ready', {
+    timeout: 30_000,
+  })
+  await expect(map).toHaveAttribute('data-pitch', '45')
+  await expect(map).toHaveAttribute('data-bearing', '0')
+  await expect(map).toHaveAttribute('data-buildings', 'visible')
+
+  const zoom = Number(await map.getAttribute('data-zoom'))
+  const box = await map.boundingBox()
+  if (box === null) {
+    throw new Error('The home map is not visible')
+  }
+
+  await page.mouse.move(box.x + box.width / 2, box.y + 300)
+  await page.mouse.wheel(0, -600)
+  await expect
+    .poll(async () => Number(await map.getAttribute('data-zoom')))
+    .toBeGreaterThan(zoom)
+  await expect(map).toHaveAttribute('data-pitch', '45')
+  await expect(map).toHaveAttribute('data-bearing', '0')
+
+  await page.mouse.move(box.x + box.width / 2, box.y + 300)
+  await page.mouse.down({ button: 'right' })
+  await page.mouse.move(box.x + box.width / 2 + 100, box.y + 400, {
+    steps: 10,
+  })
+  await page.mouse.up({ button: 'right' })
+  await expect(map).toHaveAttribute('data-pitch', '45')
+  await expect(map).toHaveAttribute('data-bearing', '0')
+})
+
 test('clearing the search box drops the results at once', async ({ page }) => {
   await page.goto('/')
   const input = page.getByRole('combobox', { name: 'Medicine name' })

@@ -10,7 +10,7 @@ const LINE_COLOR = '#2f3a8f'
  * Source: OpenStreetMap relation 3084673, (c) OpenStreetMap contributors,
  * ODbL; the maps already credit OpenStreetMap.
  */
-const NAGA_CITY_RING: [number, number][] = [
+export const NAGA_CITY_RING: [number, number][] = [
   [123.17517, 13.61735],
   [123.17593, 13.61617],
   [123.17757, 13.61588],

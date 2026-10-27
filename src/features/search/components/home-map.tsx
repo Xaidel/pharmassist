@@ -5,6 +5,11 @@ import { useEffect, useRef, useState } from 'react'
 
 import { cn } from '#/lib/cn'
 import { loadBaseMapStyle } from '#/shared/components/base-map-style'
+import {
+  addBuildingExtrusions,
+  applyBuildingGate,
+  MAP_PITCH_3D,
+} from '#/shared/components/map-3d'
 import { addNagaBoundary } from '#/shared/components/naga-boundary'
 import {
   createCalloutPin,
@@ -20,6 +25,11 @@ const HOME_CENTER = { latitude: 13.6105, longitude: 123.1945 } as const
 // Pharmacies this far from the cluster's median point stay off the first view.
 const DOWNTOWN_RADIUS_M = 1500
 const METERS_PER_DEGREE = 111_320
+
+// The home top bar and sheet cover these shares of the map. The gate follows
+// the centre of the strip between them, the part people can actually see.
+const COVERED_TOP_PX = 72
+const COVERED_BOTTOM_RATIO = 0.5
 
 type Pharmacy = PharmacyPins['pharmacies'][number]
 
@@ -64,6 +74,13 @@ function downtownPharmacies(pharmacies: readonly Pharmacy[]): Pharmacy[] {
   return nearby.length === 0 ? [...pharmacies] : nearby
 }
 
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  )
+}
+
 type HomeMapProps = {
   className?: string
 }
@@ -94,13 +111,36 @@ export function HomeMap({ className }: HomeMapProps): React.JSX.Element {
             container,
             center: [HOME_CENTER.longitude, HOME_CENTER.latitude],
             zoom: 13.2,
+            pitch: MAP_PITCH_3D,
+            bearing: 0,
+            maxPitch: MAP_PITCH_3D,
+            dragRotate: false,
+            touchPitch: false,
+            pitchWithRotate: false,
             attributionControl: { compact: true },
           })
           loadBaseMapStyle(created)
+          created.touchZoomRotate.disableRotation()
+          created.keyboard.disableRotation()
           map = created
+
+          const applyGate = (): void => {
+            applyBuildingGate(created, {
+              is3d: true,
+              coveredTop: COVERED_TOP_PX,
+              coveredBottomRatio: COVERED_BOTTOM_RATIO,
+              reducedMotion: prefersReducedMotion(),
+            })
+          }
+          created.on('move', applyGate)
+          created.on('moveend', applyGate)
+          created.on('resize', applyGate)
+
           created.once('load', () => {
             if (!disposed) {
               addNagaBoundary(created)
+              addBuildingExtrusions(created)
+              applyGate()
               setIsReady(true)
             }
           })
@@ -197,6 +237,12 @@ export function HomeMap({ className }: HomeMapProps): React.JSX.Element {
                     { ...revealed, pinned: true },
                     ...byPriority.filter((pin) => pin !== revealed),
                   ],
+              {
+                left: 0,
+                right: containerRef.current?.clientWidth ?? 0,
+                top: 0,
+                bottom: containerRef.current?.clientHeight ?? 0,
+              },
             )
           }
           relayout()

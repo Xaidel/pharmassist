@@ -47,6 +47,7 @@ import { BasketDrawer } from './basket-drawer'
 import { BasketPanel } from './basket-panel'
 import { BasketToggleButton } from './basket-toggle-button'
 import { CandidateGenerics } from './candidate-generics'
+import { MapModeToggleButton } from './map-mode-toggle-button'
 import { PharmacyDetailSheet } from './pharmacy-detail-sheet'
 import {
   noPriceKey,
@@ -84,7 +85,8 @@ const SHEET_PEEK_RATIO = 0.46
 const SHEET_FULL_RATIO = 0.88
 // Keep in step with the `h-sheet-closed` utility: just the handle row.
 const SHEET_CLOSED_PX = 56
-const TOP_BAR_CLEARANCE_PX = 80
+// The basket button plus the 2D/3D button beneath it.
+const TOP_BAR_CLEARANCE_PX = 120
 type RouteStatus = 'idle' | 'loading' | 'error'
 
 type ActiveRoute = {
@@ -183,6 +185,7 @@ export function ResultsExperience({
   const [reloadToken, setReloadToken] = useState(0)
   const [sheet, setSheet] = useState<SheetSnap>('peek')
   const [basketOpen, setBasketOpen] = useState(false)
+  const [map3d, setMap3d] = useState(true)
 
   // True only while the sheet is closed because the user started adding a
   // medicine, so closing the basket reopens it; a sheet the user closed stays closed.
@@ -720,6 +723,7 @@ export function ResultsExperience({
           coveredBottomRatio={SHEET_PEEK_RATIO}
           coveredTop={TOP_BAR_CLEARANCE_PX}
           focusMode={routeFocus}
+          is3d={map3d}
           onSelect={handlePinSelect}
           origin={origin}
           pins={pins}
@@ -732,11 +736,17 @@ export function ResultsExperience({
 
       <header className="pointer-events-none absolute inset-x-0 top-0 z-20 mx-auto flex w-full max-w-xl items-center gap-2 px-4 pt-safe-top">
         <BackButton />
-        <div className="ml-auto">
+        <div className="ml-auto flex flex-col items-center gap-2">
           <BasketToggleButton
             count={basketCount}
             onToggle={toggleBasket}
             open={basketOpen}
+          />
+          <MapModeToggleButton
+            is3d={map3d}
+            onToggle={() => {
+              setMap3d((current) => !current)
+            }}
           />
         </div>
 
